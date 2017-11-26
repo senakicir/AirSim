@@ -233,7 +233,7 @@ FRotator VehiclePawnWrapper::getDroneWorldOrientation() const
     return pawn_ -> GetActorRotation();
 }
 
-msr::airlib::Vector3r_arr VehiclePawnWrapper::getBonePositions() const
+const Vector3r_arr VehiclePawnWrapper::getBonePositions() 
 {
     
     TArray<AActor*> foundActors;
@@ -365,13 +365,19 @@ msr::airlib::Vector3r_arr VehiclePawnWrapper::getBonePositions() const
             }
             bonePositions.dronePos = dronePos;
             bonePositions.droneOrient = droneOrient;
-            bones = bonePositions;
+            setBonePos(bonePositions);
             return bonePositions;
         }
     }
     
     UAirBlueprintLib::LogMessageString("Carl is missing!", "", LogDebugLevel::Failure);
     return Vector3r_arr();
+}
+
+//sena was here
+void VehiclePawnWrapper::setBonePos(Vector3r_arr bonePos_)
+{
+    bones = bonePos_;
 }
 
 //sena was here
