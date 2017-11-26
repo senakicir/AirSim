@@ -6,6 +6,7 @@
 
 #include "common/Common.hpp"
 #include "common/common_utils/EnumFlags.hpp"
+#include "common/CommonStructs.hpp"
 
 namespace msr { namespace airlib {
 
@@ -45,7 +46,8 @@ public: //types
     struct ImageResponse {
         vector<uint8_t> image_data_uint8;
         vector<float> image_data_float;
-
+        //sena was here
+        Vector3r_arr bones =  Vector3r_arr::Vector3r_arr();
         Vector3r camera_position = Vector3r::Zero();
         Quaternionr camera_orientation = Quaternionr::Identity();
         TTimePoint time_stamp = 0;
@@ -57,7 +59,7 @@ public: //types
     };
 
 public: //methods
-    virtual ImageResponse getImage(ImageType image_type, bool pixels_as_float, bool compress) = 0;
+    virtual ImageResponse getImage(ImageType image_type, bool pixels_as_float, bool compress, const msr::airlib::Vector3r_arr *bonePos) = 0;
 };
 
 

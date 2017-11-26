@@ -50,6 +50,85 @@ public:
         }
     };
 
+    //sena was here
+    struct Vector3r_arr {
+        Vector3r dronePos;
+        Vector3r droneOrient;
+        Vector3r humanPos;
+        Vector3r hip;
+        Vector3r right_up_leg;
+        Vector3r right_leg;
+        Vector3r right_foot;
+        Vector3r left_up_leg;
+        Vector3r left_leg;
+        Vector3r left_foot;
+        Vector3r spine1;
+        Vector3r neck;
+        Vector3r head;
+        Vector3r head_top;
+        Vector3r left_arm;
+        Vector3r left_forearm;
+        Vector3r left_hand;
+        Vector3r right_arm;
+        Vector3r right_forearm;
+        Vector3r right_hand;
+        
+        Vector3r right_hand_tip;
+        Vector3r left_hand_tip;
+        Vector3r right_foot_tip;
+        Vector3r left_foot_tip;
+        MSGPACK_DEFINE_MAP(dronePos, droneOrient, humanPos, hip,
+                           right_up_leg, right_leg, right_foot,
+                           left_up_leg,left_leg, left_foot,
+                           spine1,neck,head,head_top,
+                           left_arm,left_forearm,left_hand,
+                           right_arm,right_forearm,right_hand,
+                           right_hand_tip, left_hand_tip, right_foot_tip, left_foot_tip);
+        
+        Vector3r_arr()
+        {}
+        
+        Vector3r_arr(const msr::airlib::Vector3r_arr& s)
+        {
+            dronePos = s.dronePos;
+            droneOrient = s.droneOrient;
+            humanPos = s.humanPos;
+            hip = s.hip;
+            right_up_leg = s.right_up_leg;
+            right_leg = s.right_leg;
+            right_foot = s.right_foot;
+            left_up_leg = s.left_up_leg;
+            left_leg = s.left_leg;
+            left_foot = s.left_foot;
+            spine1 = s.spine1;
+            neck = s.neck;
+            head = s.head;
+            head_top = s.head_top;
+            left_arm = s.left_arm;
+            left_forearm = s.left_forearm;
+            left_hand = s.left_hand;
+            right_arm = s.right_arm;
+            right_forearm = s.right_forearm;
+            right_hand = s.right_hand;
+            
+            right_hand_tip = s.right_hand_tip;
+            left_hand_tip = s.left_hand_tip;
+            right_foot_tip = s.right_foot_tip;
+            left_foot_tip = s.left_foot_tip;
+        }
+        
+        msr::airlib::Vector3r_arr to() const
+        {
+            return msr::airlib::Vector3r_arr(dronePos.to(), droneOrient.to(), humanPos.to(), hip.to(),
+                                             right_up_leg.to(), right_leg.to(), right_foot.to(),
+                                             left_up_leg.to(),left_leg.to(), left_foot.to(),
+                                             spine1.to(),neck.to(),head.to(),head_top.to(),
+                                             left_arm.to(),left_forearm.to(),left_hand.to(),
+                                             right_arm.to(),right_forearm.to(),right_hand.to(),
+                                             right_hand_tip.to(), left_hand_tip.to(), right_foot_tip.to(), left_foot_tip.to());
+        }
+    };
+    
     struct CollisionInfo {
         bool has_collided = false;
         Vector3r normal;
@@ -253,6 +332,8 @@ public:
 
         Vector3r camera_position;
         Quaternionr camera_orientation;
+        //sena was here
+        Vector3r_arr bones;
         msr::airlib::TTimePoint time_stamp;
         std::string message;
         bool pixels_as_float;

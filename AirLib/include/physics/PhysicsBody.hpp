@@ -56,6 +56,25 @@ public: //interface
         collision_info_ = collision_info;
     }
 
+    //sena was here
+    virtual void setHumanPosition(const Vector3r& human_position)
+    {
+        human_position_ = human_position;
+    }
+    
+    virtual void setBonePositions(const Vector3r_arr& bone_position)
+    {
+        bone_position_ = bone_position;
+    }
+    virtual void setDroneWorldPosition(const Vector3r& pos)
+    {
+        drone_world_position_ = pos;
+    }
+    virtual void setDroneWorldOrientation(const Vector3r& orientation)
+    {
+        drone_world_orientation_ = orientation;
+    }
+    
 public: //methods
     //constructors
     PhysicsBody()
@@ -223,6 +242,23 @@ public: //methods
         return collision_response_info_;
     }
 
+    //sena was here
+    const Vector3r& getHumanPosition() const
+    {
+        return human_position_;
+    }
+    const Vector3r& getDroneWorldPosition() const
+    {
+        return drone_world_position_;
+    }
+    const Vector3r_arr& getBonePositions() const
+    {
+        return bone_position_;
+    }
+    const Vector3r& getDroneWorldOrientation() const
+    {
+        return drone_world_orientation_;
+    }
 
 public:
     //for use in physics angine: //TODO: use getter/setter or friend method?
@@ -240,6 +276,12 @@ private:
     CollisionInfo collision_info_;
     CollisionResponseInfo collision_response_info_;
 
+    //sena was here
+    Vector3r human_position_;
+    Vector3r_arr bone_position_;
+    Vector3r drone_world_position_;
+    Vector3r drone_world_orientation_;
+    
     Environment* environment_ = nullptr;
 };
 

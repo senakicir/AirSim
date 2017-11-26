@@ -17,8 +17,7 @@ RenderRequest::~RenderRequest()
 
 // read pixels from render target using render thread, then compress the result into PNG
 // argument on the thread that calls this method.
-void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<uint8>& image_data_uint8, 
-    TArray<float>& image_data_float, bool pixels_as_float, bool compress, int& width, int& height)
+void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<uint8>& image_data_uint8, TArray<float>& image_data_float, bool pixels_as_float, bool compress, int& width, int& height, const Vector3r_arr* bonesPosPtr, Vector3r_arr& accurate_bones) //sena was here
 {
     data->render_target = renderTarget;
     if (!pixels_as_float)
@@ -27,7 +26,8 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
         data->bmp_float.Reset();
     data->pixels_as_float = pixels_as_float;
     data->compress = compress;
-
+    if (bonesPosPtr != nullptr)
+        accurate_bones = *bonesPosPtr; //sena was here
     //make sure we are not on the rendering thread
     CheckNotBlockedOnRenderThread();
 

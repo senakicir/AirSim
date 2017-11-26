@@ -11,7 +11,7 @@ RecordingFile::RecordingFile(std::vector <std::string> columns)
 {
     this->columns = columns;
 }
-void RecordingFile::appendRecord(TArray<uint8>& image_data, VehiclePawnWrapper* wrapper)
+void RecordingFile::appendRecord(TArray<uint8>& image_data, VehiclePawnWrapper* wrapper, const msr::airlib::Vector3r_arr bonesPos)
 {
     if (image_data.Num() == 0)
         return;
@@ -33,7 +33,7 @@ void RecordingFile::appendRecord(TArray<uint8>& image_data, VehiclePawnWrapper* 
     if (imageSavedOk) {
         writeString(wrapper->getLogLine().append(filename).append("\n"));
 
-        //UAirBlueprintLib::LogMessage(TEXT("Screenshot saved to:"), filePath, LogDebugLevel::Success);
+        UAirBlueprintLib::LogMessage(TEXT("Screenshot saved to:"), filePath, LogDebugLevel::Success);
         images_saved_++;
     }
 }

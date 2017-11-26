@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "common/common_utils/WorkerThread.hpp"
+#include "common/CommonStructs.hpp"
 
 class RenderRequest : public FRenderCommand
 {
@@ -39,7 +40,8 @@ public:
 
     // read pixels from render target using render thread, then compress the result into PNG
     // argument on the thread that calls this method.
-    void getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<uint8>& image_data_uint8, 
-        TArray<float>& image_data_float, bool pixels_as_float, bool compress, int& width, int& height);
+    //sena was here
+    void getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<uint8>& image_data_uint8,
+   TArray<float>& image_data_float, bool pixels_as_float, bool compress, int& width, int& height, const Vector3r_arr* bonesPosPtr, Vector3r_arr& accurate_bones);
     void ExecuteTask();
 };

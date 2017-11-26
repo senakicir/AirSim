@@ -38,6 +38,8 @@ public:
     void toggleTrace();
 
 public: //interface
+    msr::airlib::Vector3r_arr bones; //sena was here
+
     VehiclePawnWrapper();
     void initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras);
 
@@ -64,7 +66,12 @@ public: //interface
 
     const GeoPoint& getHomePoint() const;
     const CollisionInfo& getCollisionInfo() const;
-
+    //sena was here
+    FVector getHumanPosition() const;
+    FVector getDroneWorldPosition() const;
+    FRotator getDroneWorldOrientation() const;
+    msr::airlib::Vector3r_arr getBonePositions() const;
+    
     void setLogLine(std::string line);
     std::string getLogLine();
 
@@ -84,6 +91,7 @@ private: //methods
 
 
 private: //vars
+    
     FVector ground_trace_end_;
     FVector ground_margin_;
     GeoPoint home_point_;

@@ -13,7 +13,7 @@ public:
     RecordingFile(std::vector <std::string> columns);
     ~RecordingFile();
 
-    void appendRecord(TArray<uint8>& compressedPng, VehiclePawnWrapper* wrapper);
+    void appendRecord(TArray<uint8>& compressedPng, VehiclePawnWrapper* wrapper, const msr::airlib::Vector3r_arr bonesPos);
     void appendColumnHeader(std::vector <std::string> columns);
     void startRecording();
     void stopRecording(bool ignore_if_stopped);
@@ -25,7 +25,8 @@ private:
     void writeString(const std::string& line);
     bool isFileOpen();
     std::string getLogFileFullPath();
-
+    //sena was here
+    std::string getLine2(const msr::airlib::Vector3r_arr& bones);
 
 private:
     std::string record_filename = "airsim_rec";     

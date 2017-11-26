@@ -163,6 +163,34 @@ public:
         getController()->setCollisionInfo(collision_info);
     }
 
+    //sena was here
+    virtual void setHumanPosition(const Vector3r& humanPosition) override
+    {
+        PhysicsBody::setHumanPosition(humanPosition);
+        getController()->setHumanPosition(humanPosition);
+    }
+    
+    //sena was here
+    virtual void setBonePositions(const Vector3r_arr& bonePositions) override
+    {
+        PhysicsBody::setBonePositions(bonePositions);
+        getController()->setBonePositions(bonePositions);
+    }
+    
+    //sena was here
+    virtual void setDroneWorldPosition(const Vector3r& pos) override
+    {
+        PhysicsBody::setDroneWorldPosition(pos);
+        getController()->setDroneWorldPosition(pos);
+    }
+    
+    //sena was here
+    virtual void setDroneWorldOrientation(const Vector3r& orientation) override
+    {
+        PhysicsBody::setDroneWorldOrientation(orientation);
+        getController()->setDroneWorldOrientation(orientation);
+    }
+    
     virtual ~MultiRotor() = default;
 
 private: //methods

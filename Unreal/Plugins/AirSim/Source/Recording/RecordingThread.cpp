@@ -26,6 +26,7 @@ void FRecordingThread::startRecording(msr::airlib::VehicleCameraBase* camera, co
     instance_.reset(new FRecordingThread());
     instance_->camera_ = camera;
     instance_->kinematics_ = kinematics;
+    instance_->bonesPosPtr = nullptr; //sena was here
     instance_->settings_ = settings;
     instance_->wrapper_ = wrapper;
 
@@ -83,10 +84,12 @@ uint32 FRecordingThread::Run()
 
                 // todo: should we go as fast as possible, or should we limit this to a particular number of
                 // frames per second?
-                auto response = camera_->getImage(msr::airlib::VehicleCameraBase::ImageType::Scene, false, true);
+                auto response = camera_->getImage(msr::airlib::VehicleCameraBase::ImageType::Scene, false, true, bonesPosPtr);
+                msr::airlib::Vector3r_arr bonePos = response.bones;
+
                 TArray<uint8_t> image_data;
                 image_data.Append(response.image_data_uint8.data(), response.image_data_uint8.size());
-                recording_file_->appendRecord(image_data, wrapper_);
+                recording_file_->appendRecord(image_data, wrapper_, bonePos);
             }
         }
     }

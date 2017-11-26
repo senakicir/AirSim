@@ -198,6 +198,55 @@ struct CollisionInfo {
     }
 };
 
+//sena was here
+struct Vector3r_arr {
+    Vector3r dronePos = Vector3r::Zero();
+    Vector3r droneOrient = Vector3r::Zero();
+    Vector3r humanPos = Vector3r::Zero();
+    Vector3r hip = Vector3r::Zero();
+    Vector3r right_up_leg = Vector3r::Zero();
+    Vector3r right_leg = Vector3r::Zero();
+    Vector3r right_foot = Vector3r::Zero();
+    Vector3r left_up_leg = Vector3r::Zero();
+    Vector3r left_leg = Vector3r::Zero();
+    Vector3r left_foot = Vector3r::Zero();
+    Vector3r spine1 = Vector3r::Zero();
+    Vector3r neck = Vector3r::Zero();
+    Vector3r head = Vector3r::Zero();
+    Vector3r head_top = Vector3r::Zero();
+    Vector3r left_arm = Vector3r::Zero();
+    Vector3r left_forearm = Vector3r::Zero();
+    Vector3r left_hand = Vector3r::Zero();
+    Vector3r right_arm = Vector3r::Zero();
+    Vector3r right_forearm = Vector3r::Zero();
+    Vector3r right_hand = Vector3r::Zero();
+    
+    Vector3r right_hand_tip = Vector3r::Zero();
+    Vector3r left_hand_tip = Vector3r::Zero();
+    Vector3r right_foot_tip = Vector3r::Zero();
+    Vector3r left_foot_tip = Vector3r::Zero();
+    
+    Vector3r_arr()
+    {}
+    
+    Vector3r_arr(const Vector3r& dronePos_val, const Vector3r& droneOrient_val, const Vector3r& humanPos_val, const Vector3r& hip_val,
+                 const Vector3r& right_up_leg_val, const Vector3r& right_leg_val, const Vector3r& right_foot_val,
+                 const Vector3r& left_up_leg_val, const Vector3r& left_leg_val, const Vector3r& left_foot_val,
+                 const Vector3r& spine1_val, const Vector3r& neck_val, const Vector3r& head_val, const Vector3r& head_top_val,
+                 const Vector3r& left_arm_val, const Vector3r& left_forearm_val, const Vector3r& left_hand_val,
+                 const Vector3r& right_arm_val, const Vector3r& right_forearm_val, const Vector3r& right_hand_val,
+                 const Vector3r& right_hand_tip_val, const Vector3r& left_hand_tip_val, const Vector3r& right_foot_tip_val, const Vector3r& left_foot_tip_val):
+    dronePos(dronePos_val), droneOrient(droneOrient_val), humanPos(humanPos_val),
+    right_up_leg(right_up_leg_val), right_leg(right_leg_val), right_foot(right_foot_val),
+    left_up_leg(left_up_leg_val), left_leg(left_leg_val), left_foot(left_foot_val),
+    spine1(spine1_val), neck(neck_val), head(head_val), head_top(head_top_val),
+    left_arm(left_arm_val) , left_forearm(left_forearm_val), left_hand(left_hand_val),
+    right_arm(right_arm_val), right_forearm(right_forearm_val), right_hand(right_hand_val),
+    right_hand_tip(right_hand_tip_val), left_hand_tip(left_hand_tip_val), right_foot_tip(right_foot_tip_val), left_foot_tip(left_foot_tip_val)
+    {
+    }
+};
+    
 struct CollisionResponseInfo {
     unsigned int collision_count_raw = 0;
     unsigned int collision_count_non_resting = 0;

@@ -122,6 +122,28 @@ Vector3r MultirotorRpcLibClient::getPosition()
 {
     return static_cast<rpc::client*>(getClient())->call("getPosition").as<MultirotorRpcLibAdapators::Vector3r>().to();
 }
+    
+//sena was here
+Vector3r MultirotorRpcLibClient::getHumanPosition()
+{
+    return static_cast<rpc::client*>(getClient())->call("getHumanPosition").as<MultirotorRpcLibAdapators::Vector3r>().to();
+}
+
+Vector3r_arr MultirotorRpcLibClient::getBonePositions()
+{
+    return static_cast<rpc::client*>(getClient())->call("getBonePositions").as<MultirotorRpcLibAdapators::Vector3r_arr>().to();
+}
+    
+Vector3r MultirotorRpcLibClient::getDroneWorldOrientation()
+{
+    return static_cast<rpc::client*>(getClient())->call("getDroneWorldOrientation").as<MultirotorRpcLibAdapators::Vector3r>().to();
+}
+    
+Vector3r MultirotorRpcLibClient::getDroneWorldPosition()
+{
+    return static_cast<rpc::client*>(getClient())->call("getDroneWorldPosition").as<MultirotorRpcLibAdapators::Vector3r>().to();
+}
+    
 Vector3r MultirotorRpcLibClient::getVelocity()
 {
     return static_cast<rpc::client*>(getClient())->call("getVelocity").as<MultirotorRpcLibAdapators::Vector3r>().to();

@@ -42,6 +42,7 @@ private:
     std::unique_ptr<RecordingFile> recording_file_;
     const msr::airlib::Kinematics::State* kinematics_;
     VehiclePawnWrapper* wrapper_;
+    const msr::airlib::Vector3r_arr* bonesPosPtr; //sena was here
 
     msr::airlib::TTimePoint last_screenshot_on_;
     msr::airlib::Pose last_pose_;

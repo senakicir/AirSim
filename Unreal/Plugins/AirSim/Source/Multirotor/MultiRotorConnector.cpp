@@ -14,47 +14,47 @@
 
 #endif
 
-#include "FlyingPawn.h" 
+#include "FlyingPawn.h"
 #include "AirBlueprintLib.h"
 #include "NedTransform.h"
 #include <exception>
 
 using namespace msr::airlib;
 
-MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* vehicle_pawn_wrapper, 
-    msr::airlib::MultiRotorParams* vehicle_params, bool enable_rpc, 
-    std::string api_server_address, uint16_t api_server_port,
-    UManualPoseController* manual_pose_controller)
+MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* vehicle_pawn_wrapper,
+                                         msr::airlib::MultiRotorParams* vehicle_params, bool enable_rpc,
+                                         std::string api_server_address, uint16_t api_server_port,
+                                         UManualPoseController* manual_pose_controller)
 {
     enable_rpc_ = enable_rpc;
     api_server_address_ = api_server_address;
     api_server_port_ = api_server_port;
     vehicle_pawn_wrapper_ = vehicle_pawn_wrapper;
     manual_pose_controller_ = manual_pose_controller;
-
+    
     //reset roll & pitch of vehicle as multirotors required to be on plain surface at start
     Pose pose = vehicle_pawn_wrapper->getPose();
     float pitch, roll, yaw;
     VectorMath::toEulerianAngle(pose.orientation, pitch, roll, yaw);
     pose.orientation = VectorMath::toQuaternion(0, 0, yaw);
     vehicle_pawn_wrapper->setPose(pose, false);
-
+    
     vehicle_params_ = vehicle_params;
-
-    vehicle_.initialize(vehicle_params_, vehicle_pawn_wrapper_->getPose(), 
-        vehicle_pawn_wrapper_->getHomePoint(), environment_);
-
+    
+    vehicle_.initialize(vehicle_params_, vehicle_pawn_wrapper_->getPose(),
+                        vehicle_pawn_wrapper_->getHomePoint(), environment_);
+    
     controller_ = static_cast<msr::airlib::DroneControllerBase*>(vehicle_.getController());
-
+    
     if (controller_->getRemoteControlID() >= 0)
         detectUsbRc();
-
+    
     rotor_count_ = vehicle_.wrenchVertexCount();
     rotor_info_.assign(rotor_count_, RotorInfo());
-
+    
     last_pose_ = pending_pose_ = last_debug_pose_ = Pose::nanPose();
     pending_pose_status_ = PendingPoseStatus::NonePending;
-
+    
     std::string message;
     if (!vehicle_.getController()->isAvailable(message)) {
         UAirBlueprintLib::LogMessage(FString("Vehicle was not initialized: "), FString(message.c_str()), LogDebugLevel::Failure);
@@ -80,33 +80,33 @@ msr::airlib::VehicleControllerBase* MultiRotorConnector::getController()
 void MultiRotorConnector::detectUsbRc()
 {
     joystick_.getJoyStickState(controller_->getRemoteControlID(), joystick_state_);
-
+    
     rc_data_.is_initialized = joystick_state_.is_initialized;
-
+    
     if (rc_data_.is_initialized)
         UAirBlueprintLib::LogMessage(TEXT("RC Controller on USB: "), "Detected", LogDebugLevel::Informational);
     else
-        UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ", 
-            std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
+        UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ",
+                                           std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
 }
 
 const msr::airlib::RCData& MultiRotorConnector::getRCData()
 {
     joystick_.getJoyStickState(controller_->getRemoteControlID(), joystick_state_);
-
+    
     rc_data_.is_valid = joystick_state_.is_valid;
-
+    
     if (rc_data_.is_valid) {
         //-1 to 1 --> 0 to 1
         rc_data_.throttle = (joystick_state_.left_y + 1) / 2;
-
+        
         //convert 0 to 1 -> -1 to 1
-        rc_data_.yaw = joystick_state_.left_x; 
+        rc_data_.yaw = joystick_state_.left_x;
         rc_data_.roll = joystick_state_.right_x;
         rc_data_.pitch = - joystick_state_.right_y;
-
+        
         //TODO: add fields for z axis?
-
+        
         //last 8 bits are not used for now
         rc_data_.switch1 = joystick_state_.buttons & 0x0001 ? 1 : 0; //front-upper-left
         rc_data_.switch2 = joystick_state_.buttons & 0x0002 ? 1 : 0; //front-upper-right
@@ -116,59 +116,78 @@ const msr::airlib::RCData& MultiRotorConnector::getRCData()
         rc_data_.switch6 = joystick_state_.buttons & 0x0020 ? 1 : 0; //top-right-right
         rc_data_.switch7 = joystick_state_.buttons & 0x0040 ? 1 : 0; //top-left-left
         rc_data_.switch8 = joystick_state_.buttons & 0x0080 ? 1 : 0; //top-right-left
-
-
+        
+        
         UAirBlueprintLib::LogMessageString("Joystick (T,R,P,Y,Buttons): ", Utils::stringf("%f, %f, %f %f, %d",
-            rc_data_.throttle, rc_data_.roll, rc_data_.pitch, rc_data_.yaw, joystick_state_.buttons), LogDebugLevel::Informational);
-
+                                                                                          rc_data_.throttle, rc_data_.roll, rc_data_.pitch, rc_data_.yaw, joystick_state_.buttons), LogDebugLevel::Informational);
+        
         //TODO: should below be at controller level info?
         UAirBlueprintLib::LogMessageString("RC Mode: ", rc_data_.switch1 == 0 ? "Angle" : "Rate", LogDebugLevel::Informational);
-
+        
         UAirBlueprintLib::LogMessage(FString("Joystick (Switches): "), FString::FromInt(joystick_state_.buttons) + ", " +
-            FString::FromInt(rc_data_.switch1) + ", " + FString::FromInt(rc_data_.switch2) + ", " + FString::FromInt(rc_data_.switch3) + ", " + FString::FromInt(rc_data_.switch4)
-            + ", " + FString::FromInt(rc_data_.switch5) + ", " + FString::FromInt(rc_data_.switch6) + ", " + FString::FromInt(rc_data_.switch7) + ", " + FString::FromInt(rc_data_.switch8),
-            LogDebugLevel::Informational);
+                                     FString::FromInt(rc_data_.switch1) + ", " + FString::FromInt(rc_data_.switch2) + ", " + FString::FromInt(rc_data_.switch3) + ", " + FString::FromInt(rc_data_.switch4)
+                                     + ", " + FString::FromInt(rc_data_.switch5) + ", " + FString::FromInt(rc_data_.switch6) + ", " + FString::FromInt(rc_data_.switch7) + ", " + FString::FromInt(rc_data_.switch8),
+                                     LogDebugLevel::Informational);
     }
     //else don't waste time
-
+    
     return rc_data_;
 }
 
 void MultiRotorConnector::updateRenderedState(float dt)
 {
     //Utils::log("------Render tick-------");
-
+    //sena was here
+    const Vector3r_arr& bone_positions = (vehicle_pawn_wrapper_->getBonePositions());
+    vehicle_.setBonePositions(bone_positions);
+    
+    /*
+     //sena was here
+     const FVector humanPosition_f = vehicle_pawn_wrapper_->getHumanPosition();
+     Vector3r humanPosition = Vector3r(humanPosition_f.X, humanPosition_f.Y, humanPosition_f.Z);
+     vehicle_.setHumanPosition(humanPosition);
+     //sena was here
+     const FVector droneWorldPosition_f = vehicle_pawn_wrapper_->getDroneWorldPosition();
+     Vector3r droneWorldPosition = Vector3r(droneWorldPosition_f.X, droneWorldPosition_f.Y, droneWorldPosition_f.Z);
+     vehicle_.setDroneWorldPosition(droneWorldPosition);
+     //sena was here
+     const FRotator droneWorldOrientation_f = vehicle_pawn_wrapper_->getDroneWorldOrientation();
+     float pi = 3.14159265358979323846;
+     Vector3r droneWorldOrientation = Vector3r(droneWorldOrientation_f.Roll*pi/180, droneWorldOrientation_f.Pitch*pi/180, droneWorldOrientation_f.Yaw*pi/180);
+     vehicle_.setDroneWorldOrientation(droneWorldOrientation);
+     */
+    
     //move collision info from rendering engine to vehicle
     const CollisionInfo& collision_info = vehicle_pawn_wrapper_->getCollisionInfo();
     vehicle_.setCollisionInfo(collision_info);
-
+    
     //update ground level
     if (manual_pose_controller_ != nullptr && manual_pose_controller_->getActor() == vehicle_pawn_wrapper_->getPawn()) {
         FVector delta_position;
         FRotator delta_rotation;
-
+        
         manual_pose_controller_->updateDeltaPosition(dt);
         manual_pose_controller_->getDeltaPose(delta_position, delta_rotation);
         manual_pose_controller_->resetDelta();
         Vector3r delta_position_ned = NedTransform::toNedMeters(delta_position, false);
         Quaternionr delta_rotation_ned = NedTransform::toQuaternionr(delta_rotation.Quaternion(), true);
-
+        
         auto pose = vehicle_.getPose();
         pose.position += delta_position_ned;
         pose.orientation = pose.orientation * delta_rotation_ned;
         pose.orientation.normalize();
-
+        
         vehicle_.setPose(pose);
     }
-
+    
     if (pending_pose_status_ == PendingPoseStatus::RenderStatePending)
         vehicle_.setPose(pending_pose_);
-        
+    
     last_pose_ = vehicle_.getPose();
     
     collision_response_info = vehicle_.getCollisionResponseInfo();
     last_debug_pose_ = controller_->getDebugPose();
-
+    
     //update rotor poses
     for (unsigned int i = 0; i < rotor_count_; ++i) {
         const auto& rotor_output = vehicle_.getRotorOutput(i);
@@ -178,9 +197,9 @@ void MultiRotorConnector::updateRenderedState(float dt)
         info->rotor_thrust = rotor_output.thrust;
         info->rotor_control_filtered = rotor_output.control_signal_filtered;
     }
-
+    
     controller_->getStatusMessages(controller_messages_);
-
+    
     if (controller_->getRemoteControlID() >= 0)
         controller_->setRCData(getRCData());
 }
@@ -193,7 +212,7 @@ void MultiRotorConnector::updateRendering(float dt)
     catch (std::exception &e) {
         UAirBlueprintLib::LogMessage(FString(e.what()), TEXT(""), LogDebugLevel::Failure, 30);
     }
-
+    
     if (!VectorMath::hasNan(last_pose_)) {
         if (pending_pose_status_ ==  PendingPoseStatus::RenderPending) {
             vehicle_pawn_wrapper_->setPose(last_pose_, pending_pose_collisions_);
@@ -201,21 +220,21 @@ void MultiRotorConnector::updateRendering(float dt)
         }
         else
             vehicle_pawn_wrapper_->setPose(last_pose_, false);
-
+        
         vehicle_pawn_wrapper_->setDebugPose(last_debug_pose_);
     }
-
+    
     //update rotor animations
     for (unsigned int i = 0; i < rotor_count_; ++i) {
         RotorInfo* info = &rotor_info_[i];
         static_cast<AFlyingPawn*>(vehicle_pawn_wrapper_->getPawn())->
-            setRotorSpeed(i, info->rotor_speed * info->rotor_direction);
+        setRotorSpeed(i, info->rotor_speed * info->rotor_direction);
     }
-
+    
     for (auto i = 0; i < controller_messages_.size(); ++i) {
         UAirBlueprintLib::LogMessage(FString(controller_messages_[i].c_str()), TEXT(""), LogDebugLevel::Success, 30);
     }
-
+    
     if (manual_pose_controller_ != nullptr && manual_pose_controller_->getActor() == vehicle_pawn_wrapper_->getPawn()) {
         UAirBlueprintLib::LogMessage(TEXT("Collision Count:"), FString::FromInt(vehicle_pawn_wrapper_->getCollisionInfo().collision_count), LogDebugLevel::Failure);
     }
@@ -238,7 +257,7 @@ Pose MultiRotorConnector::getPose()
 }
 
 bool MultiRotorConnector::setSegmentationObjectID(const std::string& mesh_name, int object_id,
-    bool is_name_regex)
+                                                  bool is_name_regex)
 {
     bool success;
     UAirBlueprintLib::RunCommandOnGameThread([mesh_name, object_id, is_name_regex, &success]() {
@@ -257,21 +276,21 @@ void MultiRotorConnector::startApiServer()
 {
     if (enable_rpc_) {
         controller_cancelable_.reset(new msr::airlib::DroneApi(this));
-
+        
 #ifdef AIRLIB_NO_RPC
-    rpclib_server_.reset(new msr::airlib::DebugApiServer());
+        rpclib_server_.reset(new msr::airlib::DebugApiServer());
 #else
-    rpclib_server_.reset(new msr::airlib::MultirotorRpcLibServer(
-        controller_cancelable_.get(), api_server_address_, api_server_port_));
+        rpclib_server_.reset(new msr::airlib::MultirotorRpcLibServer(
+                                                                     controller_cancelable_.get(), api_server_address_, api_server_port_));
 #endif
-
+        
         rpclib_server_->start();
-        UAirBlueprintLib::LogMessageString("API server started at ", 
-            api_server_address_ == "" ? "(default)" : api_server_address_.c_str(), LogDebugLevel::Informational);
+        UAirBlueprintLib::LogMessageString("API server started at ",
+                                           api_server_address_ == "" ? "(default)" : api_server_address_.c_str(), LogDebugLevel::Informational);
     }
     else
         UAirBlueprintLib::LogMessageString("API server is disabled in settings", "", LogDebugLevel::Informational);
-
+    
 }
 void MultiRotorConnector::stopApiServer()
 {
@@ -293,10 +312,10 @@ void MultiRotorConnector::reset()
 {
     UAirBlueprintLib::RunCommandOnGameThread([this]() {
         VehicleConnectorBase::reset();
-
+        
         //TODO: should this be done in MultiRotor.hpp
         //controller_->reset();
-
+        
         rc_data_ = RCData();
         vehicle_pawn_wrapper_->reset();    //we do flier resetPose so that flier is placed back without collisions
         vehicle_.reset();
@@ -306,7 +325,7 @@ void MultiRotorConnector::reset()
 void MultiRotorConnector::update()
 {
     VehicleConnectorBase::update();
-
+    
     //this is high frequency physics tick, flier gets ticked at rendering frame rate
     vehicle_.update();
 }

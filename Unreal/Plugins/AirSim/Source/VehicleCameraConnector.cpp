@@ -15,7 +15,8 @@ VehicleCameraConnector::VehicleCameraConnector(APIPCamera* camera)
 VehicleCameraConnector::~VehicleCameraConnector()
 {}
 
-msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getImage(VehicleCameraConnector::ImageType image_type, bool pixels_as_float, bool compress)
+//sena was here: Vector3r_arr bonePos
+msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getImage(VehicleCameraConnector::ImageType image_type, bool pixels_as_float, bool compress, const Vector3r_arr *bonePos)
 {
 
     if (camera_== nullptr) {
@@ -24,11 +25,11 @@ msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getImage(V
         return response;
     }
 
-    return getSceneCaptureImage(image_type, pixels_as_float, compress, false);
+    return getSceneCaptureImage(image_type, pixels_as_float, compress, false, bonePos); //sena was here
 }
 
-msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getSceneCaptureImage(VehicleCameraConnector::ImageType image_type, 
-    bool pixels_as_float, bool compress, bool use_safe_method)
+//sena was here
+msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getSceneCaptureImage(VehicleCameraConnector::ImageType image_type, bool pixels_as_float, bool compress, bool use_safe_method, const Vector3r_arr *bonePos)
 {
     bool visibilityChanged = false;
     if (! camera_->getCameraTypeEnabled(image_type)) {
@@ -66,9 +67,11 @@ msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getSceneCa
     TArray<uint8> image_uint8;
     TArray<float> image_float;
 
-    request.getScreenshot(textureTarget, image_uint8, image_float, pixels_as_float, compress, width, height);
-
     ImageResponse response;
+    Vector3r_arr accurate_bones;
+    request.getScreenshot(textureTarget, image_uint8, image_float, pixels_as_float, compress, width, height, bonePos, accurate_bones);
+    if(bonePos != nullptr)
+        response.bones = accurate_bones; //sena was here
     response.time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
     response.image_data_uint8 = std::vector<uint8_t>(image_uint8.GetData(), image_uint8.GetData() + image_uint8.Num());
     response.image_data_float = std::vector<float>(image_float.GetData(), image_float.GetData() + image_float.Num());
