@@ -1,8 +1,10 @@
 from projective_transform_plot import *
 from math import *
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
 
 
 def EulerToRotationMatrix(roll, pitch, yaw):
@@ -11,24 +13,27 @@ def EulerToRotationMatrix(roll, pitch, yaw):
                     [-sin(pitch), cos(pitch)*sin(roll), cos(pitch)*cos(roll)]])
 
 
+
 ##read lines from file
-filepath = '../../../Airsim/2017-11-26/airsim_rec2017-11-26-18-58-49.txt'
-filepath2 = '../../../Airsim/2017-11-26/plots/groundtruth.txt'
-filepath3 = '../../../Airsim/2017-11-26/plots'
+DATE = '2017-11-27-23-04-39'
+filepath = '../../../Airsim/'+DATE+'/airsim_rec.txt'
+filepath2 = '../../../Airsim/'+DATE+'/plots/groundtruth.txt'
+filepath3 = '../../../Airsim/'+DATE+'/plots'
+if not os.path.exists(filepath3):
+    os.makedirs(filepath3)
 #filepath = 'temp/file.txt'
 #filepath2 = 'temp/plots/groundtruth.txt'
 #filepath3 = 'temp/plots'
 
 SIZE_X = 1280
 SIZE_Y = 720
-CAMERA_OFFSET_X = 56
-CAMERA_OFFSET_Y = 12.5
+CAMERA_OFFSET_X = 46
+CAMERA_OFFSET_Y = 0
 CAMERA_OFFSET_Z = 0
 CAMERA_ROLL_OFFSET = 0
 CAMERA_PITCH_OFFSET = -pi/4
 CAMERA_YAW_OFFSET = 0
 FLIP_X_Y = np.array([[0,-1,0],[1,0,0],[0,0,1]])
-
 
 f  = open(filepath, 'r')
 f_output = open(filepath2, 'w')
@@ -38,9 +43,11 @@ R_cam = EulerToRotationMatrix (CAMERA_ROLL_OFFSET, CAMERA_PITCH_OFFSET, CAMERA_Y
 R_cam = FLIP_X_Y@R_cam@(FLIP_X_Y.T)
 C_cam = np.array([[CAMERA_OFFSET_X, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z]]).T
 C_cam = FLIP_X_Y.dot(C_cam)
+next(f)
 for line in f:
     linecount = linecount + 1
     numbers = line.strip().split('\t')
+    numbers = numbers[:-1]
     numbers = list(map(float, numbers))
     
     #take the drone position and orientation
@@ -67,7 +74,7 @@ for line in f:
     K = np.array([[fx,0,px],[0,fy,py],[0,0,1]])
 
     ##Take projective transform
-    X = numbers[7:]
+    X = numbers[10:]
     X = np.reshape(X, (-1, 3)).T
     X = FLIP_X_Y.dot(X)
     T = np.linalg.inv(R_drone@R_cam)@(X-R_drone@C_cam-C_drone)
@@ -79,7 +86,7 @@ for line in f:
     x[1,:] = X2
     x = x[0:2, :]
 
-    PlotProjection(x, linecount, filepath3)
+# PlotProjection(x, linecount, filepath3)
     SuperImposeOnImage(x, filepath3, linecount)
     
     x = x.flatten('F')

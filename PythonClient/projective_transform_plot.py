@@ -21,7 +21,9 @@ def PlotDroneAndHuman(numbers, linecount, location):
     index = numbers[0]
     drone = numbers[1:4]
     drone = np.asarray(drone, dtype=np.float32)
-    joints = numbers[7:]
+    human = numbers[7:10]
+    human = np.asarray(human, dtype=np.float32)
+    joints = numbers[10:]
     joints = np.reshape(joints, (-1, 3)).T
     
     fig = plt.figure()
@@ -42,10 +44,17 @@ def PlotDroneAndHuman(numbers, linecount, location):
     ax.set_zlim(mid_z - max_range, mid_z + max_range)
 
     #plot drone
-    ax.scatter(drone[0], drone[1], drone[2], c='r', marker='o')
+    plot1 = ax.scatter(drone[0], drone[1], drone[2], c='r', marker='o')
     #plot joints
     for i, bone in enumerate(bones_h36m):
-        ax.plot(joints[0,bone], joints[1,bone], joints[2,bone], c='b', marker='^')
+        plot2 = ax.plot(joints[0,bone], joints[1,bone], joints[2,bone], c='b', marker='^')
+
+    text1 = 'human position:\n'+str(human[0])+'\n'+str(human[1])+'\n'+str(human[2])
+    text2 = 'drone position:\n'+str(drone[0])+'\n'+str(drone[1])+'\n'+str(drone[2])
+
+    plt.legend((plot1,plot1),(text1,text2), bbox_to_anchor=(1.6, 0.7))
+    
+
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -53,15 +62,17 @@ def PlotDroneAndHuman(numbers, linecount, location):
     lol = 'Image no: '+str(int(index))
     ax.set_title(lol)
 
-    filename_photo = location + '/../img_' + str(linecount)  + '.png'
+    filename_photo = location + '/../images/img_' + str(linecount)  + '.png'
     im = plt.imread(filename_photo)
     gs2 = gridspec.GridSpec(1, 1)
     ax2 = fig.add_subplot(gs2[0])
     ax2.imshow(im)
 
+
     gs1.tight_layout(fig, rect=[0, 0, 0.6, 0.6])
     gs2.tight_layout(fig, rect=[0.4, 0.4, 1, 1])
     filename = location + '/3d' + str(linecount) + '.png'
+
     plt.savefig(filename)
     plt.close()
 
@@ -86,7 +97,7 @@ def PlotProjection(numbers, linecount, location):
     plt.close()
 
 def SuperImposeOnImage(numbers, location, linecount):
-    filename = location + '/../img_' + str(linecount)  + '.png'
+    filename = location + '/../images/img_' + str(linecount)  + '.png'
     im = plt.imread(filename)
     
     fig = plt.figure()

@@ -13,10 +13,10 @@ def TakePhoto(index):
     AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
     SaveBonePositions(num_of_photos, bone_pos, f_output)
 
-Z_POS = -1.8
+Z_POS = -4
 drone_vel = 0
 DELTA_T = 1
-n = 3
+n = 5
 
 #connect to the AirSim simulator
 client = MultirotorClient()
@@ -25,7 +25,6 @@ client.enableApiControl(True)
 client.armDisarm(True)
 print('Taking off')
 client.takeoff()
-client.moveToZ(Z_POS, 2, 2)
 
 #find initial human and drone positions, and find the distance between them
 positions = client.getBonePositions()
@@ -114,12 +113,12 @@ while True:
         rotationAmount = rotationAmount - 360
 
     #update drone position
-    prev_x = new_x
-    prev_y = new_y
-    prev_z = new_z
+    #prev_x = new_x
+    #prev_y = new_y
+    #prev_z = new_z
     new_x = polar_x + predicted_human_x
     new_y = polar_y + predicted_human_y
-    new_z = new_z - predicted_human_z
+    new_z = new_z - human_pos_z
     
     #move drone!
     client.moveToPosition(new_x, new_y, new_z, drone_vel, 0, DrivetrainType.MaxDegreeOfFreedom, YawMode(False, rotationAmount/pi), -1, 0)

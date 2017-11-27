@@ -1,37 +1,41 @@
-from PythonClient import *
+from AirSimClient import *
 from math import *
 
 import time
 import cv2 as cv2
+from helpers import *
 
 #a small function to take photos and save them with name py[index].png to folder temp
 def TakePhoto(index):
-    response = client.simGetImage(0, AirSimImageType.Scene)
-    rawImage = np.fromstring(response, np.uint8)
-    loc = 'temp/py' + str(index) + '.png'
-    AirSimClient.write_file(os.path.normpath(loc), rawImage)
-    return response
+    response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
+    response = response[0]
+    bone_pos = client.getBonePositions()#response.bones
+    loc = 'temp/img_' + str(index) + '.png'
+    AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
+    SaveBonePositions(num_of_photos, bone_pos, f_output)
 
-def doNothing(x):
-    pass
 
 Z_POS = -2
 DELTA_T = 1
 
 #connect to the AirSim simulator
-client = AirSimClient()
+client = MultirotorClient()
 client.confirmConnection()
 client.enableApiControl(True)
 client.armDisarm(True)
 print('Taking off')
 client.takeoff()
 
-#find initial human and drone positions, and find the distance between them
+#move to Z_POS
 client.moveToPosition(0,0,Z_POS, 2, 1)
-drone_loc = client.getDroneWorldPosition()
-human_loc = client.getHumanPosition()
+
+#find initial human and drone positions, and find the distance between them
+positions = client.getBonePositions()
+drone_loc = positions.dronePos
+human_loc = positions.humanPos
+
 HUMAN_OFFSET = human_loc
-RADIUS =  sqrt((drone_loc.x_val-human_loc.x_val)**2 + (drone_loc.y_val-human_loc.y_val)**2) / 100
+RADIUS =  sqrt((drone_loc[b'x_val']-human_loc[b'x_val'])**2 + (drone_loc[b'y_val']-human_loc[b'y_val'])**2) / 100
 print ('Drone started %.2f m. from the hiker.\n' % RADIUS)
 
 #set up plot stuff
@@ -58,14 +62,15 @@ while True:
     if k == 27:
         break
     #get human position, delta human position, human drone_velcity
-    human_loc = client.getHumanPosition()
+    positions = client.getBonePositions()
+    human_loc = positions.humanPos
     prev_human_x = human_pos_x
     prev_human_y = human_pos_y
     prev_human_z = human_pos_z
     #subtract initial location of human from current location. We're taking the initial location as the origin of our coord. system.
-    human_pos_x = (human_loc.x_val - HUMAN_OFFSET.x_val)/100
-    human_pos_y = (human_loc.y_val - HUMAN_OFFSET.y_val)/100
-    human_pos_z = (human_loc.z_val - HUMAN_OFFSET.z_val)/100
+    human_pos_x = (human_loc[b'x_val'] - HUMAN_OFFSET[b'x_val'])/100
+    human_pos_y = (human_loc[b'y_val'] - HUMAN_OFFSET[b'y_val'])/100
+    human_pos_z = (human_loc[b'z_val'] - HUMAN_OFFSET[b'z_val'])/100
     delta_human_x = (human_pos_x - prev_human_x) #how much the human moved in one iteration
     delta_human_y = (human_pos_y - prev_human_y)
     delta_human_z = (human_pos_z - prev_human_z)
@@ -105,7 +110,7 @@ while True:
 
     #angle required to face the hiker
     desiredAngle = input_degree + 180
-    angle = client.getRollPitchYaw()
+    angle = client.getPitchRollYaw()
     rotationAmount = (desiredAngle - degrees(angle[2]))%360
     if rotationAmount > 180:
         rotationAmount = rotationAmount - 360
@@ -118,12 +123,13 @@ while True:
         time.sleep(DELTA_T - elapsed_time)
 
     #lets see if we got farther (mostly plot stuff)
+    positions = client.getBonePositions()
     olddrone_loc = drone_loc
-    drone_loc = client.getDroneWorldPosition()
-    human_loc = client.getHumanPosition()
-    current_radius = sqrt((drone_loc.x_val-human_loc.x_val)**2 + (drone_loc.y_val-human_loc.y_val)**2) / 100
+    drone_loc = positions.dronePos
+    human_loc = positions.humanPos
+    current_radius = sqrt((drone_loc[b'x_val']-human_loc[b'x_val'])**2 + (drone_loc[b'y_val']-human_loc[b'y_val'])**2) / 100
     drone_human_distance.append(current_radius)
-    real_drone_vel = sqrt((drone_loc.x_val - olddrone_loc.x_val)**2 + (drone_loc.y_val - olddrone_loc.y_val)**2 +  (drone_loc.z_val - olddrone_loc.z_val)**2 )/100
+    real_drone_vel = sqrt((drone_loc[b'x_val'] - olddrone_loc[b'x_val'])**2 + (drone_loc[b'y_val'] - olddrone_loc[b'y_val'])**2 +  (drone_loc[b'z_val'] - olddrone_loc[b'z_val'])**2 )/100
     drone_velcity_arr.append(real_drone_vel)
 
     print(current_radius, human_vel, drone_vel, real_drone_vel)
