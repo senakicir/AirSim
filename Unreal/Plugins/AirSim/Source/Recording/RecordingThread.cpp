@@ -11,7 +11,7 @@ std::unique_ptr<FRecordingThread> FRecordingThread::instance_;
 
 
 FRecordingThread::FRecordingThread()
-    : stop_task_counter_(0), camera_(nullptr), recording_file_(nullptr), kinematics_(nullptr), is_ready_(false)
+: stop_task_counter_(0), camera_(nullptr), recording_file_(nullptr), kinematics_(nullptr), is_ready_(false)
 {
     thread_.reset(FRunnableThread::Create(this, TEXT("FRecordingThread"), 0, TPri_BelowNormal)); // Windows default, possible to specify more priority
 }
@@ -20,21 +20,20 @@ FRecordingThread::FRecordingThread()
 void FRecordingThread::startRecording(msr::airlib::VehicleCameraBase* camera, const msr::airlib::Kinematics::State* kinematics, const RecordingSettings& settings, std::vector <std::string> columns, VehiclePawnWrapper* wrapper)
 {
     stopRecording();
-
+    
     //TODO: check FPlatformProcess::SupportsMultithreading()?
-
+    
     instance_.reset(new FRecordingThread());
     instance_->camera_ = camera;
     instance_->kinematics_ = kinematics;
-    instance_->bonesPosPtr = nullptr; //sena was here
     instance_->settings_ = settings;
     instance_->wrapper_ = wrapper;
-
+    instance_->bonePos = nullptr;
     instance_->last_screenshot_on_ = 0;
     instance_->last_pose_ = msr::airlib::Pose();
-
+    
     instance_->is_ready_ = true;
-
+    
     instance_->recording_file_.reset(new RecordingFile(columns));
     instance_->recording_file_->startRecording();
 }
@@ -81,21 +80,21 @@ uint32 FRecordingThread::Run()
             {
                 last_screenshot_on_ = msr::airlib::ClockFactory::get()->nowNanos();
                 last_pose_ = kinematics_->pose;
-
+                
                 // todo: should we go as fast as possible, or should we limit this to a particular number of
                 // frames per second?
-                auto response = camera_->getImage(msr::airlib::VehicleCameraBase::ImageType::Scene, false, true, bonesPosPtr);
+                auto response = camera_->getImage(msr::airlib::VehicleCameraBase::ImageType::Scene, false, true, bonePos); // sena was here
                 msr::airlib::Vector3r_arr bonePos = response.bones;
-
+                
                 TArray<uint8_t> image_data;
                 image_data.Append(response.image_data_uint8.data(), response.image_data_uint8.size());
                 recording_file_->appendRecord(image_data, wrapper_, bonePos);
             }
         }
     }
-
+    
     recording_file_.reset();
-
+    
     return 0;
 }
 
@@ -118,3 +117,4 @@ void FRecordingThread::EnsureCompletion()
     thread_->WaitForCompletion();
     //UAirBlueprintLib::LogMessage(TEXT("Stopped recording thread"), TEXT(""), LogDebugLevel::Success);
 }
+

@@ -138,7 +138,7 @@ void MultiRotorConnector::updateRenderedState(float dt)
 {
     //Utils::log("------Render tick-------");
     //sena was here
-    const Vector3r_arr& bone_positions = (vehicle_pawn_wrapper_->getBonePositions());
+    const Vector3r_arr& bone_positions = (vehicle_pawn_wrapper_->bones);
     vehicle_.setBonePositions(bone_positions);
     
     /*
@@ -146,16 +146,18 @@ void MultiRotorConnector::updateRenderedState(float dt)
      const FVector humanPosition_f = vehicle_pawn_wrapper_->getHumanPosition();
      Vector3r humanPosition = Vector3r(humanPosition_f.X, humanPosition_f.Y, humanPosition_f.Z);
      vehicle_.setHumanPosition(humanPosition);
-     //sena was here
-     const FVector droneWorldPosition_f = vehicle_pawn_wrapper_->getDroneWorldPosition();
-     Vector3r droneWorldPosition = Vector3r(droneWorldPosition_f.X, droneWorldPosition_f.Y, droneWorldPosition_f.Z);
-     vehicle_.setDroneWorldPosition(droneWorldPosition);
-     //sena was here
-     const FRotator droneWorldOrientation_f = vehicle_pawn_wrapper_->getDroneWorldOrientation();
-     float pi = 3.14159265358979323846;
-     Vector3r droneWorldOrientation = Vector3r(droneWorldOrientation_f.Roll*pi/180, droneWorldOrientation_f.Pitch*pi/180, droneWorldOrientation_f.Yaw*pi/180);
-     vehicle_.setDroneWorldOrientation(droneWorldOrientation);
      */
+    
+     //sena was here
+    const FVector droneWorldPosition_f = vehicle_pawn_wrapper_->getDroneWorldPosition();
+    Vector3r droneWorldPosition = Vector3r(droneWorldPosition_f.X, droneWorldPosition_f.Y, droneWorldPosition_f.Z);
+    vehicle_.setDroneWorldPosition(droneWorldPosition);
+    
+    //sena was here
+    const FRotator droneWorldOrientation_f = vehicle_pawn_wrapper_->getDroneWorldOrientation();
+    float pi = 3.14159265358979323846;
+    Vector3r droneWorldOrientation = Vector3r(droneWorldOrientation_f.Roll*pi/180, droneWorldOrientation_f.Pitch*pi/180, droneWorldOrientation_f.Yaw*pi/180);
+    vehicle_.setDroneWorldOrientation(droneWorldOrientation);
     
     //move collision info from rendering engine to vehicle
     const CollisionInfo& collision_info = vehicle_pawn_wrapper_->getCollisionInfo();

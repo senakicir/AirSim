@@ -146,15 +146,15 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
 
 void ASimModeWorldMultiRotor::Tick(float DeltaSeconds)
 {
-    Super::Tick(DeltaSeconds);
     getFpvVehiclePawnWrapper()->setLogLine(getLogString());
+    Super::Tick(DeltaSeconds);
 }
 
 //sena was here
 std::string ASimModeWorldMultiRotor::getLogString()
 {
     const msr::airlib::Kinematics::State* kinematics = getFpvVehiclePawnWrapper()->getKinematics();
-    msr::airlib::Vector3r_arr bones = getFpvVehiclePawnWrapper()->bones;
+    msr::airlib::Vector3r_arr bones = getFpvVehiclePawnWrapper()->getBonePositions();
     uint64_t timestamp_millis = static_cast<uint64_t>(msr::airlib::ClockFactory::get()->nowNanos() / 1.0E6);
     
     //TODO: because this bug we are using alternative code with stringstream
@@ -168,6 +168,9 @@ std::string ASimModeWorldMultiRotor::getLogString()
     .append(std::to_string(bones.droneOrient.x())).append("\t")
     .append(std::to_string(bones.droneOrient.y())).append("\t")
     .append(std::to_string(bones.droneOrient.z())).append("\t")
+    .append(std::to_string(bones.humanPos.x())).append("\t")
+    .append(std::to_string(bones.humanPos.y())).append("\t")
+    .append(std::to_string(bones.humanPos.z())).append("\t")
     .append(std::to_string(bones.hip.x())).append("\t")
     .append(std::to_string(bones.hip.y())).append("\t")
     .append(std::to_string(bones.hip.z())).append("\t")

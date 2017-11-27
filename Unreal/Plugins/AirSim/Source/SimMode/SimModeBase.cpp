@@ -169,6 +169,7 @@ void ASimModeBase::Tick(float DeltaSeconds)
     if (isRecording())
         ++record_tick_count;
     Super::Tick(DeltaSeconds);
+    
 }
 
 void ASimModeBase::reset()
