@@ -4,7 +4,6 @@
 #include "PIPCamera.h"
 #include "controllers/VehicleCameraBase.hpp"
 #include "common/CommonStructs.hpp"
-#include "common/CommonStructs.hpp"
 
 class VehicleCameraConnector : public msr::airlib::VehicleCameraBase
 {

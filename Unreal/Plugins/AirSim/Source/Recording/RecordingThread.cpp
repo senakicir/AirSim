@@ -28,7 +28,7 @@ void FRecordingThread::startRecording(msr::airlib::VehicleCameraBase* camera, co
     instance_->kinematics_ = kinematics;
     instance_->settings_ = settings;
     instance_->wrapper_ = wrapper;
-    instance_->bonePos = nullptr;
+    instance_->bonePos = &(wrapper->bones);
     instance_->last_screenshot_on_ = 0;
     instance_->last_pose_ = msr::airlib::Pose();
     

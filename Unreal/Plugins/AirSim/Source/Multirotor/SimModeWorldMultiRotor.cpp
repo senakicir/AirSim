@@ -125,9 +125,9 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
             //chose first pawn as FPV if none is designated as FPV
             VehiclePawnWrapper* wrapper = vehicle_pawn->getVehiclePawnWrapper();
             if (enable_collision_passthrough)
-                wrapper->config.enable_passthrough_on_collisions = true;
+            wrapper->config.enable_passthrough_on_collisions = true;
             if (wrapper->config.is_fpv_vehicle || fpv_vehicle_pawn_wrapper_ == nullptr)
-                fpv_vehicle_pawn_wrapper_ = wrapper;
+            fpv_vehicle_pawn_wrapper_ = wrapper;
             
             //now create the connector for each pawn
             VehiclePtr vehicle = createVehicle(wrapper);
@@ -135,7 +135,7 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
                 vehicles.push_back(vehicle);
                 
                 if (fpv_vehicle_pawn_wrapper_ == wrapper)
-                    fpv_vehicle_connector_ = vehicle;
+                fpv_vehicle_connector_ = vehicle;
             }
             //else we don't have vehicle for this pawn
         }
@@ -146,7 +146,8 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
 
 void ASimModeWorldMultiRotor::Tick(float DeltaSeconds)
 {
-    getFpvVehiclePawnWrapper()->setLogLine(getLogString());
+    //getFpvVehiclePawnWrapper()->setLogLine(getLogString());
+    getFpvVehiclePawnWrapper()->getBonePositions();
     Super::Tick(DeltaSeconds);
 }
 
@@ -262,7 +263,7 @@ ASimModeWorldBase::VehiclePtr ASimModeWorldMultiRotor::createVehicle(VehiclePawn
                                                                                          vehicle_params_.back()->getParams().api_server_port, manual_pose_controller);
     
     if (vehicle->getPhysicsBody() != nullptr)
-        wrapper->setKinematics(&(static_cast<PhysicsBody*>(vehicle->getPhysicsBody())->getKinematics()));
+    wrapper->setKinematics(&(static_cast<PhysicsBody*>(vehicle->getPhysicsBody())->getKinematics()));
     
     return std::static_pointer_cast<VehicleConnectorBase>(vehicle);
 }

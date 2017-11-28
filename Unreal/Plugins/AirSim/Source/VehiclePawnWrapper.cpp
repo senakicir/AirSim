@@ -6,8 +6,6 @@
 #include "AirBlueprintLib.h"
 #include "common/ClockFactory.hpp"
 #include "NedTransform.h"
-#include "GameFramework/Character.h"
-
 
 VehiclePawnWrapper::VehiclePawnWrapper()
 {
@@ -233,7 +231,7 @@ FRotator VehiclePawnWrapper::getDroneWorldOrientation() const
     return pawn_ -> GetActorRotation();
 }
 
-const Vector3r_arr VehiclePawnWrapper::getBonePositions() 
+const Vector3r_arr VehiclePawnWrapper::getBonePositions()
 {
     
     TArray<AActor*> foundActors;
@@ -244,123 +242,62 @@ const Vector3r_arr VehiclePawnWrapper::getBonePositions()
     Vector3r droneOrient(droneOrient_f.Roll*pi/180, droneOrient_f.Pitch*pi/180, droneOrient_f.Yaw*pi/180);
     FVector dronePos_f = pawn_ -> GetActorLocation();
     Vector3r dronePos(dronePos_f.X, dronePos_f.Y, dronePos_f.Z);
+    
     for (AActor* actor : foundActors) {
-        
         FString str = actor->GetName();
         std::string str2 = std::string(TCHAR_TO_UTF8(*str));
         if(str2 == "Carl_Blueprint"){
             Vector3r_arr bonePositions;
-            ACharacter* character = Cast<ACharacter>(actor);
-            FVector humanloc = actor->GetActorLocation();
-            Vector3r humanloc_3r(humanloc.X, humanloc.Y, humanloc.Z);
-            bonePositions.humanPos = humanloc_3r; //save human's position
+            ICharacterInterface* TheInterface = Cast<ICharacterInterface>(actor);
             
-            USkeletalMeshComponent* skeletal_actor = character->GetMesh();
-            int32 num_of_bones = skeletal_actor->GetNumBones();
-            std::string num_of_bones_str = std::to_string(num_of_bones);
-            UAirBlueprintLib::LogMessageString(num_of_bones_str, "", LogDebugLevel::Success);
-            for (int i=0; i < num_of_bones; i++){
-                FName boneName = skeletal_actor->GetBoneName(i);
-                std::string boneName_str = std::string(TCHAR_TO_UTF8(*(boneName.ToString() )));
-                if (boneName_str =="pelvis"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.hip = boneloc_3r;
-                }
-                else if (boneName_str =="thigh_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_up_leg = boneloc_3r;
-                }
-                else if (boneName_str =="calf_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_leg = boneloc_3r;
-                }
-                else if (boneName_str =="foot_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_foot = boneloc_3r;
-                }
-                else if (boneName_str =="thigh_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_up_leg = boneloc_3r;
-                }
-                else if (boneName_str =="calf_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_leg = boneloc_3r;
-                }
-                else if (boneName_str =="foot_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_foot = boneloc_3r;
-                }
-                else if (boneName_str =="spine_02"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.spine1 = boneloc_3r;
-                }
-                else if (boneName_str =="neck_01"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.neck = boneloc_3r;
-                }
-                else if (boneName_str =="head"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.head = boneloc_3r;
-                }
-                else if (boneName_str =="upperarm_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_arm = boneloc_3r;
-                }
-                else if (boneName_str =="lowerarm_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_forearm = boneloc_3r;
-                }
-                else if (boneName_str =="hand_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_hand = boneloc_3r;
-                }
-                else if (boneName_str =="upperarm_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_arm = boneloc_3r;
-                }
-                else if (boneName_str =="lowerarm_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_forearm = boneloc_3r;
-                }
-                else if (boneName_str =="hand_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_hand = boneloc_3r;
-                }
-                else if (boneName_str =="middle_03_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_hand_tip = boneloc_3r;
-                }
-                else if (boneName_str =="middle_03_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_hand_tip = boneloc_3r;
-                }
-                else if (boneName_str =="ball_r"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.right_foot_tip = boneloc_3r;
-                }
-                else if (boneName_str =="ball_l"){
-                    FVector boneloc = skeletal_actor-> GetSocketLocation(boneName);
-                    Vector3r boneloc_3r(boneloc.X, boneloc.Y, boneloc.Z);
-                    bonePositions.left_foot_tip = boneloc_3r;
+            if (TheInterface){
+                FVector humanloc = TheInterface->Execute_getHumanPositionUpdated(actor);
+                Vector3r humanloc_3r(humanloc.X, humanloc.Y, humanloc.Z);
+                bonePositions.humanPos = humanloc_3r; //save human's position
+                
+                TArray<FVector> bones =TheInterface->Execute_getBonePositionsUpdated(actor);
+                for (int j=0; j<20; j++){
+                    Vector3r boneloc_3r(bones[j].X, bones[j].Y, bones[j].Z);
+                    if (j==0)
+                        bonePositions.hip = boneloc_3r;
+                    if (j==1)
+                        bonePositions.right_up_leg = boneloc_3r;
+                    if (j==2)
+                        bonePositions.right_leg = boneloc_3r;
+                    if (j==3)
+                        bonePositions.right_foot = boneloc_3r;
+                    if (j==4)
+                        bonePositions.left_up_leg = boneloc_3r;
+                    if (j==5)
+                        bonePositions.left_leg = boneloc_3r;
+                    if (j==6)
+                        bonePositions.left_foot = boneloc_3r;
+                    if (j==7)
+                        bonePositions.spine1 = boneloc_3r;
+                    if (j==8)
+                        bonePositions.neck = boneloc_3r;
+                    if (j==9)
+                        bonePositions.head = boneloc_3r;
+                    if (j==10)
+                        bonePositions.left_arm = boneloc_3r;
+                    if (j==11)
+                        bonePositions.left_forearm = boneloc_3r;
+                    if (j==12)
+                        bonePositions.left_hand = boneloc_3r;
+                    if (j==13)
+                        bonePositions.right_arm = boneloc_3r;
+                    if (j==14)
+                        bonePositions.right_forearm = boneloc_3r;
+                    if (j==15)
+                        bonePositions.right_hand = boneloc_3r;
+                    if (j==16)
+                        bonePositions.right_hand_tip = boneloc_3r;
+                    if (j==17)
+                        bonePositions.left_hand_tip = boneloc_3r;
+                    if (j==18)
+                        bonePositions.right_foot_tip = boneloc_3r;
+                    if (j==19)
+                        bonePositions.left_foot_tip = boneloc_3r;
                 }
             }
             bonePositions.dronePos = dronePos;

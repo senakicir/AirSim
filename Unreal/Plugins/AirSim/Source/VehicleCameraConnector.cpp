@@ -70,7 +70,7 @@ msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getSceneCa
     ImageResponse response;
     Vector3r_arr accurate_bones; //sena was here
     request.getScreenshot(textureTarget, image_uint8, image_float, pixels_as_float, compress, width, height, bonePos, accurate_bones);
-    
+    response.bones = accurate_bones; //sena was here
     response.time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
     response.image_data_uint8 = std::vector<uint8_t>(image_uint8.GetData(), image_uint8.GetData() + image_uint8.Num());
     response.image_data_float = std::vector<float>(image_float.GetData(), image_float.GetData() + image_float.Num());
@@ -100,17 +100,17 @@ void VehicleCameraConnector::addScreenCaptureHandler(UWorld *world)
         UGameViewportClient* ViewportClient = world->GetGameViewport();
         ViewportClient->OnScreenshotCaptured().Clear();
         ViewportClient->OnScreenshotCaptured().AddLambda(
-                                                         [this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
-                                                         {
-                                                             // Make sure that all alpha values are opaque.
-                                                             TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
-                                                             for(auto& Color : RefBitmap)
-                                                                 Color.A = 255;
-                                                             
-                                                             TArray<uint8_t> last_compressed_png;
-                                                             FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
-                                                             last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
-                                                         });
+     [this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
+     {
+         // Make sure that all alpha values are opaque.
+         TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
+         for(auto& Color : RefBitmap)
+         Color.A = 255;
+         
+         TArray<uint8_t> last_compressed_png;
+         FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
+         last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
+     });
         
         is_installed = true;
     }

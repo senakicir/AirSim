@@ -10,6 +10,9 @@
 #include "controllers/Settings.hpp"
 #include "physics/Kinematics.hpp"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"
+#include "CharacterInterface.h"
+
 
 class VehiclePawnWrapper
 {
@@ -125,3 +128,4 @@ private: //vars
     
     State state_, initial_state_;
 };
+

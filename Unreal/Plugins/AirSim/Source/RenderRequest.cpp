@@ -21,16 +21,14 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
 {
     data->render_target = renderTarget;
     if (!pixels_as_float)
-        data->bmp.Reset();
+    data->bmp.Reset();
     else
-        data->bmp_float.Reset();
+    data->bmp_float.Reset();
     data->pixels_as_float = pixels_as_float;
     data->compress = compress;
-    if (bonesPosPtr != nullptr)
-        accurate_bones = *bonesPosPtr; //sena was here
     //make sure we are not on the rendering thread
     CheckNotBlockedOnRenderThread();
-
+    
     if (data->use_safe_method) {
         //TODO: below doesn't work right now because it must be running in game thread
         FIntPoint size;
@@ -48,10 +46,12 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
     }
     else {
         //wait for render thread to pick up our task
-
+        if (bonesPosPtr != nullptr)
+        accurate_bones = *bonesPosPtr; //sena was here
+        
         // Queue up the task of rendering the scene in the render thread
         TGraphTask<RenderRequest>::CreateTask().ConstructAndDispatchWhenReady(*this);
-
+        
         // wait for this task to complete
         if (!data->signal.waitFor(5)) {
             throw std::runtime_error("timeout waiting for screenshot");
@@ -60,11 +60,11 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
     
     width = data->width;
     height = data->height;
-
+    
     if (!pixels_as_float) {
         if (data->width != 0 && data->height != 0) {
             if (data->compress)
-                FImageUtils::CompressImageArray(data->width, data->height, data->bmp, image_data_uint8);
+            FImageUtils::CompressImageArray(data->width, data->height, data->bmp, image_data_uint8);
             else {
                 for (const auto& item : data->bmp) {
                     image_data_uint8.Add(item.R);
@@ -90,7 +90,7 @@ FReadSurfaceDataFlags RenderRequest::setupRenderResource(FTextureRenderTargetRes
     data->height = size.Y;
     FReadSurfaceDataFlags flags(RCM_UNorm, CubeFace_MAX);
     flags.SetLinearToGamma(false);
-
+    
     return flags;
 }
 
@@ -104,27 +104,28 @@ void RenderRequest::ExecuteTask()
             const FTexture2DRHIRef& rhi_texture = rt_resource->GetRenderTargetTexture();
             FIntPoint size;
             auto flags = setupRenderResource(rt_resource, data.get(), size);
-
+            
             //should we be using ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER which was in original commit by @saihv
             //https://github.com/Microsoft/AirSim/pull/162/commits/63e80c43812300a8570b04ed42714a3f6949e63f#diff-56b790f9394f7ca1949ddbb320d8456fR64
             if (!data->pixels_as_float) {
                 //below is undocumented method that avoids flushing, but it seems to segfault every 2000 or so calls
                 RHICmdList.ReadSurfaceData(
-                    rhi_texture,
-                    FIntRect(0, 0, size.X, size.Y),
-                    data->bmp,
-                    flags);
+                                           rhi_texture,
+                                           FIntRect(0, 0, size.X, size.Y),
+                                           data->bmp,
+                                           flags);
             }
             else {
                 RHICmdList.ReadSurfaceFloatData(
-                    rhi_texture,
-                    FIntRect(0, 0, size.X, size.Y),
-                    data->bmp_float,
-                    CubeFace_PosX, 0, 0
-                );
+                                                rhi_texture,
+                                                FIntRect(0, 0, size.X, size.Y),
+                                                data->bmp_float,
+                                                CubeFace_PosX, 0, 0
+                                                );
             }
         }
-
+        
         data->signal.signal();
     }
 }
+
