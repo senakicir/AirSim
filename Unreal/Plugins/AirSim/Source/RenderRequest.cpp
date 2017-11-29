@@ -46,8 +46,6 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
     }
     else {
         //wait for render thread to pick up our task
-        if (bonesPosPtr != nullptr)
-        accurate_bones = *bonesPosPtr; //sena was here
         
         // Queue up the task of rendering the scene in the render thread
         TGraphTask<RenderRequest>::CreateTask().ConstructAndDispatchWhenReady(*this);
@@ -57,6 +55,8 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
             throw std::runtime_error("timeout waiting for screenshot");
         }
     }
+    if (bonesPosPtr != nullptr)
+    accurate_bones = *bonesPosPtr; //sena was here
     
     width = data->width;
     height = data->height;

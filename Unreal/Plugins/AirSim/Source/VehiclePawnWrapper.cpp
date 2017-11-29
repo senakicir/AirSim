@@ -219,7 +219,8 @@ FVector VehiclePawnWrapper::getHumanPosition() const
         FString str = actor->GetName();
         std::string str2 = std::string(TCHAR_TO_UTF8(*str));
         if(str2 == "Carl_Blueprint"){
-            return actor->GetActorLocation();
+            ICharacterInterface* TheInterface = Cast<ICharacterInterface>(actor);
+            return TheInterface->Execute_getHumanPositionUpdated(actor);
         }
     }
     return FVector(05,10,17);
@@ -228,7 +229,8 @@ FVector VehiclePawnWrapper::getHumanPosition() const
 //sena was here
 FRotator VehiclePawnWrapper::getDroneWorldOrientation() const
 {
-    return pawn_ -> GetActorRotation();
+    IDroneInterface* TheDroneInterface = Cast<IDroneInterface>(pawn_);
+    return TheDroneInterface -> Execute_getDroneOrientationUpdated(pawn_);
 }
 
 const Vector3r_arr VehiclePawnWrapper::getBonePositions()
@@ -236,11 +238,10 @@ const Vector3r_arr VehiclePawnWrapper::getBonePositions()
     
     TArray<AActor*> foundActors;
     UGameplayStatics::GetAllActorsOfClass(pawn_, ACharacter::StaticClass(), foundActors);
-    
-    FRotator droneOrient_f = pawn_ -> GetActorRotation();
+    FRotator droneOrient_f = this -> getDroneWorldOrientation();
     float pi = 3.14159265358979323846;
     Vector3r droneOrient(droneOrient_f.Roll*pi/180, droneOrient_f.Pitch*pi/180, droneOrient_f.Yaw*pi/180);
-    FVector dronePos_f = pawn_ -> GetActorLocation();
+    FVector dronePos_f = this -> getDroneWorldPosition();
     Vector3r dronePos(dronePos_f.X, dronePos_f.Y, dronePos_f.Z);
     
     for (AActor* actor : foundActors) {
@@ -320,7 +321,8 @@ void VehiclePawnWrapper::setBonePos(Vector3r_arr bonePos_)
 //sena was here
 FVector VehiclePawnWrapper::getDroneWorldPosition() const
 {
-    return pawn_->GetActorLocation();
+    IDroneInterface* TheDroneInterface = Cast<IDroneInterface>(pawn_);
+    return TheDroneInterface -> Execute_getDronePositionUpdated(pawn_);
 }
 
 

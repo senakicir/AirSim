@@ -12,7 +12,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Character.h"
 #include "CharacterInterface.h"
-
+#include "DroneInterface.h"
 
 class VehiclePawnWrapper
 {
