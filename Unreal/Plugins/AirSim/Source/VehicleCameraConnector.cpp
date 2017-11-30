@@ -74,7 +74,6 @@ msr::airlib::VehicleCameraBase::ImageResponse VehicleCameraConnector::getSceneCa
     response.time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
     response.image_data_uint8 = std::vector<uint8_t>(image_uint8.GetData(), image_uint8.GetData() + image_uint8.Num());
     response.image_data_float = std::vector<float>(image_float.GetData(), image_float.GetData() + image_float.Num());
-    
     response.camera_position = NedTransform::toNedMeters(capture->GetComponentLocation());
     response.camera_orientation = NedTransform::toQuaternionr(capture->GetComponentRotation().Quaternion(), true);
     response.pixels_as_float = pixels_as_float;
@@ -99,18 +98,17 @@ void VehicleCameraConnector::addScreenCaptureHandler(UWorld *world)
     if (!is_installed) {
         UGameViewportClient* ViewportClient = world->GetGameViewport();
         ViewportClient->OnScreenshotCaptured().Clear();
-        ViewportClient->OnScreenshotCaptured().AddLambda(
-     [this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
-     {
-         // Make sure that all alpha values are opaque.
-         TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
-         for(auto& Color : RefBitmap)
-         Color.A = 255;
-         
-         TArray<uint8_t> last_compressed_png;
-         FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
-         last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
-     });
+        ViewportClient->OnScreenshotCaptured().AddLambda([this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
+                                                         {
+                                                             // Make sure that all alpha values are opaque.
+                                                             TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
+                                                             for(auto& Color : RefBitmap)
+                                                             Color.A = 255;
+                                                             
+                                                             TArray<uint8_t> last_compressed_png;
+                                                             FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
+                                                             last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
+                                                         });
         
         is_installed = true;
     }

@@ -55,8 +55,7 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
             throw std::runtime_error("timeout waiting for screenshot");
         }
     }
-    if (bonesPosPtr != nullptr)
-    accurate_bones = *bonesPosPtr; //sena was here
+    
     
     width = data->width;
     height = data->height;
@@ -81,6 +80,8 @@ void RenderRequest::getScreenshot(UTextureRenderTarget2D* renderTarget, TArray<u
             image_data_float.Add(fval);
         }
     }
+    if (bonesPosPtr != nullptr)
+    accurate_bones = *bonesPosPtr; //sena was here
 }
 
 FReadSurfaceDataFlags RenderRequest::setupRenderResource(FTextureRenderTargetResource* rt_resource, RenderRequestInfo* data, FIntPoint& size)
