@@ -37,6 +37,8 @@ public:
         float home_longitude = -122.140165;
         float home_altitude = 122;
         bool enable_trace = false;
+        WrapperConfig() //sena was here
+        {}
     };
 
     void toggleTrace();

@@ -16,7 +16,7 @@ std::vector<VehicleCameraBase::ImageResponse> CarPawnApi::simGetImages(
 
     for (const auto& item : request) {
         VehicleCameraBase* camera = pawn_->getCameraConnector(item.camera_id);
-        const auto& item_response = camera->getImage(item.image_type, item.pixels_as_float, item.compress);
+        const auto& item_response = camera->getImage(item.image_type, item.pixels_as_float, item.compress, nullptr); //sena was here
         response.push_back(item_response);
     }
 
