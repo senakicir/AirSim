@@ -15,10 +15,10 @@ def EulerToRotationMatrix(roll, pitch, yaw):
 
 def main():
     ##read lines from file
-    DATE = '2017-11-29-22-28-21'
-    filepath = '../../../Airsim/'+DATE+'/airsim_rec.txt'
-    filepath2 = '../../../Airsim/'+DATE+'/plots/groundtruth.txt'
-    filepath3 = '../../../Airsim/'+DATE+'/plots'
+    DATE = '2017-12-04-14-40-31'
+    filepath = '../../../AirSim/'+DATE+'/airsim_rec.txt'
+    filepath2 = '../../../AirSim/'+DATE+'/plots/groundtruth.txt'
+    filepath3 = '../../../AirSim/'+DATE+'/plots'
     if not os.path.exists(filepath3):
         os.makedirs(filepath3)
     #filepath = 'temp/file.txt'
