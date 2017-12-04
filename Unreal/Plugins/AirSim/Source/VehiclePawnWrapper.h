@@ -29,24 +29,25 @@ public: //types
     
 public:
     struct WrapperConfig {
-        bool is_fpv_vehicle = false;
-        FString vehicle_config_name = ""; //use the default config name
-        bool enable_collisions = true;
-        bool enable_passthrough_on_collisions = false;
+        bool is_fpv_vehicle = false; 
+        std::string vehicle_config_name = ""; //use the default config name
+        bool enable_collisions = true; 
+        bool enable_passthrough_on_collisions = false; 
         float home_lattitude = 47.641468;
         float home_longitude = -122.140165;
         float home_altitude = 122;
         bool enable_trace = false;
-    } config;
-    
+    };
+
     void toggleTrace();
     
 public: //interface
     Vector3r_arr bones; //sena was here
     
     VehiclePawnWrapper();
-    void initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras);
-    
+
+    void initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras, const WrapperConfig& config = WrapperConfig());
+
     void reset();
     void onCollision(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp,
                      bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit);
@@ -79,7 +80,13 @@ public: //interface
     
     void setLogLine(std::string line);
     std::string getLogLine();
-    
+
+
+    void printLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0);
+
+    WrapperConfig& getConfig();
+    const WrapperConfig& getConfig() const;
+
 protected:
     UPROPERTY(VisibleAnywhere)
     UParticleSystem* collision_display_template;
@@ -105,7 +112,8 @@ private: //vars
     std::vector<std::unique_ptr<VehicleCameraConnector>> camera_connectors_;
     const msr::airlib::Kinematics::State* kinematics_;
     std::string log_line_;
-    
+    WrapperConfig config_;
+
     struct State {
         FVector start_location;
         FRotator start_rotation;

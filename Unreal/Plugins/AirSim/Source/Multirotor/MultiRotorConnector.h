@@ -15,6 +15,8 @@
 #include <chrono>
 #include "api/ControlServerBase.hpp"
 #include "SimJoyStick/SimJoyStick.h"
+#include <future>
+
 
 class MultiRotorConnector : public msr::airlib::VehicleConnectorBase
 {
@@ -60,10 +62,13 @@ public:
 
     virtual msr::airlib::VehicleCameraBase* getCamera(unsigned int index = 0) override;
 
+    virtual void printLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0) override;
+
+
 private:
     void detectUsbRc();
-    static float joyStickToRC(int16_t val);
-    const msr::airlib::RCData& getRCData();
+    const msr::airlib::RCData& getRCData();  
+    void resetPrivate();
 
 private:
     MultiRotor vehicle_;
@@ -101,6 +106,11 @@ private:
         NonePending, RenderStatePending, RenderPending
     } pending_pose_status_;
     Pose pending_pose_; //force new pose through API
+
+    //reset must happen while World is locked so its async task initiated from API thread
+    bool reset_pending_;
+    std::packaged_task<void()> reset_task_;
+
     Pose last_pose_; //for trace lines showing vehicle path
     Pose last_debug_pose_; //for purposes such as comparing recorded trajectory
 };

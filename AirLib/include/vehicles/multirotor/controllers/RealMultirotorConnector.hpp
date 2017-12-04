@@ -18,6 +18,7 @@ public:
 
     virtual void updateRenderedState(float dt) override
     {
+        unused(dt);
     }
 
     virtual void updateRendering(float dt) override
@@ -69,6 +70,12 @@ public:
         throw std::logic_error("getSegmentationObjectID() call is only supported for simulation");
     }
 
+    virtual void printLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0)  override
+    {
+        unused(message);
+        unused(message_param);
+        unused(severity);
+    }
 
 private:
     VehicleControllerBase* controller_;

@@ -54,7 +54,9 @@ MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* vehicle_pawn_wrappe
     
     last_pose_ = pending_pose_ = last_debug_pose_ = Pose::nanPose();
     pending_pose_status_ = PendingPoseStatus::NonePending;
-    
+
+    reset_pending_ = false;
+
     std::string message;
     if (!vehicle_.getController()->isAvailable(message)) {
         UAirBlueprintLib::LogMessage(FString("Vehicle was not initialized: "), FString(message.c_str()), LogDebugLevel::Failure);
@@ -84,7 +86,7 @@ void MultiRotorConnector::detectUsbRc()
     rc_data_.is_initialized = joystick_state_.is_initialized;
     
     if (rc_data_.is_initialized)
-        UAirBlueprintLib::LogMessage(TEXT("RC Controller on USB: "), "Detected", LogDebugLevel::Informational);
+        UAirBlueprintLib::LogMessageString("RC Controller on USB: ", joystick_state_.pid_vid, LogDebugLevel::Informational);
     else
         UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ",
                                            std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
@@ -137,6 +139,7 @@ const msr::airlib::RCData& MultiRotorConnector::getRCData()
 void MultiRotorConnector::updateRenderedState(float dt)
 {
     //Utils::log("------Render tick-------");
+
     //sena was here
     const Vector3r_arr& bone_positions = (vehicle_pawn_wrapper_->bones);
     vehicle_.setBonePositions(bone_positions);
@@ -159,6 +162,13 @@ void MultiRotorConnector::updateRenderedState(float dt)
     Vector3r droneWorldOrientation = Vector3r(droneWorldOrientation_f.Roll*pi/180, droneWorldOrientation_f.Pitch*pi/180, droneWorldOrientation_f.Yaw*pi/180);
     vehicle_.setDroneWorldOrientation(droneWorldOrientation);
     
+
+    //if reset is pending then do it first, no need to do other things until next tick
+    if (reset_pending_) {
+        reset_task_();
+        return;
+    }
+
     //move collision info from rendering engine to vehicle
     const CollisionInfo& collision_info = vehicle_pawn_wrapper_->getCollisionInfo();
     vehicle_.setCollisionInfo(collision_info);
@@ -208,6 +218,12 @@ void MultiRotorConnector::updateRenderedState(float dt)
 
 void MultiRotorConnector::updateRendering(float dt)
 {
+    //if we did reset then don't worry about synchrnozing states for this tick
+    if (reset_pending_) {
+        reset_pending_ = false;
+        return;
+    }
+
     try {
         controller_->reportTelemetry(dt);
     }
@@ -268,6 +284,11 @@ bool MultiRotorConnector::setSegmentationObjectID(const std::string& mesh_name, 
     return success;
 }
 
+void MultiRotorConnector::printLogMessage(const std::string& message, std::string message_param, unsigned char severity)
+{
+    vehicle_pawn_wrapper_->printLogMessage(message, message_param, severity);
+}
+
 int MultiRotorConnector::getSegmentationObjectID(const std::string& mesh_name)
 {
     return UAirBlueprintLib::GetMeshStencilID(mesh_name);
@@ -312,16 +333,28 @@ bool MultiRotorConnector::isApiServerStarted()
 //*** Start: UpdatableState implementation ***//
 void MultiRotorConnector::reset()
 {
-    UAirBlueprintLib::RunCommandOnGameThread([this]() {
-        VehicleConnectorBase::reset();
-        
-        //TODO: should this be done in MultiRotor.hpp
-        //controller_->reset();
-        
-        rc_data_ = RCData();
-        vehicle_pawn_wrapper_->reset();    //we do flier resetPose so that flier is placed back without collisions
-        vehicle_.reset();
-    }, true);
+
+    if (UAirBlueprintLib::IsInGameThread())
+        resetPrivate();
+    else {
+        //schedule the task which we will execute in tick event when World object is locked
+        reset_task_ = std::packaged_task<void()>([this]() { resetPrivate(); });
+        std::future<void> reset_result = reset_task_.get_future();
+        reset_pending_ = true;
+        reset_result.wait();
+    }
+}
+
+void MultiRotorConnector::resetPrivate()
+{
+    VehicleConnectorBase::reset();
+
+    //TODO: should this be done in MultiRotor.hpp
+    //controller_->reset();
+
+    rc_data_ = RCData();
+    vehicle_pawn_wrapper_->reset();    //we do flier resetPose so that flier is placed back without collisions
+    vehicle_.reset();
 }
 
 void MultiRotorConnector::update()
