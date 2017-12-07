@@ -49,9 +49,11 @@ class Vector3r(MsgpackMixin):
         self.y_val = y_val
         self.z_val = z_val
 
+#sena was here
 class Vector3r_arr(MsgpackMixin):
     dronePos = Vector3r()
     droneOrient = Vector3r()
+    humanPos = Vector3r()
     hip = Vector3r()
     right_up_leg = Vector3r()
     right_leg = Vector3r()
@@ -170,8 +172,11 @@ class CarState(MsgpackMixin):
     orientation = Quaternionr()
 
 class AirSimClientBase:
+    
     def __init__(self, ip, port):
         self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = 3600)
+        self.program_started = False #sena was here
+        self.DRONE_INITIAL_POS = np.array([0, 0, 0])
         
     def ping(self):
         return self.client.call('ping')
@@ -202,10 +207,7 @@ class AirSimClientBase:
         return self.client.call('simSetSegmentationObjectID', mesh_name, object_id, is_name_regex)
     def simGetSegmentationObjectID(self, mesh_name):
         return self.client.call('simGetSegmentationObjectID', mesh_name)
-    def simPrintLogMessage(self, message, message_param = "", severity = 0):
-        return self.client.call('simPrintLogMessage', message, message_param, severity)
-
-
+            
     # camera control
     # simGetImage returns compressed png in array of bytes
     # image_type uses one of the AirSimImageType members
@@ -296,6 +298,20 @@ class AirSimClientBase:
         yaw = math.atan2(t3, t4)
 
         return (pitch, roll, yaw)
+
+    #sena was here
+    def toArrayFromVector3r_arr(self, bonePos):
+        if (self.program_started == False):
+            self.program_started = True
+            self.DRONE_INITIAL_POS = np.array([bonePos.dronePos[b'x_val'], bonePos.dronePos[b'y_val'], -bonePos.dronePos[b'z_val']])
+        positionsArr = np.zeros((4,3))
+        positionsArr[0,:]= [bonePos.dronePos[b'x_val'], bonePos.dronePos[b'y_val'], -bonePos.dronePos[b'z_val']]
+        positionsArr[1,:]= [bonePos.humanPos[b'x_val'], bonePos.humanPos[b'y_val'], -bonePos.humanPos[b'z_val']]
+        positionsArr[2,:]= [bonePos.right_arm[b'x_val'], bonePos.right_arm[b'y_val'], -bonePos.right_arm[b'z_val']]
+        positionsArr[3,:]= [bonePos.left_arm[b'x_val'], bonePos.left_arm[b'y_val'], -bonePos.left_arm[b'z_val']]
+        
+        positionsArr = (positionsArr - self.DRONE_INITIAL_POS)/100
+        return positionsArr
 
     @staticmethod
     def toQuaternion(pitch, roll, yaw):
@@ -490,6 +506,9 @@ class MultirotorClient(AirSimClientBase, object):
         return Vector3r.from_msgpack(self.client.call('getHumanPosition'))
     def getBonePositions(self):
         return Vector3r_arr.from_msgpack(self.client.call('getBonePositions'))
+    #sena was here
+    def getAllPositions(self):
+        return self.toArrayFromVector3r_arr(self.getBonePositions())
     def getDroneWorldPosition(self):
         return Vector3r.from_msgpack(self.client.call('getDroneWorldPosition'))
     def getDroneWorldOrientation(self):
@@ -528,19 +547,6 @@ class MultirotorClient(AirSimClientBase, object):
         return self.client.call('moveToPosition', x, y, z, velocity, max_wait_seconds, drivetrain, yaw_mode, lookahead, adaptive_lookahead)
 
     def moveByManual(self, vx_max, vy_max, z_min, duration, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode()):
-        """Read current RC state and use it to control the vehicles. 
-
-        Parameters sets up the constraints on velocity and minimum altitude while flying. If RC state is detected to violate these constraints
-        then that RC state would be ignored.
-
-        :param vx_max: max velocity allowed in x direction
-        :param vy_max: max velocity allowed in y direction
-        :param vz_max: max velocity allowed in z direction
-        :param z_min: min z allowed allowed for vehicle position
-        :param duration: after this duration vehicle would switch back to non-manual mode
-        :param drivetrain: when ForwardOnly, vehicle rotates itself so that its front is always facing the direction of travel. If MaxDegreeOfFreedom then it doesn't do that (crab-like movement)
-        :param yaw_mode: Specifies if vehicle should face at given angle (is_rate=False) or should be rotating around its axis at given rate (is_rate=True)
-        """
         return self.client.call('moveByManual', vx_max, vy_max, z_min, duration, drivetrain, yaw_mode)
 
     def rotateToYaw(self, yaw, max_wait_seconds = 60, margin = 5):
