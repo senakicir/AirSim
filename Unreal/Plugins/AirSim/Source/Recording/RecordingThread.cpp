@@ -85,11 +85,11 @@ uint32 FRecordingThread::Run()
                 // frames per second?
                 std::vector<msr::airlib::ImageCaptureBase::ImageRequest> requests;
                 std::vector<msr::airlib::ImageCaptureBase::ImageResponse> responses;
-
+                
                 requests.push_back(msr::airlib::ImageCaptureBase::ImageRequest(0, msr::airlib::ImageCaptureBase::ImageType::Scene, false, true));
                 
                 image_capture_->getImages(requests, responses, bonePos); //sena was here
-                msr::airlib::Vector3r_arr bonePos = response.bones;
+                msr::airlib::Vector3r_arr bonePos = responses[0].bones;
                 TArray<uint8_t> image_data;
                 image_data.Append(responses[0].image_data_uint8.data(), responses[0].image_data_uint8.size());
                 recording_file_->appendRecord(image_data, wrapper_, bonePos);
@@ -112,7 +112,7 @@ void FRecordingThread::Stop()
 void FRecordingThread::Exit()
 {
     if (recording_file_)
-        recording_file_.reset();
+    recording_file_.reset();
 }
 
 void FRecordingThread::EnsureCompletion()

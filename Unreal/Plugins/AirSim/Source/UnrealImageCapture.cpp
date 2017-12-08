@@ -5,8 +5,8 @@
 #include "NedTransform.h"
 
 
-UnrealImageCapture::UnrealImageCapture(APIPCamera* cameras[]) 
-    : cameras_(cameras)
+UnrealImageCapture::UnrealImageCapture(APIPCamera* cameras[])
+: cameras_(cameras)
 {
     //TODO: explore screenshot option
     //addScreenCaptureHandler(camera->GetWorld());
@@ -15,8 +15,9 @@ UnrealImageCapture::UnrealImageCapture(APIPCamera* cameras[])
 UnrealImageCapture::~UnrealImageCapture()
 {}
 
-void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, 
-    std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses)
+//sena was here
+void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests,
+                                   std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, Vector3r_arr* bonePos)
 {
     if (cameras_== nullptr) {
         for (unsigned int i = 0; i < requests.size(); ++i) {
@@ -25,24 +26,24 @@ void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBa
         }
     }
     else
-        getSceneCaptureImage(requests, responses, false);
+    getSceneCaptureImage(requests, responses, false, bonePos);
 }
 
-
-void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, 
-    std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method)
+//sena was here
+void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests,
+                                              std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method, Vector3r_arr* bonePos)
 {
     std::vector<std::shared_ptr<RenderRequest::RenderParams>> render_params;
     std::vector<std::shared_ptr<RenderRequest::RenderResult>> render_results;
-
+    
     for (unsigned int i = 0; i < requests.size(); ++i) {
         APIPCamera* camera = cameras_[i];
         responses.push_back(ImageResponse());
         ImageResponse& response = responses[i];
-
-
+        
+        
         updateCameraVisibility(camera, requests[i]);
-
+        
         UTextureRenderTarget2D* textureTarget = nullptr;
         USceneCaptureComponent2D* capture = camera->getCaptureComponent(requests[i].image_type, false);
         if (capture == nullptr) {
@@ -51,24 +52,26 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         else if (capture->TextureTarget == nullptr) {
             response.message = "Can't take screenshot because texture target is null";
         }
-        else 
-            textureTarget = capture->TextureTarget;
-
+        else
+        textureTarget = capture->TextureTarget;
+        
         render_params.push_back(std::make_shared<RenderRequest::RenderParams>(textureTarget, requests[i].pixels_as_float, requests[i].compress));
     }
-
+    
+    Vector3r_arr accurate_bones; //sena was here
     RenderRequest render_request(use_safe_method);
-    render_request.getScreenshot(render_params.data(), render_results, render_params.size());
-
+    render_request.getScreenshot(render_params.data(), render_results, render_params.size(), bonePos, accurate_bones); //sena was here
+    
     for (unsigned int i = 0; i < requests.size(); ++i) {
         const ImageRequest& request = requests[i];
         ImageResponse& response = responses[i];
         APIPCamera* camera = cameras_[i];
-                
+        
         response.time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
         response.image_data_uint8 = std::vector<uint8_t>(render_results[i]->image_data_uint8.GetData(), render_results[i]->image_data_uint8.GetData() + render_results[i]->image_data_uint8.Num());
         response.image_data_float = std::vector<float>(render_results[i]->image_data_float.GetData(), render_results[i]->image_data_float.GetData() + render_results[i]->image_data_float.Num());
-
+        //sena was here
+        response.bones = accurate_bones;
         response.camera_position = NedTransform::toNedMeters(camera->GetActorLocation());
         response.camera_orientation = NedTransform::toQuaternionr(camera->GetActorRotation().Quaternion(), true);
         response.pixels_as_float = request.pixels_as_float;
@@ -77,7 +80,7 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         response.height = render_results[i]->height;
         response.image_type = request.image_type;
     }
-
+    
 }
 
 
@@ -88,7 +91,7 @@ void UnrealImageCapture::updateCameraVisibility(APIPCamera* camera, const msr::a
         camera->setCameraTypeEnabled(request.image_type, true);
         visibilityChanged = true;
     }
-
+    
     if (visibilityChanged) {
         // Wait for render so that view is ready for capture
         std::this_thread::sleep_for(std::chrono::duration<double>(0.2));
@@ -108,23 +111,25 @@ bool UnrealImageCapture::getScreenshotScreen(ImageType image_type, std::vector<u
 void UnrealImageCapture::addScreenCaptureHandler(UWorld *world)
 {
     static bool is_installed = false;
-
+    
     if (!is_installed) {
         UGameViewportClient* ViewportClient = world->GetGameViewport();
         ViewportClient->OnScreenshotCaptured().Clear();
         ViewportClient->OnScreenshotCaptured().AddLambda(
-            [this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
-        {
-            // Make sure that all alpha values are opaque.
-            TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
-            for(auto& Color : RefBitmap)
-                Color.A = 255;
-
-            TArray<uint8_t> last_compressed_png;
-            FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
-            last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
-        });
-
+                                                         [this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
+                                                         {
+                                                             // Make sure that all alpha values are opaque.
+                                                             TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
+                                                             for(auto& Color : RefBitmap)
+                                                             Color.A = 255;
+                                                             
+                                                             TArray<uint8_t> last_compressed_png;
+                                                             FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
+                                                             last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
+                                                         });
+        
         is_installed = true;
     }
 }
+
+

@@ -120,15 +120,8 @@ void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>&
 
     config_ = config;
 
-<<<<<<< HEAD
-    for (auto camera : cameras_) {
-        camera_connectors_.push_back(std::unique_ptr<VehicleCameraConnector>(new VehicleCameraConnector(camera)));
-    }
-    
-=======
     image_capture_.reset(new UnrealImageCapture(cameras_.data()));
 
->>>>>>> upstream/master
     if (!NedTransform::isInitialized())
         NedTransform::initialize(pawn_);
     
