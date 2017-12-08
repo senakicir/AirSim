@@ -91,7 +91,7 @@ class Pose(MsgpackMixin):
     position = Vector3r()
     orientation = Quaternionr()
 
-    def __init__(self, position_val, orientation_val):
+    def __init__(self, position_val = Vector3r(), orientation_val = Quaternionr()):
         self.position = position_val
         self.orientation = orientation_val
 
@@ -207,7 +207,13 @@ class AirSimClientBase:
         return self.client.call('simSetSegmentationObjectID', mesh_name, object_id, is_name_regex)
     def simGetSegmentationObjectID(self, mesh_name):
         return self.client.call('simGetSegmentationObjectID', mesh_name)
-            
+
+    def simPrintLogMessage(self, message, message_param = "", severity = 0):
+        return self.client.call('simPrintLogMessage', message, message_param, severity)
+    def simGetObjectPose(self, object_name):
+        pose = self.client.call('simGetObjectPose', object_name)
+        return Pose.from_msgpack(pose)
+
     # camera control
     # simGetImage returns compressed png in array of bytes
     # image_type uses one of the AirSimImageType members
@@ -267,7 +273,8 @@ class AirSimClientBase:
         self.client.call('simSetPose', pose, ignore_collison)
 
     def simGetPose(self):
-        return self.client.call('simGetPose')
+        pose = self.client.call('simGetPose')
+        return Pose.from_msgpack(pose)
 
     # helper method for converting getOrientation to roll/pitch/yaw
     # https:#en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles

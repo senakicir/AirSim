@@ -9,18 +9,15 @@ CarPawnApi::CarPawnApi(VehiclePawnWrapper* pawn, UWheeledVehicleMovementComponen
 {
 }
 
-std::vector<VehicleCameraBase::ImageResponse> CarPawnApi::simGetImages(
-    const std::vector<VehicleCameraBase::ImageRequest>& request)
+std::vector<ImageCaptureBase::ImageResponse> CarPawnApi::simGetImages(
+    const std::vector<ImageCaptureBase::ImageRequest>& requests)
 {
-    std::vector<VehicleCameraBase::ImageResponse> response;
+    std::vector<ImageCaptureBase::ImageResponse> responses;
 
-    for (const auto& item : request) {
-        VehicleCameraBase* camera = pawn_->getCameraConnector(item.camera_id);
-        const auto& item_response = camera->getImage(item.image_type, item.pixels_as_float, item.compress, nullptr); //sena was here
-        response.push_back(item_response);
-    }
+    ImageCaptureBase* camera = pawn_->getImageCapture();
+    camera->getImages(requests, responses, nullptr); //sena was here
 
-    return response;
+    return responses;
 }
 
 bool CarPawnApi::simSetSegmentationObjectID(const std::string& mesh_name, int object_id, 
@@ -33,7 +30,7 @@ bool CarPawnApi::simSetSegmentationObjectID(const std::string& mesh_name, int ob
     return success;
 }
 
-void CarPawnApi::simPrintLogMessage(const std::string& message, std::string message_param, unsigned char severity)
+void CarPawnApi::simPrintLogMessage(const std::string& message, const std::string& message_param, unsigned char severity)
 {
     pawn_->printLogMessage(message, message_param, severity);
 }
@@ -48,10 +45,10 @@ msr::airlib::CollisionInfo CarPawnApi::getCollisionInfo()
     return pawn_->getCollisionInfo();
 }
 
-std::vector<uint8_t> CarPawnApi::simGetImage(uint8_t camera_id, VehicleCameraBase::ImageType image_type)
+std::vector<uint8_t> CarPawnApi::simGetImage(uint8_t camera_id, ImageCaptureBase::ImageType image_type)
 {
-    std::vector<VehicleCameraBase::ImageRequest> request = { VehicleCameraBase::ImageRequest(camera_id, image_type) };
-    const std::vector<VehicleCameraBase::ImageResponse>& response = simGetImages(request);
+    std::vector<ImageCaptureBase::ImageRequest> request = { ImageCaptureBase::ImageRequest(camera_id, image_type) };
+    const std::vector<ImageCaptureBase::ImageResponse>& response = simGetImages(request);
     if (response.size() > 0)
         return response.at(0).image_data_uint8;
     else
@@ -74,6 +71,17 @@ void CarPawnApi::setCarControls(const CarApiBase::CarControls& controls)
     movement_->SetBrakeInput(controls.brake);
     movement_->SetHandbrakeInput(controls.handbrake);
     movement_->SetUseAutoGears(!controls.is_manual_gear);
+}
+
+msr::airlib::Pose CarPawnApi::simGetObjectPose(const std::string& actor_name)
+{
+    msr::airlib::Pose pose;
+
+    UAirBlueprintLib::RunCommandOnGameThread([&pose, &actor_name, this]() {
+        pose = pawn_->getActorPose(actor_name);
+    }, true);
+
+    return pose;
 }
 
 const CarApiBase::CarControls& CarPawnApi::getCarControls() const

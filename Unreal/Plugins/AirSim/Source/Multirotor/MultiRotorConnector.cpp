@@ -64,9 +64,9 @@ MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* vehicle_pawn_wrappe
     }
 }
 
-msr::airlib::VehicleCameraBase* MultiRotorConnector::getCamera(unsigned int index)
+msr::airlib::ImageCaptureBase* MultiRotorConnector::getImageCapture()
 {
-    return vehicle_pawn_wrapper_->getCameraConnector(index);
+    return vehicle_pawn_wrapper_->getImageCapture();
 }
 
 MultiRotorConnector::~MultiRotorConnector()
@@ -273,6 +273,18 @@ Pose MultiRotorConnector::getPose()
 {
     return vehicle_.getPose();
 }
+
+Pose MultiRotorConnector::getActorPose(const std::string& actor_name)
+{
+    msr::airlib::Pose pose;
+
+    UAirBlueprintLib::RunCommandOnGameThread([&pose, &actor_name, this]() {
+        pose = vehicle_pawn_wrapper_->getActorPose(actor_name);
+    }, true);
+
+    return pose;
+}
+
 
 bool MultiRotorConnector::setSegmentationObjectID(const std::string& mesh_name, int object_id,
                                                   bool is_name_regex)

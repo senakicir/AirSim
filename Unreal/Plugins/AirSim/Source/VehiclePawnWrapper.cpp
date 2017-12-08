@@ -19,8 +19,8 @@ VehiclePawnWrapper::VehiclePawnWrapper()
 void VehiclePawnWrapper::setupCamerasFromSettings()
 {
     typedef msr::airlib::Settings Settings;
-    typedef msr::airlib::VehicleCameraBase::ImageType ImageType;
-    
+    typedef msr::airlib::ImageCaptureBase::ImageType ImageType;
+
     Settings& json_settings_root = Settings::singleton();
     Settings json_settings_parent;
     if (json_settings_root.getChild("CaptureSettings", json_settings_parent)) {
@@ -120,10 +120,15 @@ void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>&
 
     config_ = config;
 
+<<<<<<< HEAD
     for (auto camera : cameras_) {
         camera_connectors_.push_back(std::unique_ptr<VehicleCameraConnector>(new VehicleCameraConnector(camera)));
     }
     
+=======
+    image_capture_.reset(new UnrealImageCapture(cameras_.data()));
+
+>>>>>>> upstream/master
     if (!NedTransform::isInitialized())
         NedTransform::initialize(pawn_);
     
@@ -172,10 +177,9 @@ APIPCamera* VehiclePawnWrapper::getCamera(int index)
     return cameras_.at(index);
 }
 
-VehicleCameraConnector* VehiclePawnWrapper::getCameraConnector(int index)
+UnrealImageCapture* VehiclePawnWrapper::getImageCapture()
 {
-    //should be overridden in derived class
-    return camera_connectors_.at(index).get();
+    return image_capture_.get();
 }
 
 int VehiclePawnWrapper::getCameraCount()
@@ -382,7 +386,7 @@ void VehiclePawnWrapper::plot(std::istream& s, FColor color, const Vector3r& off
     
 }
 
-void VehiclePawnWrapper::printLogMessage(const std::string& message, std::string message_param, unsigned char severity)
+void VehiclePawnWrapper::printLogMessage(const std::string& message, const std::string& message_param, unsigned char severity)
 {
     UAirBlueprintLib::LogMessageString(message, message_param, static_cast<LogDebugLevel>(severity));
 }
@@ -390,8 +394,13 @@ void VehiclePawnWrapper::printLogMessage(const std::string& message, std::string
 //parameters in NED frame
 VehiclePawnWrapper::Pose VehiclePawnWrapper::getPose() const
 {
-    const Vector3r& position = NedTransform::toNedMeters(getPosition());
-    const Quaternionr& orientation = NedTransform::toQuaternionr(pawn_->GetActorRotation().Quaternion(), true);
+    return toPose(getPosition(), pawn_->GetActorRotation().Quaternion());
+}
+
+VehiclePawnWrapper::Pose VehiclePawnWrapper::toPose(const FVector& u_position, const FQuat& u_quat)
+{
+    const Vector3r& position = NedTransform::toNedMeters(u_position);
+    const Quaternionr& orientation = NedTransform::toQuaternionr(u_quat, true);
     return Pose(position, orientation);
 }
 
@@ -434,7 +443,7 @@ void VehiclePawnWrapper::setDebugPose(const Pose& debug_pose)
         FVector debug_position = state_.current_debug_position - state_.debug_position_offset;
         if ((state_.last_debug_position - debug_position).SizeSquared() > 0.25) {
             UKismetSystemLibrary::DrawDebugLine(pawn_->GetWorld(), state_.last_debug_position, debug_position, FColor(0xaa, 0x33, 0x11), -1, 10.0F);
-            UAirBlueprintLib::LogMessage("Debug Pose: ", debug_position.ToCompactString(), LogDebugLevel::Informational);
+            UAirBlueprintLib::LogMessage(FString("Debug Pose: "), debug_position.ToCompactString(), LogDebugLevel::Informational);
             state_.last_debug_position = debug_position;
         }
     }
@@ -463,5 +472,11 @@ std::string VehiclePawnWrapper::getLogLine()
     return log_line_;
 }
 
+msr::airlib::Pose VehiclePawnWrapper::getActorPose(std::string actor_name)
+{
+    AActor* actor = UAirBlueprintLib::FindActor<AActor>(pawn_, FString(actor_name.c_str()));
+    return actor ? toPose(actor->GetActorLocation(), actor->GetActorQuat())
+        : Pose::nanPose();
+}
 
 

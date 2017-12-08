@@ -9,23 +9,24 @@
 
 class CarPawnApi : public msr::airlib::CarApiBase {
 public:
-    typedef msr::airlib::VehicleCameraBase VehicleCameraBase;
+    typedef msr::airlib::ImageCaptureBase ImageCaptureBase;
 
     CarPawnApi(VehiclePawnWrapper* pawn, UWheeledVehicleMovementComponent* movement);
 
-    virtual std::vector<VehicleCameraBase::ImageResponse> simGetImages(
-        const std::vector<VehicleCameraBase::ImageRequest>& request) override;
+
 
     virtual bool simSetSegmentationObjectID(const std::string& mesh_name, int object_id,
         bool is_name_regex = false) override;
 
-    virtual void simPrintLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0) override;
+    virtual void simPrintLogMessage(const std::string& message, const std::string& message_param = "", unsigned char severity = 0) override;
 
     virtual int simGetSegmentationObjectID(const std::string& mesh_name) override;
 
     virtual msr::airlib::CollisionInfo getCollisionInfo() override;
 
-    virtual std::vector<uint8_t> simGetImage(uint8_t camera_id, VehicleCameraBase::ImageType image_type) override;
+    virtual std::vector<uint8_t> simGetImage(uint8_t camera_id, ImageCaptureBase::ImageType image_type) override;
+    virtual std::vector<ImageCaptureBase::ImageResponse> simGetImages(
+        const std::vector<ImageCaptureBase::ImageRequest>& requests) override;
 
     virtual void setCarControls(const CarApiBase::CarControls& controls) override;
 
@@ -43,6 +44,9 @@ public:
     virtual bool isApiControlEnabled() const override;
 
     virtual const CarApiBase::CarControls& getCarControls() const;
+
+    virtual msr::airlib::Pose simGetObjectPose(const std::string& actor_name);
+
 
 
     virtual ~CarPawnApi();

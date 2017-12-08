@@ -91,7 +91,7 @@ Pose RpcLibClientBase::simGetPose()
 {
     return pimpl_->client.call("simGetPose").as<RpcLibAdapatorsBase::Pose>().to();
 }
-vector<VehicleCameraBase::ImageResponse> RpcLibClientBase::simGetImages(vector<VehicleCameraBase::ImageRequest> request)
+vector<ImageCaptureBase::ImageResponse> RpcLibClientBase::simGetImages(vector<ImageCaptureBase::ImageRequest> request)
 {
     const auto& response_adaptor = pimpl_->client.call("simGetImages", 
         RpcLibAdapatorsBase::ImageRequest::from(request))
@@ -99,7 +99,7 @@ vector<VehicleCameraBase::ImageResponse> RpcLibClientBase::simGetImages(vector<V
 
     return RpcLibAdapatorsBase::ImageResponse::to(response_adaptor);
 }
-vector<uint8_t> RpcLibClientBase::simGetImage(int camera_id, VehicleCameraBase::ImageType type)
+vector<uint8_t> RpcLibClientBase::simGetImage(int camera_id, ImageCaptureBase::ImageType type)
 {
     vector<uint8_t> result = pimpl_->client.call("simGetImage", camera_id, type).as<vector<uint8_t>>();
     if (result.size() == 1) {
@@ -153,6 +153,11 @@ void* RpcLibClientBase::getClient()
 CollisionInfo RpcLibClientBase::getCollisionInfo()
 {
     return pimpl_->client.call("getCollisionInfo").as<RpcLibAdapatorsBase::CollisionInfo>().to();
+}
+
+msr::airlib::Pose RpcLibClientBase::simGetObjectPose(const std::string& object_name)
+{
+    return pimpl_->client.call("simGetObjectPose").as<RpcLibAdapatorsBase::Pose>().to();
 }
 
 

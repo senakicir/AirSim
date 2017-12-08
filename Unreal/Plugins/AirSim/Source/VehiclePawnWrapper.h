@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include <vector>
 #include <memory>
-#include "VehicleCameraConnector.h"
+#include "UnrealImageCapture.h"
 #include "common/Common.hpp"
 #include "common/CommonStructs.hpp"
 #include "PIPCamera.h"
@@ -55,7 +55,7 @@ public: //interface
                      bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit);
     
     APIPCamera* getCamera(int index = 0);
-    VehicleCameraConnector* getCameraConnector(int index = 0);
+    UnrealImageCapture* getImageCapture();
     int getCameraCount();
     void displayCollisionEffect(FVector hit_location, const FHitResult& hit);
     APawn* getPawn();
@@ -83,11 +83,14 @@ public: //interface
     void setLogLine(std::string line);
     std::string getLogLine();
 
-
-    void printLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0);
+    void printLogMessage(const std::string& message, const std::string& message_param = "", unsigned char severity = 0);
 
     WrapperConfig& getConfig();
     const WrapperConfig& getConfig() const;
+
+    static VehiclePawnWrapper::Pose toPose(const FVector& u_position, const FQuat& u_quat);
+    msr::airlib::Pose getActorPose(std::string actor_name);
+
 
 protected:
     UPROPERTY(VisibleAnywhere)
@@ -111,7 +114,7 @@ private: //vars
     GeoPoint home_point_;
     APawn* pawn_;
     std::vector<APIPCamera*> cameras_;
-    std::vector<std::unique_ptr<VehicleCameraConnector>> camera_connectors_;
+    std::unique_ptr<UnrealImageCapture> image_capture_;
     const msr::airlib::Kinematics::State* kinematics_;
     std::string log_line_;
     WrapperConfig config_;
