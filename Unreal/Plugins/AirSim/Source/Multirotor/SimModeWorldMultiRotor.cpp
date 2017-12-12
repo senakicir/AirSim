@@ -125,10 +125,10 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
             //chose first pawn as FPV if none is designated as FPV
             VehiclePawnWrapper* wrapper = vehicle_pawn->getVehiclePawnWrapper();
             if (enable_collision_passthrough)
-                wrapper->getConfig().enable_passthrough_on_collisions = true;
+            wrapper->getConfig().enable_passthrough_on_collisions = true;
             if (wrapper->getConfig().is_fpv_vehicle || fpv_vehicle_pawn_wrapper_ == nullptr)
-                fpv_vehicle_pawn_wrapper_ = wrapper;
-
+            fpv_vehicle_pawn_wrapper_ = wrapper;
+            
             //now create the connector for each pawn
             VehiclePtr vehicle = createVehicle(wrapper);
             if (vehicle != nullptr) {
@@ -202,6 +202,9 @@ std::string ASimModeWorldMultiRotor::getLogString()
     .append(std::to_string(bones.head.x())).append("\t")
     .append(std::to_string(bones.head.y())).append("\t")
     .append(std::to_string(bones.head.z())).append("\t")
+    .append(std::to_string(bones.head_top.x())).append("\t")
+    .append(std::to_string(bones.head_top.y())).append("\t")
+    .append(std::to_string(bones.head_top.z())).append("\t")
     .append(std::to_string(bones.left_arm.x())).append("\t")
     .append(std::to_string(bones.left_arm.y())).append("\t")
     .append(std::to_string(bones.left_arm.z())).append("\t")
@@ -253,8 +256,8 @@ void ASimModeWorldMultiRotor::createVehicles(std::vector<VehiclePtr>& vehicles)
 ASimModeWorldBase::VehiclePtr ASimModeWorldMultiRotor::createVehicle(VehiclePawnWrapper* wrapper)
 {
     auto vehicle_params = MultiRotorParamsFactory::createConfig(wrapper->getConfig().vehicle_config_name == "" ? default_vehicle_config
-        : wrapper->getConfig().vehicle_config_name);
-
+                                                                : wrapper->getConfig().vehicle_config_name);
+    
     vehicle_params_.push_back(std::move(vehicle_params));
     
     std::shared_ptr<MultiRotorConnector> vehicle = std::make_shared<MultiRotorConnector>(

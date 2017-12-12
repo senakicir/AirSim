@@ -65,13 +65,12 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
     for (unsigned int i = 0; i < requests.size(); ++i) {
         const ImageRequest& request = requests[i];
         ImageResponse& response = responses[i];
+        //sena was here
+        response.bones = accurate_bones;
         APIPCamera* camera = cameras_[i];
-        
         response.time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
         response.image_data_uint8 = std::vector<uint8_t>(render_results[i]->image_data_uint8.GetData(), render_results[i]->image_data_uint8.GetData() + render_results[i]->image_data_uint8.Num());
         response.image_data_float = std::vector<float>(render_results[i]->image_data_float.GetData(), render_results[i]->image_data_float.GetData() + render_results[i]->image_data_float.Num());
-        //sena was here
-        response.bones = accurate_bones;
         response.camera_position = NedTransform::toNedMeters(camera->GetActorLocation());
         response.camera_orientation = NedTransform::toQuaternionr(camera->GetActorRotation().Quaternion(), true);
         response.pixels_as_float = request.pixels_as_float;

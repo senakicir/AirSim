@@ -64,6 +64,7 @@ class Vector3r_arr(MsgpackMixin):
     spine1 = Vector3r()
     neck = Vector3r()
     head = Vector3r()
+    head_top = Vector3r()
     left_arm = Vector3r()
     left_forearm = Vector3r()
     left_hand = Vector3r()

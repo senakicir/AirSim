@@ -230,7 +230,7 @@ FVector VehiclePawnWrapper::getHumanPosition() const
     for (AActor* actor : foundActors) {
         FString str = actor->GetName();
         std::string str2 = std::string(TCHAR_TO_UTF8(*str));
-        if(str2 == "Carl_Blueprint"){
+        if(str2 == "Maximo_Adam_Blueprint"){
             ICharacterInterface* TheInterface = Cast<ICharacterInterface>(actor);
             return TheInterface->Execute_getHumanPositionUpdated(actor);
         }
@@ -259,7 +259,7 @@ const Vector3r_arr VehiclePawnWrapper::getBonePositions()
     for (AActor* actor : foundActors) {
         FString str = actor->GetName();
         std::string str2 = std::string(TCHAR_TO_UTF8(*str));
-        if(str2 == "Carl_Blueprint"){
+        if(str2 == "Maximo_Adam_Blueprint"){
             Vector3r_arr bonePositions;
             ICharacterInterface* TheInterface = Cast<ICharacterInterface>(actor);
             
@@ -269,7 +269,7 @@ const Vector3r_arr VehiclePawnWrapper::getBonePositions()
                 bonePositions.humanPos = humanloc_3r; //save human's position
                 
                 TArray<FVector> bones =TheInterface->Execute_getBonePositionsUpdated(actor);
-                for (int j=0; j<20; j++){
+                for (int j=0; j<21; j++){
                     Vector3r boneloc_3r(bones[j].X, bones[j].Y, bones[j].Z);
                     if (j==0)
                         bonePositions.hip = boneloc_3r;
@@ -292,24 +292,26 @@ const Vector3r_arr VehiclePawnWrapper::getBonePositions()
                     if (j==9)
                         bonePositions.head = boneloc_3r;
                     if (j==10)
-                        bonePositions.left_arm = boneloc_3r;
+                        bonePositions.head_top = boneloc_3r;
                     if (j==11)
-                        bonePositions.left_forearm = boneloc_3r;
+                        bonePositions.left_arm = boneloc_3r;
                     if (j==12)
-                        bonePositions.left_hand = boneloc_3r;
+                        bonePositions.left_forearm = boneloc_3r;
                     if (j==13)
-                        bonePositions.right_arm = boneloc_3r;
+                        bonePositions.left_hand = boneloc_3r;
                     if (j==14)
-                        bonePositions.right_forearm = boneloc_3r;
+                        bonePositions.right_arm = boneloc_3r;
                     if (j==15)
-                        bonePositions.right_hand = boneloc_3r;
+                        bonePositions.right_forearm = boneloc_3r;
                     if (j==16)
-                        bonePositions.right_hand_tip = boneloc_3r;
+                        bonePositions.right_hand = boneloc_3r;
                     if (j==17)
-                        bonePositions.left_hand_tip = boneloc_3r;
+                        bonePositions.right_hand_tip = boneloc_3r;
                     if (j==18)
-                        bonePositions.right_foot_tip = boneloc_3r;
+                        bonePositions.left_hand_tip = boneloc_3r;
                     if (j==19)
+                        bonePositions.right_foot_tip = boneloc_3r;
+                    if (j==20)
                         bonePositions.left_foot_tip = boneloc_3r;
                 }
             }
@@ -320,7 +322,7 @@ const Vector3r_arr VehiclePawnWrapper::getBonePositions()
         }
     }
     
-    UAirBlueprintLib::LogMessageString("Carl is missing!", "", LogDebugLevel::Failure);
+    UAirBlueprintLib::LogMessageString("Adam is missing!", "", LogDebugLevel::Failure);
     return Vector3r_arr();
 }
 
