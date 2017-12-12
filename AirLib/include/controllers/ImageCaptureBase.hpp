@@ -47,6 +47,7 @@ public: //types
         vector<float> image_data_float;
         //sena was here
         Vector3r_arr bones =  Vector3r_arr::Vector3r_arr();
+        int camera_id = -1; //should be filled later
         Vector3r camera_position = Vector3r::Zero();
         Quaternionr camera_orientation = Quaternionr::Identity();
         TTimePoint time_stamp = 0;

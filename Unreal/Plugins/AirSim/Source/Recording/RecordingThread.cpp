@@ -17,7 +17,8 @@ FRecordingThread::FRecordingThread()
 }
 
 
-void FRecordingThread::startRecording(msr::airlib::ImageCaptureBase* image_capture, const msr::airlib::Kinematics::State* kinematics, const RecordingSettings& settings, std::vector <std::string> columns, VehiclePawnWrapper* wrapper)
+void FRecordingThread::startRecording(msr::airlib::ImageCaptureBase* image_capture, const msr::airlib::Kinematics::State* kinematics, 
+    const RecordingSettings& settings, VehiclePawnWrapper* wrapper)
 {
     stopRecording();
     
@@ -33,8 +34,7 @@ void FRecordingThread::startRecording(msr::airlib::ImageCaptureBase* image_captu
     instance_->last_pose_ = msr::airlib::Pose();
     
     instance_->is_ready_ = true;
-    
-    instance_->recording_file_.reset(new RecordingFile(columns));
+    instance_->recording_file_.reset(new RecordingFile(instance_->settings_.header_columns));
     instance_->recording_file_->startRecording();
 }
 
@@ -83,16 +83,12 @@ uint32 FRecordingThread::Run()
                 
                 // todo: should we go as fast as possible, or should we limit this to a particular number of
                 // frames per second?
-                std::vector<msr::airlib::ImageCaptureBase::ImageRequest> requests;
+                
                 std::vector<msr::airlib::ImageCaptureBase::ImageResponse> responses;
-                
-                requests.push_back(msr::airlib::ImageCaptureBase::ImageRequest(0, msr::airlib::ImageCaptureBase::ImageType::Scene, false, true));
-                
-                image_capture_->getImages(requests, responses, bonePos); //sena was here
-                msr::airlib::Vector3r_arr bonePos = responses[0].bones;
-                TArray<uint8_t> image_data;
-                image_data.Append(responses[0].image_data_uint8.data(), responses[0].image_data_uint8.size());
-                recording_file_->appendRecord(image_data, wrapper_, bonePos);
+                image_capture_->getImages(settings_.requests, responses, bonePos); //sena was here
+                msr::airlib::Vector3r_arr bonePosArr = responses[0].bones;
+
+                recording_file_->appendRecord(responses, wrapper_, bonePosArr);
             }
         }
     }

@@ -41,15 +41,13 @@
     <Compile Include="drive_straight.py">
       <SubType>Code</SubType>
     </Compile>
-<<<<<<< HEAD:PythonClient/AirSim_Demos/PythonClient.pyproj
-=======
+
     <Compile Include="drone_stress_test.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="objects.py">
       <SubType>Code</SubType>
     </Compile>
->>>>>>> upstream/master:PythonClient/PythonClient.pyproj
     <Compile Include="seg_pallete.py">
       <SubType>Code</SubType>
     </Compile>
@@ -73,6 +71,11 @@
     <Compile Include="segmentation.py">
       <SubType>Code</SubType>
     </Compile>
+
+    <Compile Include="car_stress_test.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="survey.py" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

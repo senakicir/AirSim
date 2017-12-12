@@ -27,6 +27,8 @@ public:
 
         int width;
         int height;
+
+        msr::airlib::TTimePoint time_stamp;
     };
 
 private:
