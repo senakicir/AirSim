@@ -4,6 +4,7 @@ from math import *
 import time
 import cv2 as cv2
 from helpers import *
+import os, shutil
 
 #constants
 BETA = 0.35
@@ -11,12 +12,14 @@ DRONE_POS_IND = 0
 HUMAN_POS_IND = 1
 R_SHOULDER_IND = 2
 L_SHOULDER_IND = 3
-USE_TRACKBAR = False
-INCREMENT_DEGREE_AMOUNT = radians(-20)
+USE_TRACKBAR = True
+INCREMENT_DEGREE_AMOUNT = radians(-45)
+MAX_HUMAN_SPEED = 0.5
+
 
 z_pos = 6 #to do
 DELTA_T = 1
-N = 5
+N = 3
 TIME_HORIZON = N*DELTA_T
 
 radius = 0
@@ -27,6 +30,7 @@ class State(object):
         self.positions = positions_
         shoulder_vector = positions_[R_SHOULDER_IND, :] - positions_[L_SHOULDER_IND, :]
         self.human_orientation = np.arctan2(-shoulder_vector[0], shoulder_vector[1])
+        self.human_rotation_speed = 0
         self.human_pos = positions_[HUMAN_POS_IND,:]
         self.human_vel = 0
         self.human_speed = 0
@@ -61,10 +65,10 @@ class State(object):
         prev_human_orientation = self.human_orientation
         #a filter to eliminate noisy data (smoother movement)
         self.human_orientation = np.arctan2(-shoulder_vector[0], shoulder_vector[1])*BETA + prev_human_orientation*(1-BETA)
-
+        self.human_rotation_speed = (self.human_orientation-prev_human_orientation)/DELTA_T
 
 def getDesiredPosAndAngle(state):
-    desired_polar_angle = state.current_degree + INCREMENT_DEGREE_AMOUNT
+    desired_polar_angle = state.current_degree + INCREMENT_DEGREE_AMOUNT*(np.linalg.norm(state.human_vel)/MAX_HUMAN_SPEED)
     desired_polar_pos = np.array([cos(desired_polar_angle) * radius, sin(desired_polar_angle) * radius, 0])
     desired_pos = desired_polar_pos + state.human_pos + TIME_HORIZON*state.human_vel - np.array([0,0,z_pos])
     desired_yaw = desired_polar_angle - pi
@@ -74,7 +78,7 @@ def getDesiredPosAndAngleTrackbar(state):
     #calculate new polar coordinates according to circular motion (the circular offset required to rotate around human)
     input_rad = radians(cv2.getTrackbarPos('Angle', 'Angle Control')) #according to what degree we want the drone to be at
     #input_rad_unreal_orient = input_rad + INITIAL_HUMAN_ORIENTATION #we don't use this at all currently
-    desired_polar_angle = state.human_orientation + input_rad #+ human_rotation_speed*TIME_HORIZON
+    desired_polar_angle = state.human_orientation + input_rad + state.human_rotation_speed*TIME_HORIZON
     desired_polar_pos = np.array([cos(desired_polar_angle) * radius, sin(desired_polar_angle) * radius, 0])
     desired_pos = desired_polar_pos + state.human_pos + TIME_HORIZON*state.human_vel - np.array([0,0,z_pos])
     desired_yaw = desired_polar_angle - pi
@@ -95,14 +99,20 @@ def main():
     def TakePhoto(index):
         response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
         response = response[0]
-        bone_pos = client.getBonePositions()#response.bones
+        bone_pos = response.bones
         loc = 'temp/img_' + str(index) + '.png'
         AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
-        SaveBonePositions(num_of_photos, bone_pos, f_output)
+        SaveBonePositions2(num_of_photos, bone_pos, f_bones)
     
+    for f in os.listdir('temp'):
+        file_path = os.path.join('temp', f)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+        else:
+            shutil.rmtree(file_path)
+    f_output = open('temp/a_flight.txt', 'w')
+    f_bones = open('temp/bones.txt', 'w')
     
-    filepath = 'temp/a_flight.txt'
-    f_output = open(filepath, 'w')
 
     #connect to the AirSim simulator
     client = MultirotorClient()
@@ -124,6 +134,7 @@ def main():
     #define some variables
     drone_loc = np.array([0 ,0, 0])
     linecount = 0
+    num_of_photos = 0
 
     if (USE_TRACKBAR == True):
         # create trackbars for angle change
@@ -154,8 +165,8 @@ def main():
         
         #find desired drone speed
         delta_pos = desired_pos - current_state.drone_pos #how much the drone will have to move for this iteration
-        desired_vel = delta_pos/TIME_HORIZON #The polar velocity we need.
-        drone_speed = np.linalg.norm(desired_vel) #human_vel+polar_vel)
+        desired_vel = delta_pos/TIME_HORIZON
+        drone_speed = np.linalg.norm(desired_vel)
 
         #update drone position
         curr_pos = current_state.drone_pos
@@ -175,6 +186,10 @@ def main():
 
         end = time.time()
         elapsed_time = end - start
+        
+        TakePhoto(num_of_photos)
+        num_of_photos = num_of_photos +1
+        
         if DELTA_T - elapsed_time > 0:
             time.sleep(DELTA_T - elapsed_time)
         end = time.time()

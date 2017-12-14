@@ -5,8 +5,6 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-
-
 def EulerToRotationMatrix(roll, pitch, yaw):
     return np.array([[cos(yaw)*cos(pitch), cos(yaw)*sin(pitch)*sin(roll)-sin(yaw)*cos(roll), cos(yaw)*sin(pitch)*cos(roll)+sin(yaw)*sin(roll)],
                     [sin(yaw)*cos(pitch), sin(yaw)*sin(pitch)*sin(roll)+cos(yaw)*cos(roll), sin(yaw)*sin(pitch)*cos(roll)-cos(yaw)*sin(roll)],
@@ -14,16 +12,12 @@ def EulerToRotationMatrix(roll, pitch, yaw):
 
 
 def main():
-    ##read lines from file
-    DATE = '2017-12-04-14-40-31'
-    filepath = '../../../Airsim/'+DATE+'/airsim_rec.txt'
-    filepath2 = '../../../Airsim/'+DATE+'/plots/groundtruth.txt'
-    filepath3 = '../../../Airsim/'+DATE+'/plots'
+    filepath = 'temp/bones.txt'
+    filepath2 = 'temp/plots/groundtruth.txt'
+    filepath3 = 'temp/plots'
+    filepath4 = 'temp'
     if not os.path.exists(filepath3):
         os.makedirs(filepath3)
-    #filepath = 'temp/file.txt'
-    #filepath2 = 'temp/plots/groundtruth.txt'
-    #filepath3 = 'temp/plots'
 
     SIZE_X = 1280
     SIZE_Y = 720
@@ -43,12 +37,10 @@ def main():
     R_cam = FLIP_X_Y@R_cam@(FLIP_X_Y.T)
     C_cam = np.array([[CAMERA_OFFSET_X, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z]]).T
     C_cam = FLIP_X_Y.dot(C_cam)
-    next(f)
     for line in f:
         linecount = linecount + 1
         print(linecount)
         numbers = line.strip().split('\t')
-        numbers = numbers[:-1]
         numbers = list(map(float, numbers))
         
         #take the drone position and orientation
@@ -64,7 +56,8 @@ def main():
         C_drone = FLIP_X_Y@C_drone
         
         #plot everything
-        #PlotDroneAndHuman(numbers, linecount, filepath3)
+        photo_loc = filepath4 + '/img_'+ str(linecount)+'.png'
+        #PlotDroneAndHuman(numbers, linecount, filepath3, photo_loc)
 
         ##find H matrix
         fx = SIZE_X/2
@@ -88,7 +81,7 @@ def main():
         x = x[0:2, :]
 
         #PlotProjection(x, linecount, filepath3)
-        SuperImposeOnImage(x, filepath3, linecount)
+        SuperImposeOnImage(x, filepath3, linecount, photo_loc)
         
         x = x.flatten('F')
         mystr = ''

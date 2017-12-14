@@ -97,7 +97,7 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(DroneApi* drone, string server_ad
     bind("getHumanPosition", [&]() -> MultirotorRpcLibAdapators::Vector3r { return getDroneApi()->getHumanPosition(); });
     
     (static_cast<rpc::server*>(getServer()))->
-    bind("getBonePositions", [&]() -> MultirotorRpcLibAdapators::Vector3r_arr { return getDroneApi()->getBonePositions(); });
+    bind("getBonePositions", [&]() -> MultirotorRpcLibAdapators::Vector3r_arr { return *(getDroneApi()->getBonePositions()); });
     
     (static_cast<rpc::server*>(getServer()))->
     bind("getDroneWorldPosition", [&]() -> MultirotorRpcLibAdapators::Vector3r { return getDroneApi()->getDroneWorldPosition(); });

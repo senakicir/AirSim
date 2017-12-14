@@ -245,7 +245,7 @@ FRotator VehiclePawnWrapper::getDroneWorldOrientation() const
     return TheDroneInterface -> Execute_getDroneOrientationUpdated(pawn_);
 }
 
-const Vector3r_arr VehiclePawnWrapper::getBonePositions()
+Vector3r_arr VehiclePawnWrapper::getBonePositions()
 {
     
     TArray<AActor*> foundActors;

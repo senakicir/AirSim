@@ -87,7 +87,7 @@ public: //interface
     FVector getHumanPosition() const;
     FVector getDroneWorldPosition() const;
     FRotator getDroneWorldOrientation() const;
-    const Vector3r_arr getBonePositions();
+    Vector3r_arr getBonePositions();
     void setBonePos(Vector3r_arr bonePos_);
     
     void setLogLine(std::string line);

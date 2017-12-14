@@ -26,12 +26,11 @@ void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBa
         }
     }
     else
-    getSceneCaptureImage(requests, responses, false, bonePos);
+        getSceneCaptureImage(requests, responses, false, bonePos);
 }
 
 //sena was here
-void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests,
-                                              std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method, Vector3r_arr* bonePos)
+void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method, Vector3r_arr* bonePos)
 {
     std::vector<std::shared_ptr<RenderRequest::RenderParams>> render_params;
     std::vector<std::shared_ptr<RenderRequest::RenderResult>> render_results;
@@ -53,31 +52,22 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
             response.message = "Can't take screenshot because texture target is null";
         }
         else
-        textureTarget = capture->TextureTarget;
+            textureTarget = capture->TextureTarget;
         
         render_params.push_back(std::make_shared<RenderRequest::RenderParams>(textureTarget, requests[i].pixels_as_float, requests[i].compress));
     }
     
-    Vector3r_arr accurate_bones; //sena was here
-    RenderRequest render_request(use_safe_method);
-    render_request.getScreenshot(render_params.data(), render_results, render_params.size(), bonePos, accurate_bones); //sena was here
+    RenderRequest render_request(use_safe_method, bonePos); //sena was here
+    render_request.getScreenshot(render_params.data(), render_results, render_params.size());
     
     for (unsigned int i = 0; i < requests.size(); ++i) {
-<<<<<<< HEAD
-        const ImageRequest& request = requests[i];
-        ImageResponse& response = responses[i];
-        //sena was here
-        response.bones = accurate_bones;
-        APIPCamera* camera = cameras_[i];
-        response.time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
-=======
         const ImageRequest& request = requests.at(i);
         ImageResponse& response = responses.at(i);
         APIPCamera* camera = cameras_[i];
-              
+        //sena was here
+        response.bones = render_results[i]->bonePos_data;
         response.camera_id = request.camera_id;
         response.time_stamp = render_results[i]->time_stamp;
->>>>>>> upstream/master
         response.image_data_uint8 = std::vector<uint8_t>(render_results[i]->image_data_uint8.GetData(), render_results[i]->image_data_uint8.GetData() + render_results[i]->image_data_uint8.Num());
         response.image_data_float = std::vector<float>(render_results[i]->image_data_float.GetData(), render_results[i]->image_data_float.GetData() + render_results[i]->image_data_float.Num());
         response.camera_position = NedTransform::toNedMeters(camera->GetActorLocation());
@@ -129,7 +119,7 @@ void UnrealImageCapture::addScreenCaptureHandler(UWorld *world)
                                                              // Make sure that all alpha values are opaque.
                                                              TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
                                                              for(auto& Color : RefBitmap)
-                                                             Color.A = 255;
+                                                                 Color.A = 255;
                                                              
                                                              TArray<uint8_t> last_compressed_png;
                                                              FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);

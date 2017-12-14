@@ -698,11 +698,11 @@ void DroneControllerBase::setHumanPosition(const Vector3r& humanPosition)
 }
 
 //sena was here
-Vector3r_arr DroneControllerBase::getBonePositions()
+Vector3r_arr* DroneControllerBase::getBonePositions()
 {
     return bonePositions_;
 }
-void DroneControllerBase::setBonePositions(const Vector3r_arr& bone_positions)
+void DroneControllerBase::setBonePositions(Vector3r_arr* bone_positions)
 {
     bonePositions_ = bone_positions;
 }

@@ -47,21 +47,25 @@ MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* vehicle_pawn_wrappe
     controller_ = static_cast<msr::airlib::DroneControllerBase*>(vehicle_.getController());
     
     if (controller_->getRemoteControlID() >= 0)
-        detectUsbRc();
+    detectUsbRc();
     
     rotor_count_ = vehicle_.wrenchVertexCount();
     rotor_info_.assign(rotor_count_, RotorInfo());
     
     last_pose_ = pending_pose_ = last_debug_pose_ = Pose::nanPose();
     pending_pose_status_ = PendingPoseStatus::NonePending;
-
+    
     reset_pending_ = false;
-
+    
     std::string message;
     if (!vehicle_.getController()->isAvailable(message)) {
         UAirBlueprintLib::LogMessage(FString("Vehicle was not initialized: "), FString(message.c_str()), LogDebugLevel::Failure);
         UAirBlueprintLib::LogMessage("Tip: check connection info in settings.json", "", LogDebugLevel::Informational);
     }
+    
+    //sena was here
+    Vector3r_arr* bone_positions = &(vehicle_pawn_wrapper_->bones);
+    vehicle_.setBonePositions(bone_positions);
 }
 
 msr::airlib::ImageCaptureBase* MultiRotorConnector::getImageCapture()
@@ -86,10 +90,10 @@ void MultiRotorConnector::detectUsbRc()
     rc_data_.is_initialized = joystick_state_.is_initialized;
     
     if (rc_data_.is_initialized)
-        UAirBlueprintLib::LogMessageString("RC Controller on USB: ", joystick_state_.pid_vid, LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("RC Controller on USB: ", joystick_state_.pid_vid, LogDebugLevel::Informational);
     else
-        UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ",
-                                           std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ",
+                                       std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
 }
 
 const msr::airlib::RCData& MultiRotorConnector::getRCData()
@@ -139,36 +143,13 @@ const msr::airlib::RCData& MultiRotorConnector::getRCData()
 void MultiRotorConnector::updateRenderedState(float dt)
 {
     //Utils::log("------Render tick-------");
-
-    //sena was here
-    const Vector3r_arr& bone_positions = (vehicle_pawn_wrapper_->bones);
-    vehicle_.setBonePositions(bone_positions);
     
-    /*
-     //sena was here
-     const FVector humanPosition_f = vehicle_pawn_wrapper_->getHumanPosition();
-     Vector3r humanPosition = Vector3r(humanPosition_f.X, humanPosition_f.Y, humanPosition_f.Z);
-     vehicle_.setHumanPosition(humanPosition);
-     */
-    
-     //sena was here
-    const FVector droneWorldPosition_f = vehicle_pawn_wrapper_->getDroneWorldPosition();
-    Vector3r droneWorldPosition = Vector3r(droneWorldPosition_f.X, droneWorldPosition_f.Y, droneWorldPosition_f.Z);
-    vehicle_.setDroneWorldPosition(droneWorldPosition);
-    
-    //sena was here
-    const FRotator droneWorldOrientation_f = vehicle_pawn_wrapper_->getDroneWorldOrientation();
-    float pi = 3.14159265358979323846;
-    Vector3r droneWorldOrientation = Vector3r(droneWorldOrientation_f.Roll*pi/180, droneWorldOrientation_f.Pitch*pi/180, droneWorldOrientation_f.Yaw*pi/180);
-    vehicle_.setDroneWorldOrientation(droneWorldOrientation);
-    
-
     //if reset is pending then do it first, no need to do other things until next tick
     if (reset_pending_) {
         reset_task_();
         return;
     }
-
+    
     //move collision info from rendering engine to vehicle
     const CollisionInfo& collision_info = vehicle_pawn_wrapper_->getCollisionInfo();
     vehicle_.setCollisionInfo(collision_info);
@@ -193,7 +174,7 @@ void MultiRotorConnector::updateRenderedState(float dt)
     }
     
     if (pending_pose_status_ == PendingPoseStatus::RenderStatePending)
-        vehicle_.setPose(pending_pose_);
+    vehicle_.setPose(pending_pose_);
     
     last_pose_ = vehicle_.getPose();
     
@@ -213,7 +194,7 @@ void MultiRotorConnector::updateRenderedState(float dt)
     controller_->getStatusMessages(controller_messages_);
     
     if (controller_->getRemoteControlID() >= 0)
-        controller_->setRCData(getRCData());
+    controller_->setRCData(getRCData());
 }
 
 void MultiRotorConnector::updateRendering(float dt)
@@ -223,7 +204,7 @@ void MultiRotorConnector::updateRendering(float dt)
         reset_pending_ = false;
         return;
     }
-
+    
     try {
         controller_->reportTelemetry(dt);
     }
@@ -237,7 +218,7 @@ void MultiRotorConnector::updateRendering(float dt)
             pending_pose_status_ = PendingPoseStatus::NonePending;
         }
         else
-            vehicle_pawn_wrapper_->setPose(last_pose_, false);
+        vehicle_pawn_wrapper_->setPose(last_pose_, false);
         
         vehicle_pawn_wrapper_->setDebugPose(last_debug_pose_);
     }
@@ -277,11 +258,11 @@ Pose MultiRotorConnector::getPose()
 Pose MultiRotorConnector::getActorPose(const std::string& actor_name)
 {
     msr::airlib::Pose pose;
-
+    
     UAirBlueprintLib::RunCommandOnGameThread([&pose, &actor_name, this]() {
         pose = vehicle_pawn_wrapper_->getActorPose(actor_name);
     }, true);
-
+    
     return pose;
 }
 
@@ -324,7 +305,7 @@ void MultiRotorConnector::startApiServer()
                                            api_server_address_ == "" ? "(default)" : api_server_address_.c_str(), LogDebugLevel::Informational);
     }
     else
-        UAirBlueprintLib::LogMessageString("API server is disabled in settings", "", LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("API server is disabled in settings", "", LogDebugLevel::Informational);
     
 }
 void MultiRotorConnector::stopApiServer()
@@ -345,9 +326,9 @@ bool MultiRotorConnector::isApiServerStarted()
 //*** Start: UpdatableState implementation ***//
 void MultiRotorConnector::reset()
 {
-
+    
     if (UAirBlueprintLib::IsInGameThread())
-        resetPrivate();
+    resetPrivate();
     else {
         //schedule the task which we will execute in tick event when World object is locked
         reset_task_ = std::packaged_task<void()>([this]() { resetPrivate(); });
@@ -360,10 +341,10 @@ void MultiRotorConnector::reset()
 void MultiRotorConnector::resetPrivate()
 {
     VehicleConnectorBase::reset();
-
+    
     //TODO: should this be done in MultiRotor.hpp
     //controller_->reset();
-
+    
     rc_data_ = RCData();
     vehicle_pawn_wrapper_->reset();    //we do flier resetPose so that flier is placed back without collisions
     vehicle_.reset();
@@ -392,4 +373,3 @@ MultiRotorConnector::UpdatableObject* MultiRotorConnector::getPhysicsBody()
     return vehicle_.getPhysicsBody();
 }
 //*** End: UpdatableState implementation ***//
-

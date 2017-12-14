@@ -3,21 +3,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.gridspec as gridspec
+from os import listdir
 
-bones_h36m = [[0, 1], [1, 2], [2, 3], [3, 18],
-              [0, 4], [4, 5], [5, 6], [6, 19],
-              [0, 7], [7, 8], [8, 9],
-              [8, 13], [13, 14], [14, 15], [15, 16],
-              [8, 10], [10, 11], [11, 12], [12, 17]] #19 connections
+bones_h36m = [[0, 1], [1, 2], [2, 3], [3, 19],
+              [0, 4], [4, 5], [5, 6], [6, 20],
+              [0, 7], [7, 8], [8, 9], [9, 10],
+              [8, 14], [14, 15], [15, 16], [16, 17],
+              [8, 11], [11, 12], [12, 13], [13, 18]] #20 connections
 
 
 joint_indices_h36m=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-joint_names_h36m = ['hip', 'right_up_leg','right_leg','right_foot','left_up_leg','left_leg', 'left_foot','spine1','neck','head','left_arm','left_forearm','left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip', 'right_foot_tip', 'left_foot_tip']
+joint_names_h36m = ['hip','right_up_leg','right_leg','right_foot','left_up_leg','left_leg', 'left_foot','spine1','neck','head', 'head_top', 'left_arm','left_forearm','left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip', 'right_foot_tip', 'left_foot_tip']
 
 
 colormap='gist_rainbow'
 
-def PlotDroneAndHuman(numbers, linecount, location):
+def PlotDroneAndHuman(numbers, linecount, location, photo_location):
     index = numbers[0]
     drone = numbers[1:4]
     drone = np.asarray(drone, dtype=np.float32)
@@ -53,8 +54,6 @@ def PlotDroneAndHuman(numbers, linecount, location):
     text2 = 'drone position:\n'+str(drone[0])+'\n'+str(drone[1])+'\n'+str(drone[2])
 
     plt.legend((plot1,plot1),(text1,text2), bbox_to_anchor=(1.6, 0.7))
-    
-
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -62,7 +61,7 @@ def PlotDroneAndHuman(numbers, linecount, location):
     lol = 'Image no: '+str(int(index))
     ax.set_title(lol)
 
-    filename_photo = location + '/../images/img_' + str(linecount)  + '.png'
+    filename_photo = photo_location
     im = plt.imread(filename_photo)
     gs2 = gridspec.GridSpec(1, 1)
     ax2 = fig.add_subplot(gs2[0])
@@ -81,7 +80,7 @@ def PlotProjection(numbers, linecount, location):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     cmap = plt.get_cmap(colormap)
-    colorindex = [17, 0, 5, 9, 15, 2, 18, 10, 12, 4, 14, 13, 11, 3, 7, 8, 16, 6, 1]
+    colorindex = [17, 0, 5, 9, 15, 2, 18, 10, 12, 4, 14, 13, 11, 3, 7, 8, 16, 6, 1, 19]
 
     ax.set_xlim(0, 1280)
     ax.set_ylim(0, 720)
@@ -96,21 +95,18 @@ def PlotProjection(numbers, linecount, location):
     plt.savefig(filename, bbox_inches='tight', pad_inches=0)
     plt.close()
 
-def SuperImposeOnImage(numbers, location, linecount):
-    filename = location + '/../images/img_' + str(linecount)  + '.png'
-    im = plt.imread(filename)
+def SuperImposeOnImage(numbers, location, linecount, photo_location):
+    im = plt.imread(photo_location)
     
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.imshow(im)
-    
     #plot part
     cmap = plt.get_cmap(colormap)
-    colorindex = [17, 0, 5, 9, 15, 2, 18, 10, 12, 4, 14, 13, 11, 3, 7, 8, 16, 6, 1]
-    
+    colorindex = [17, 0, 5, 9, 15, 2, 18, 10, 12, 4, 14, 13, 11, 3, 7, 8, 16, 6, 1, 19]
     for i, bone in enumerate(bones_h36m):
         color_ = cmap(colorindex[i]/len(bones_h36m))
-        ax.plot( numbers[0,bone], numbers[1,bone], color = color_)
+        ax.plot( numbers[0,bone], numbers[1,bone], color = 'w', linewidth=1)
 
     filename = location + '/superimposed' + str(linecount) + '.png'
     plt.savefig(filename, bbox_inches='tight', pad_inches=0)

@@ -131,7 +131,7 @@ Vector3r MultirotorRpcLibClient::getHumanPosition()
 
 Vector3r_arr MultirotorRpcLibClient::getBonePositions()
 {
-    return static_cast<rpc::client*>(getClient())->call("getBonePositions").as<MultirotorRpcLibAdapators::Vector3r_arr>().to();
+    return (static_cast<rpc::client*>(getClient())->call("getBonePositions")).as<MultirotorRpcLibAdapators::Vector3r_arr>().to();
 }
     
 Vector3r MultirotorRpcLibClient::getDroneWorldOrientation()

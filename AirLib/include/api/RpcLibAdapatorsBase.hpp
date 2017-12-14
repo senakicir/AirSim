@@ -110,7 +110,6 @@ public:
             right_arm = s.right_arm;
             right_forearm = s.right_forearm;
             right_hand = s.right_hand;
-            
             right_hand_tip = s.right_hand_tip;
             left_hand_tip = s.left_hand_tip;
             right_foot_tip = s.right_foot_tip;
@@ -119,13 +118,7 @@ public:
         
         msr::airlib::Vector3r_arr to() const
         {
-            return msr::airlib::Vector3r_arr(dronePos.to(), droneOrient.to(), humanPos.to(), hip.to(),
-                                             right_up_leg.to(), right_leg.to(), right_foot.to(),
-                                             left_up_leg.to(),left_leg.to(), left_foot.to(),
-                                             spine1.to(),neck.to(),head.to(),head_top.to(),
-                                             left_arm.to(),left_forearm.to(),left_hand.to(),
-                                             right_arm.to(),right_forearm.to(),right_hand.to(),
-                                             right_hand_tip.to(), left_hand_tip.to(), right_foot_tip.to(), left_foot_tip.to());
+            return msr::airlib::Vector3r_arr(dronePos.to(), droneOrient.to(), humanPos.to(), hip.to(),right_up_leg.to(), right_leg.to(), right_foot.to(), left_up_leg.to(),left_leg.to(), left_foot.to(), spine1.to(),neck.to(),head.to(),head_top.to(), left_arm.to(),left_forearm.to(),left_hand.to(),right_arm.to(),right_forearm.to(),right_hand.to(), right_hand_tip.to(), left_hand_tip.to(), right_foot_tip.to(), left_foot_tip.to());
         }
     };
     
@@ -342,7 +335,7 @@ public:
         msr::airlib::ImageCaptureBase::ImageType image_type;
 
         MSGPACK_DEFINE_MAP(image_data_uint8, image_data_float, camera_position, 
-            camera_orientation, time_stamp, message, pixels_as_float, compress, width, height, image_type);
+            camera_orientation, bones, time_stamp, message, pixels_as_float, compress, width, height, image_type);
 
         ImageResponse()
         {}
@@ -362,6 +355,7 @@ public:
 
             camera_position = Vector3r(s.camera_position);
             camera_orientation = Quaternionr(s.camera_orientation);
+            bones = s.bones;
             time_stamp = s.time_stamp;
             message = s.message;
             compress = s.compress;
@@ -383,6 +377,7 @@ public:
 
             d.camera_position = camera_position.to();
             d.camera_orientation = camera_orientation.to();
+            d.bones = bones.to();
             d.time_stamp = time_stamp;
             d.message = message;
             d.compress = compress;

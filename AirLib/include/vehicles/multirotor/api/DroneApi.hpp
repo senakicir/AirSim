@@ -8,6 +8,7 @@
 #include "common/common_utils/WorkerThread.hpp"
 #include "vehicles/multirotor/controllers/DroneControllerBase.hpp"
 #include "controllers/VehicleConnectorBase.hpp"
+
 #include "api/VehicleApiBase.hpp"
 #include "controllers/Waiter.hpp"
 #include <atomic>
@@ -33,12 +34,13 @@ namespace msr { namespace airlib {
     
     class DroneApi : public VehicleApiBase {
         
-    public:
+        public:
         DroneApi(VehicleConnectorBase* vehicle)
         : vehicle_(vehicle)
         {
             controller_ = static_cast<DroneControllerBase*>(vehicle->getController());
-            
+            bonePosPtr = controller_-> getBonePositions();
+
             //auto vehicle_params = controller_->getVehicleParams();
             //auto fence = std::make_shared<CubeGeoFence>(VectorMath::Vector3f(-1E10, -1E10, -1E10), VectorMath::Vector3f(1E10, 1E10, 1E10), vehicle_params.distance_accuracy);
             //auto safety_eval = std::make_shared<SafetyEval>(vehicle_params, fence);
@@ -170,7 +172,7 @@ namespace msr { namespace airlib {
             return controller_->getHumanPosition();
         }
         //sena was here
-        Vector3r_arr getBonePositions()
+        Vector3r_arr* getBonePositions()
         {
             return controller_->getBonePositions();
         }
@@ -186,7 +188,7 @@ namespace msr { namespace airlib {
         {
             return controller_->getDroneWorldOrientation();
         }
-
+        
         
         Vector3r getVelocity()
         {
@@ -279,7 +281,7 @@ namespace msr { namespace airlib {
         {
             vector<ImageCaptureBase::ImageResponse> responses;
             ImageCaptureBase* image_capture = vehicle_->getImageCapture();
-            image_capture->getImages(requests, responses, nullptr);
+            image_capture->getImages(requests, responses, bonePosPtr); //sena was here
             return responses;
         }
         virtual vector<uint8_t> simGetImage(uint8_t camera_id, ImageCaptureBase::ImageType image_type) override
@@ -316,13 +318,13 @@ namespace msr { namespace airlib {
         
         /*** Implementation of CancelableBase ***/
         
-    private:// types
+        private:// types
         // Trivial CancelableBase used for the synchronous commands (non-offboard control)
         // These commands do not use the WorkerThread, they are executed synchronously, but
         // they may still be cancelable.
         class DirectCancelableBase : public CancelableBase
         {
-        public:
+            public:
             virtual void execute() override {};
         };
         struct CallLock {
@@ -354,7 +356,7 @@ namespace msr { namespace airlib {
                 //lock_ will be destroyed automatically and release any locks
             }
             
-        private:
+            private:
             std::unique_lock<std::mutex> lock_;
             bool loop_post_needed = false;
             DroneControllerBase* controller_;
@@ -362,7 +364,7 @@ namespace msr { namespace airlib {
         
         class OffboardCommand : public CancelableBase {
             DroneControllerBase* controller_;
-        public:
+            public:
             OffboardCommand(DroneControllerBase* controller) {
                 controller_ = controller;
             }
@@ -393,7 +395,7 @@ namespace msr { namespace airlib {
         
         class MoveByAngle : public OffboardCommand {
             float pitch_, roll_, z_, yaw_, duration_;
-        public:
+            public:
             MoveByAngle(DroneControllerBase* controller, float pitch, float roll, float z, float yaw, float duration) : OffboardCommand(controller) {
                 this->pitch_ = pitch;
                 this->roll_ = roll;
@@ -410,7 +412,7 @@ namespace msr { namespace airlib {
             float vx_, vy_, vz_, duration_;
             YawMode yaw_mode_;
             DrivetrainType drivetrain_;
-        public:
+            public:
             MoveByVelocity(DroneControllerBase* controller, float vx, float vy, float vz, float duration, DrivetrainType drivetrain, const YawMode& yaw_mode) : OffboardCommand(controller) {
                 this->vx_ = vx;
                 this->vy_ = vy;
@@ -428,7 +430,7 @@ namespace msr { namespace airlib {
             float vx_, vy_, z_, duration_;
             YawMode yaw_mode_;
             DrivetrainType drivetrain_;
-        public:
+            public:
             MoveByVelocityZ(DroneControllerBase* controller, float vx, float vy, float z, float duration, DrivetrainType drivetrain, const YawMode& yaw_mode) : OffboardCommand(controller) {
                 this->vx_ = vx;
                 this->vy_ = vy;
@@ -449,7 +451,7 @@ namespace msr { namespace airlib {
             YawMode yaw_mode_;
             float lookahead_;
             float adaptive_lookahead_;
-        public:
+            public:
             MoveOnPath(DroneControllerBase* controller, const vector<Vector3r>& path, float velocity, DrivetrainType drivetrain, const YawMode& yaw_mode,
                        float lookahead, float adaptive_lookahead) : OffboardCommand(controller) {
                 this->path_ = path;
@@ -474,7 +476,7 @@ namespace msr { namespace airlib {
             YawMode yaw_mode_;
             float lookahead_;
             float adaptive_lookahead_;
-        public:
+            public:
             MoveToPosition(DroneControllerBase* controller, float x, float y, float z, float velocity, DrivetrainType drivetrain,
                            const YawMode& yaw_mode, float lookahead, float adaptive_lookahead) : OffboardCommand(controller) {
                 this->x_ = x;
@@ -498,7 +500,7 @@ namespace msr { namespace airlib {
             YawMode yaw_mode_;
             float lookahead_;
             float adaptive_lookahead_;
-        public:
+            public:
             MoveToZ(DroneControllerBase* controller, float z, float velocity, const YawMode& yaw_mode, float lookahead, float adaptive_lookahead) : OffboardCommand(controller) {
                 this->z_ = z;
                 this->velocity_ = velocity;
@@ -519,7 +521,7 @@ namespace msr { namespace airlib {
             YawMode yaw_mode_;
             DrivetrainType drivetrain_;
             float duration_;
-        public:
+            public:
             MoveByManual(DroneControllerBase* controller, float vx_max, float vy_max, float z_min, float duration, DrivetrainType drivetrain, const YawMode& yaw_mode) : OffboardCommand(controller) {
                 this->vx_max_ = vx_max;
                 this->vy_max_ = vy_max;
@@ -537,7 +539,7 @@ namespace msr { namespace airlib {
         class RotateToYaw : public OffboardCommand {
             float yaw_;
             float margin_;
-        public:
+            public:
             RotateToYaw(DroneControllerBase* controller, float yaw, float margin) : OffboardCommand(controller) {
                 this->yaw_ = yaw;
                 this->margin_ = margin;
@@ -550,7 +552,7 @@ namespace msr { namespace airlib {
         class RotateByYawRate : public OffboardCommand {
             float yaw_rate_;
             float duration_;
-        public:
+            public:
             RotateByYawRate(DroneControllerBase* controller, float yaw_rate, float duration) : OffboardCommand(controller) {
                 this->yaw_rate_ = yaw_rate;
                 this->duration_ = duration;
@@ -561,7 +563,7 @@ namespace msr { namespace airlib {
         };
         
         class Hover : public OffboardCommand {
-        public:
+            public:
             Hover(DroneControllerBase* controller) : OffboardCommand(controller) {
             }
             virtual void executeImpl(DroneControllerBase* controller, CancelableBase& cancelable) override {
@@ -570,9 +572,10 @@ namespace msr { namespace airlib {
         };
         
         
-    private: //vars
+        private: //vars
         VehicleConnectorBase* vehicle_ = nullptr;
         DroneControllerBase* controller_ = nullptr;
+        Vector3r_arr* bonePosPtr = nullptr;
         WorkerThread offboard_thread_;
         std::mutex action_mutex_;
         std::mutex cancel_mutex_;
