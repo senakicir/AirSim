@@ -28,17 +28,22 @@ NUM_OF_JOINTS = 17
 
 PRETRAINED = True
 config_dict = {'img_mean' : (0.485, 0.456, 0.406), 'img_std' : (0.229, 0.224, 0.225)}
-pixel_height = 
 
-def FindJointPos2D(photo, num_of_photos, make_plot = True):
+def initNet():
+    net = resnet50(PRETRAINED).cuda()
+    return net
+
+def FindJointPos2D(photo, num_of_photos, net, make_plot = True):
 
     class DroneFootage(Dataset):
         def __init__(self, input_data, transform=None):
             self.transform = transform
             self.input_data = input_data
         
+        def __len__(self):
+            return 1
+
         def __getitem__(self, idx):
-            img_name = os.path.join(self.root_dir, 'img_' + str(self.landmarks_frame.ix[idx, 0]) + '.png')
             image = self.input_data
             image = np.array(image[:,:,0:3], dtype='f')
             images = [scipy.misc.imresize( image, 1.0), scipy.misc.imresize( image, 0.8), scipy.misc.imresize( image, 1.2)]
@@ -55,13 +60,11 @@ def FindJointPos2D(photo, num_of_photos, make_plot = True):
     drone_test_dataset = DroneFootage(input_data=photo, transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize(config_dict['img_mean'], config_dict['img_std'])]))
     testloader = torch.utils.data.DataLoader(drone_test_dataset, batch_size=1, shuffle=False, num_workers=1)
 
-    net = resnet50(PRETRAINED).cuda()
-
     fig = plt.figure()
     for i, samples in enumerate(testloader, 0):
         resized_outputs = []
         for image_num, data in enumerate(samples):
-            images, labels = data['image'], data['landmarks']
+            images = data['image']
             
             if image_num == 0:
                 an_image = scipy.misc.imresize(np.squeeze(images.numpy()).transpose([1,2,0]), INPUT_IMAGE_SIZE)
@@ -85,7 +88,7 @@ def FindJointPos2D(photo, num_of_photos, make_plot = True):
             bones[:, heatmap] = np.unravel_index(np.argmax(temp),[720,1280])
         
         
-        if make_plot = True:
+        if make_plot == True:
             sum_heatmap = np.sum(mean_heatmap, axis=2)/NUM_OF_JOINTS
             fig1 = plt.figure()
             ax1 = fig1.add_subplot(111)
