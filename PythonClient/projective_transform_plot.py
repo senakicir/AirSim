@@ -106,7 +106,7 @@ def SuperImposeOnImage(numbers, location, linecount, photo_location):
     colorindex = [17, 0, 5, 9, 15, 2, 18, 10, 12, 4, 14, 13, 11, 3, 7, 8, 16, 6, 1, 19]
     for i, bone in enumerate(bones_h36m):
         color_ = cmap(colorindex[i]/len(bones_h36m))
-        ax.plot( numbers[0,bone], numbers[1,bone], color = 'w', linewidth=1)
+        ax.plot( numbers[0,bone], numbers[1,bone], color = 'b', linewidth=1)
 
     filename = location + '/superimposed' + str(linecount) + '.png'
     plt.savefig(filename, bbox_inches='tight', pad_inches=0)

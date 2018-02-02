@@ -5,15 +5,13 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>e2049e20-b6dd-474e-8bca-1c8dc54725aa</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>segmentation.py</StartupFile>
+    <StartupFile>cv_mode.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>PythonClient</Name>
     <RootNamespace>PythonClient</RootNamespace>
-    <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
-    <InterpreterVersion>3.5</InterpreterVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,25 +28,10 @@
     <Compile Include="camera.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="car_collision.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="cv_mode.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="drive_straight.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="seg_pallete.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="hello_car.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="hello_drone.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="infrared.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="navigate.py">
@@ -58,13 +41,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="pfm.py" />
-    <Compile Include="AirSimClient.py" />
-    <Compile Include="segmentation.py">
-      <SubType>Code</SubType>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\3.5" />
+    <Compile Include="PythonClient.py" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
