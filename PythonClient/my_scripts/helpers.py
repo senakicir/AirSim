@@ -1,11 +1,8 @@
 from PythonClient import *
 from AirSimClient import *
-from math import *
+from math import cos, sin, pi, radians, degrees
 import os, shutil
 import time
-import cv2 as cv2
-import time
-
 
 SIZE_X = 1280
 SIZE_Y = 720
