@@ -25,7 +25,7 @@ class State(object):
         #self.human_orientation = np.arctan2(-shoulder_vector[0], shoulder_vector[1])
         #self.human_rotation_speed = 0
         self.human_pos = positions_[HUMAN_POS_IND,:]
-        self.human_vel = 0
+        self.human_vel = 1. * np.array([0,0,0])
         self.human_speed = 0
         self.drone_pos = np.array([0,0,0])
         self.current_polar_pos = np.array([0,0,0])
@@ -38,7 +38,7 @@ class State(object):
         drone_polar_pos = - positions_[HUMAN_POS_IND, :] #find the drone initial angle (needed for trackbar)
         self.some_angle = RangeAngle(np.arctan2(drone_polar_pos[1], drone_polar_pos[0]), 360, True)
 
-        self.kalman = cv2.KalmanFilter(6, 3, 0) #6, state variables. 3 measurement variables 
+        self.kalman = cv2.KalmanFilter(3, 3, 0) #3, state variables. 3 measurement variables 
 
         #9x9 F: no need for further modification
         self.kalman.transitionMatrix = 1. * np.array([[1, 0, 0, DELTA_T, 0, 0, 0, 0, 0], [0, 1, 0, 0, DELTA_T, 0, 0, 0, 0], [0, 0, 1, 0, 0, DELTA_T,  0, 0, 0],
@@ -54,18 +54,19 @@ class State(object):
         self.kalman.errorCovPost = 1. * np.eye(9, 9)
         #6x1 initial state, no need to modify
         self.kalman.statePost = np.array([[self.human_pos[0], self.human_pos[1], self.human_pos[2], 0, 0, 0, self.human_pos[0], self.human_pos[1], self.human_pos[2]]]).T
+
     
     def updateState(self, positions_, inFrame_, cov_):
         self.kalman.measurementNoiseCov = cov_
         self.positions = positions_
         self.inFrame = inFrame_
         #get human position, delta human position, human drone_speedcity
-
-        prediction_human_pos = self.kalman.predict()
+        prediction_human_pos = self.kalman.predict(self.human_vel)
         estimated_human_state = self.kalman.correct(self.positions[HUMAN_POS_IND,:])
 
+        prev_human_pos = self.human_pos
         self.human_pos = np.copy(estimated_human_state[0:3,0])
-        self.human_vel = np.copy(estimated_human_state[3:6,0])
+        self.human_vel = (self.human_pos - prev_human_pos)/DELTA_T
         self.human_speed = np.linalg.norm(self.human_vel) #the speed of the human (scalar)
         
         #what angle and polar position is the drone at currently
