@@ -11,6 +11,7 @@ USE_AIRSIM = True
 datetime_folder_name = ''
 gt_hv = []
 est_hv = []
+mystr = ''
 
 def determineAllPositions(bone_pred, client):
     drone_pos_vec = client.getPosition() #airsim gives us the drone coordinates with initial drone loc. as origin
@@ -48,10 +49,13 @@ def determineAllPositions_mildly_GT(bone_pos_GT, client):
 
     unreal_positions = client.getAllPositions() #airsim gives us the drone coordinates with initial drone loc. as origin
 
-
+    global mystr
+    mystr = ''
+    mystr = '\t'+str(unreal_positions[HUMAN_POS_IND, 0]) +'\t'+str(unreal_positions[HUMAN_POS_IND, 1])+'\t'+str(unreal_positions[HUMAN_POS_IND, 2])+'\t'+str(angle[0])+'\t'+str(angle[1])+'\t'+str(angle[2])+'\t'+str(drone_pos_vec.x_val)+'\t'+str(drone_pos_vec.y_val)+'\t'+str(drone_pos_vec.z_val)
+    mystr = mystr+'\n'
     return positions, unreal_positions, inFrame, cov
 
-def determineAllPositions_all_GT(client, f_test):
+def determineAllPositions_all_GT(client):
     unreal_positions = client.getAllPositions() #airsim gives us the drone coordinates with initial drone loc. as origin
     angle = client.getPitchRollYaw()
     positions = np.zeros([5, 3])
@@ -63,8 +67,10 @@ def determineAllPositions_all_GT(client, f_test):
     
     positions[DRONE_ORIENTATION_IND,:] = np.array([angle[1], angle[0], angle[2]])
 
-    my_str = str(positions[DRONE_POS_IND,0]) + '\t' + str(positions[DRONE_POS_IND,1]) + '\t' + str(positions[DRONE_POS_IND,2]) + '\t' + str(positions[DRONE_ORIENTATION_IND,0]) + '\t' + str(positions[DRONE_ORIENTATION_IND,1]) + '\t' + str(positions[DRONE_ORIENTATION_IND,2]) + '\t' + str(positions[HUMAN_POS_IND,0]) + '\t' + str(positions[HUMAN_POS_IND,1]) + '\t' + str(positions[HUMAN_POS_IND,2]) + '\n'
-    f_test.write(my_str)
+    global mystr
+    mystr = ''
+    mystr = '\t'+str(unreal_positions[HUMAN_POS_IND, 0]) +'\t'+str(unreal_positions[HUMAN_POS_IND, 1])+'\t'+str(unreal_positions[HUMAN_POS_IND, 2])+'\t'+str(angle[0])+'\t'+str(angle[1])+'\t'+str(angle[2])+'\t'+str(drone_pos_vec.x_val)+'\t'+str(drone_pos_vec.y_val)+'\t'+str(drone_pos_vec.z_val)
+    mystr = mystr+'\n'
     return positions
 
 def TakePhoto(client, index):
@@ -98,7 +104,6 @@ def main():
 
     f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
     f_bones = open('temp_main/' + datetime_folder_name + '/bones.txt', 'w')
-    f_test = open('temp_main/' + datetime_folder_name + '/positions.txt', 'w')
 
     #connect to the AirSim simulator
     if (USE_AIRSIM == True):
@@ -118,7 +123,7 @@ def main():
 
     if (USE_GROUNDTRUTH == 0):
         # read unreal coordinate positions
-        initial_positions = determineAllPositions_all_GT(client, f_test)
+        initial_positions = determineAllPositions_all_GT(client)
     elif (USE_GROUNDTRUTH == 1):
         initial_positions, _, _, _ = determineAllPositions_mildly_GT(bone_pos_GT, client)
     else:
@@ -166,7 +171,7 @@ def main():
 
         if (USE_GROUNDTRUTH == 0):
             # read unreal coordinate positions
-            positions = determineAllPositions_all_GT(client, f_test)
+            positions = determineAllPositions_all_GT(client)
             inFrame = True
         elif (USE_GROUNDTRUTH == 1):
             positions, unreal_positions, inFrame, cov = determineAllPositions_mildly_GT(bone_pos_GT, client)
@@ -200,7 +205,7 @@ def main():
             ax = fig2.add_subplot(111, projection='3d')
             ax.plot(gt_hv_arr[:, 0], gt_hv_arr[:, 1], gt_hv_arr[:, 2], c='b', marker='^')
             ax.plot(est_hv_arr[:, 0], est_hv_arr[:, 1], est_hv_arr[:, 2], c='r', marker='^')
-            plt.savefig('temp_main/' + datetime_folder_name + '/estimates/est_' + str(count_est) + '.png', bbox_inches='tight', pad_inches=0)
+            plt.savefig('temp_main/' + datetime_folder_name + '/estimates/est_vel' + str(count_est) + '.png', bbox_inches='tight', pad_inches=0)
             plt.close()
 
         count_est = count_est + 1
@@ -242,13 +247,9 @@ def main():
             end = time.time()
             elapsed_time = end - start
 
-        #SAVE ALL VALUES OF THIS SIMULATION 
-        positions1 = client.getPosition()
-        angles1 = client.getPitchRollYaw()
-        unreal_positions1 = client.getAllPositions()
-        
-        mystr = str(linecount)+'\t'+str(unreal_positions1[HUMAN_POS_IND, 0]) +'\t'+str(unreal_positions1[HUMAN_POS_IND, 1])+'\t'+str(unreal_positions1[HUMAN_POS_IND, 1])+'\t'+str(angles1[0])+'\t'+str(angles1[1])+'\t'+str(angles1[2])+'\t'+str(positions1.x_val)+'\t'+str(positions1.y_val)+'\t'+str(positions1.z_val)
-        mystr = mystr+'\n'
+        #SAVE ALL VALUES OF THIS SIMULATION         
+        global mystr
+        mystr = str(linecount)+mystr
         f_output.write(mystr)
         
         line = ""

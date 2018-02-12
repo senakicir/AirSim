@@ -40,18 +40,20 @@ class State(object):
 
         self.kalman = cv2.KalmanFilter(6, 3, 0) #6, state variables. 3 measurement variables 
 
-        #6x6 F: no need for further modification
-        self.kalman.transitionMatrix = np.array([[1., 0, 0, DELTA_T, 0, 0], [0, 1., 0, 0, DELTA_T, 0], [0, 0, 1., 0, 0, DELTA_T], [0, 0, 0, 1., 0, 0], [0, 0, 0, 0, 1., 0], [0, 0, 0, 0, 0, 1.]])
-        #3x6: H just takes the position values from state. 
-        self.kalman.measurementMatrix = np.array([[1., 0, 0, 0, 0, 0], [0, 1., 0, 0, 0, 0], [0, 0, 1., 0, 0, 0]])
+        #9x9 F: no need for further modification
+        self.kalman.transitionMatrix = 1. * np.array([[1, 0, 0, DELTA_T, 0, 0, 0, 0, 0], [0, 1, 0, 0, DELTA_T, 0, 0, 0, 0], [0, 0, 1, 0, 0, DELTA_T,  0, 0, 0],
+        [1/DELTA_T, 0, 0, 0, 0, 0,  -1/DELTA_T, 0, 0], [0, 1/DELTA_T, 0, 0, 0, 0, 0, -1/DELTA_T, 0], [0, 0, 1/DELTA_T, 0, 0, 0, 0, 0, -1/DELTA_T],
+         [1, 0, 0, 0, 0, 0,  0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0]])
+        #3x9: H just takes the position values from state. 
+        self.kalman.measurementMatrix = np.array([[1., 0, 0, 0, 0, 0, 0, 0, 0], [0, 1., 0, 0, 0, 0, 0, 0, 0], [0, 0, 1., 0, 0, 0, 0, 0, 0]])
         #6x6: Process noise, no need to modify
-        self.kalman.processNoiseCov = 1e-5 * np.eye(6,6)
+        self.kalman.processNoiseCov = 1e-5 * np.eye(9,9)
         #3x3: measurement noise, WILL NEED TO MODIFY
         self.kalman.measurementNoiseCov = 1. * np.eye(3,3)#np.array([[1e-2, 0, 0], [0, 1e-2, 0], [0, 0, 1]])
         #6x6 initial covariance matrix
-        self.kalman.errorCovPost = 1. * np.eye(6, 6)
+        self.kalman.errorCovPost = 1. * np.eye(9, 9)
         #6x1 initial state, no need to modify
-        self.kalman.statePost = np.array([[self.human_pos[0], self.human_pos[1], self.human_pos[2], 0, 0, 0 ]]).T
+        self.kalman.statePost = np.array([[self.human_pos[0], self.human_pos[1], self.human_pos[2], 0, 0, 0, self.human_pos[0], self.human_pos[1], self.human_pos[2]]]).T
     
     def updateState(self, positions_, inFrame_, cov_):
         self.kalman.measurementNoiseCov = cov_
@@ -97,6 +99,6 @@ class State(object):
 
         desired_polar_pos = np.array([cos(desired_polar_angle) * current_radius, sin(desired_polar_angle) * current_radius, 0])
         #desired_pos = desired_polar_pos + self.human_pos + TIME_HORIZON*self.human_vel - np.array([0,0,desired_z_pos])
-        desired_pos = desired_polar_pos + state.human_pos - np.array([0,0,desired_z_pos])
+        desired_pos = desired_polar_pos + self.human_pos - np.array([0,0,desired_z_pos])
         desired_yaw = desired_polar_angle - pi
         return desired_pos, desired_yaw
