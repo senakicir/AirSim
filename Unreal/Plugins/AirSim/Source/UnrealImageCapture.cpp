@@ -26,7 +26,7 @@ void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBa
         }
     }
     else
-        getSceneCaptureImage(requests, responses, false, bonePos);
+        getSceneCaptureImage(requests, responses, false, bonePos); //sena was here
 }
 
 //sena was here
@@ -36,11 +36,11 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
     std::vector<std::shared_ptr<RenderRequest::RenderResult>> render_results;
     
     for (unsigned int i = 0; i < requests.size(); ++i) {
-        APIPCamera* camera = cameras_[i];
+        APIPCamera* camera = cameras_[requests.at(i).camera_id];
         responses.push_back(ImageResponse());
-        ImageResponse& response = responses[i];
-        
-        
+        ImageResponse& response = responses.at(i);
+
+
         updateCameraVisibility(camera, requests[i]);
         
         UTextureRenderTarget2D* textureTarget = nullptr;
@@ -63,7 +63,7 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
     for (unsigned int i = 0; i < requests.size(); ++i) {
         const ImageRequest& request = requests.at(i);
         ImageResponse& response = responses.at(i);
-        APIPCamera* camera = cameras_[i];
+        APIPCamera* camera = cameras_[request.camera_id];
         //sena was here
         response.bones = render_results[i]->bonePos_data;
         response.camera_id = request.camera_id;
