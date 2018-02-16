@@ -1,4 +1,4 @@
-#AirSim APIs
+# AirSim APIs
 ## Introduction
 AirSim exposes APIs so you can interact with vehicle in the simulation programmatically. You can use these APIs to retrieve images, get state, control the vehicle and so on. The APIs use [msgpack-rpc protocol](https://github.com/msgpack-rpc/msgpack-rpc) over TCP/IP which allows you to use variety of programming languages including C++, C#, Python, Java etc.
 
@@ -91,7 +91,7 @@ You can find a ready to run project in HelloCar folder in the repository.
 * `isApiControlEnabled`: Returns true if API control is established. If false (which is default) then API calls would be ignored. After a successful call to `enableApiControl`, the `isApiControlEnabled` should return true.
 * `ping`: If connection is established then this call will return true otherwise it will be blocked until timeout.
 * `simPrintLogMessage`: Prints the specified message in the simulator's window. If message_param is also supplied then its printed next to the message and in that case if this API is called with same message value but different message_param again then previous line is overwritten with new line (instead of API creating new line on display). For example, `simPrintLogMessage("Iteration: ", to_string(i))` keeps updating same line on display when API is called with different values of i. The valid values of severity parameter is 0 to 3 inclusive that corresponds to different colors.
-* `simGetObjectPose`: Gets the pose of specified object in Unreal environment. Here the object means "actor" in Unreal terminology. They are searched by tag as well as name. To add tag to actor, go to object in Unreal Editor, click on it, look for Tags property, click "+" sign and add some string value. If multiple actors have same tag then the first match is returned. If no matches are found then NaN pose is returned.
+* `simGetObjectPose`: Gets the pose of specified object in Unreal environment. Here the object means "actor" in Unreal terminology. They are searched by tag as well as name. To add tag to actor, go to object in Unreal Editor, click on it, look for [Tags property](https://answers.unrealengine.com/questions/543807/whats-the-difference-between-tag-and-tag.html), click "+" sign and add some string value. If multiple actors have same tag then the first match is returned. If no matches are found then NaN pose is returned.
 
 ### Coordinate System
 All AirSim API uses NED coordinate system, i.e., +X is North, +Y is East and +Z is Down. All units are in SI system. Please note that this is different from coordinate system used internally by Unreal Engine. In Unreal Engine, +Z is up instead of down and length unit is in centimeters instead of meters. AirSim APIs takes care of the appropriate conversions. The starting point of the vehicle is always coordinates (0, 0, 0) in NED system. Thus when converting from Unreal coordinates to NED, we first subtract the starting offset and then scale by 100 for cm to m conversion.
@@ -106,11 +106,14 @@ More on [image APIs and Computer Vision mode](image_apis.md).
 Car has followings APIs available:
 
 * `setCarControls`: This allows you to set throttle, steering, handbrake and auto or manual gear.
-* `getCarState`: This retrieves the state information including speed, current gear, velocity vector, position and orientation.
+* `getCarState`: This retrieves the state information including speed, current gear and 6 kinematics quantities: position, orientation, linear and angular velocity, linear and angular acceleration. All quantities are in NED coordinate system, SI units in world frame except for angular velocity and accelerations which are in body frame.
 * [Image APIs](image_apis.md).
 
 ### APIs for Multirotor
 Multirotor can be controlled by specifying angles, velocity vector, destination position or some combination of these. There are corresponding `move*` APIs for this purpose. When doing position control, we need to use some path following algorithm. By default AirSim uses carrot following algorithm. This is often referred to as "high level control" because you just need to specify very high level goal and the firmware takes care of the rest. Currently lowest level control available in AirSim is moveByAngle API however we will be adding more lower level controls soon as well.
+
+#### getMultirotorState
+This API state of the vehicle in one call. The state includes, collision, estimated kinematics (i.e. kinematics computed by fusing sensors), ground truth kinematics, GPS location and timestamp (nano seconds since epoch). The kinematics here means 6 quantities: position, orientation, linear and angular velocity, linear and angular acceleration. Please note that simple_slight currently doesn't support state estimator which means estimated and ground truth kinematics values would be same for simple_flight. Estimated kinematics are however available for PX4 except for angular acceleration. All quantities are in NED coordinate system, SI units in world frame except for angular velocity and accelerations which are in body frame.
 
 #### duration and max_wait_seconds
 Many API methods has parameters named `duration` or: `max_wait_seconds`.
