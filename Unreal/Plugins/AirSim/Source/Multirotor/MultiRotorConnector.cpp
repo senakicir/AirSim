@@ -73,6 +73,11 @@ msr::airlib::ImageCaptureBase* MultiRotorConnector::getImageCapture()
     return vehicle_pawn_wrapper_->getImageCapture();
 }
 
+Kinematics::State MultiRotorConnector::getTrueKinematics()
+{
+    return * vehicle_pawn_wrapper_->getTrueKinematics();
+}
+
 MultiRotorConnector::~MultiRotorConnector()
 {
     stopApiServer();
@@ -266,7 +271,6 @@ Pose MultiRotorConnector::getActorPose(const std::string& actor_name)
     return pose;
 }
 
-
 bool MultiRotorConnector::setSegmentationObjectID(const std::string& mesh_name, int object_id,
                                                   bool is_name_regex)
 {
@@ -287,12 +291,11 @@ int MultiRotorConnector::getSegmentationObjectID(const std::string& mesh_name)
     return UAirBlueprintLib::GetMeshStencilID(mesh_name);
 }
 
-
 void MultiRotorConnector::startApiServer()
 {
     if (enable_rpc_) {
-        controller_cancelable_.reset(new msr::airlib::DroneApi(this));
-        
+        controller_cancelable_.reset(new msr::airlib::MultirotorApi(this));
+
 #ifdef AIRLIB_NO_RPC
         rpclib_server_.reset(new msr::airlib::DebugApiServer());
 #else

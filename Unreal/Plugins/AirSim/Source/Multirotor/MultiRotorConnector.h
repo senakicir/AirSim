@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 //TODO: all code except setRotorSpeed requires VehiclePawnBase.
 //May be we should have MultiRotorPawnBase so we don't need FlyingPawn.h
-#include "vehicles/multirotor/api/DroneApi.hpp"
+#include "vehicles/multirotor/api/MultirotorApi.hpp"
 #include "VehiclePawnWrapper.h"
 #include "vehicles/multirotor/MultiRotor.hpp"
 #include "vehicles/multirotor/MultiRotorParams.hpp"
@@ -54,7 +54,9 @@ public:
     virtual UpdatableObject* getPhysicsBody() override;
     virtual void setPose(const Pose& pose, bool ignore_collision) override;
     virtual Pose getPose() override;
-    
+    virtual Kinematics::State getTrueKinematics() override;
+
+
     virtual bool setSegmentationObjectID(const std::string& mesh_name, int object_id,
                                          bool is_name_regex = false) override;
     virtual int getSegmentationObjectID(const std::string& mesh_name) override;
@@ -76,7 +78,7 @@ private:
     std::unique_ptr<msr::airlib::Environment> environment_;
     
     msr::airlib::MultiRotorParams* vehicle_params_;
-    std::unique_ptr<msr::airlib::DroneApi> controller_cancelable_;
+    std::unique_ptr<msr::airlib::MultirotorApi> controller_cancelable_;
     std::unique_ptr<msr::airlib::ControlServerBase> rpclib_server_;
     
     struct RotorInfo {

@@ -30,7 +30,7 @@ namespace msr { namespace airlib {
 
 typedef msr::airlib_rpclib::MultirotorRpcLibAdapators MultirotorRpcLibAdapators;
 
-MultirotorRpcLibServer::MultirotorRpcLibServer(DroneApi* drone, string server_address, uint16_t port)
+MultirotorRpcLibServer::MultirotorRpcLibServer(MultirotorApi* drone, string server_address, uint16_t port)
         : RpcLibServerBase(drone, server_address, port)
 {
     (static_cast<rpc::server*>(getServer()))->
@@ -90,37 +90,51 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(DroneApi* drone, string server_ad
 
     //getters
     (static_cast<rpc::server*>(getServer()))->
-        bind("getPosition", [&]() -> MultirotorRpcLibAdapators::Vector3r { return getDroneApi()->getPosition(); });
-    
+        bind("getMultirotorState", [&]() -> MultirotorRpcLibAdapators::MultirotorState { 
+        return MultirotorRpcLibAdapators::MultirotorState(getDroneApi()->getMultirotorState()); 
+    });
+    (static_cast<rpc::server*>(getServer()))->
+        bind("getPosition", [&]() -> MultirotorRpcLibAdapators::Vector3r { 
+        return MultirotorRpcLibAdapators::Vector3r(getDroneApi()->getPosition()); 
+    });
+    (static_cast<rpc::server*>(getServer()))->
+        bind("getVelocity", [&]() -> MultirotorRpcLibAdapators::Vector3r { 
+        return MultirotorRpcLibAdapators::Vector3r(getDroneApi()->getVelocity()); 
+    });
+    (static_cast<rpc::server*>(getServer()))->
+        bind("getOrientation", [&]() -> MultirotorRpcLibAdapators::Quaternionr { 
+        return MultirotorRpcLibAdapators::Quaternionr(getDroneApi()->getOrientation()); 
+    });
+
     //sena was here
     (static_cast<rpc::server*>(getServer()))->
     bind("getHumanPosition", [&]() -> MultirotorRpcLibAdapators::Vector3r { return getDroneApi()->getHumanPosition(); });
-    
+    //sena was here
     (static_cast<rpc::server*>(getServer()))->
     bind("getBonePositions", [&]() -> MultirotorRpcLibAdapators::Vector3r_arr { return *(getDroneApi()->getBonePositions()); });
-    
+    //sena was here
     (static_cast<rpc::server*>(getServer()))->
     bind("getDroneWorldPosition", [&]() -> MultirotorRpcLibAdapators::Vector3r { return getDroneApi()->getDroneWorldPosition(); });
-    
+    //sena was here
     (static_cast<rpc::server*>(getServer()))->
     bind("getDroneWorldOrientation", [&]() -> MultirotorRpcLibAdapators::Vector3r { return getDroneApi()->getDroneWorldOrientation(); });
     
     (static_cast<rpc::server*>(getServer()))->
-        bind("getVelocity", [&]() -> MultirotorRpcLibAdapators::Vector3r { return getDroneApi()->getVelocity(); });
+        bind("getLandedState", [&]() -> int { 
+        return static_cast<int>(getDroneApi()->getLandedState()); 
+    });
     (static_cast<rpc::server*>(getServer()))->
-        bind("getOrientation", [&]() -> MultirotorRpcLibAdapators::Quaternionr { return getDroneApi()->getOrientation(); });
+        bind("getRCData", [&]() -> MultirotorRpcLibAdapators::RCData { 
+        return MultirotorRpcLibAdapators::RCData(getDroneApi()->getRCData()); 
+    });
     (static_cast<rpc::server*>(getServer()))->
-        bind("getLandedState", [&]() -> int { return static_cast<int>(getDroneApi()->getLandedState()); });
+        bind("getGpsLocation", [&]() -> MultirotorRpcLibAdapators::GeoPoint { 
+        return MultirotorRpcLibAdapators::GeoPoint(getDroneApi()->getGpsLocation()); 
+    });
     (static_cast<rpc::server*>(getServer()))->
-        bind("getRCData", [&]() -> MultirotorRpcLibAdapators::RCData { return getDroneApi()->getRCData(); });
-    (static_cast<rpc::server*>(getServer()))->
-        bind("timestampNow", [&]() -> TTimePoint { return getDroneApi()->timestampNow(); });
-    (static_cast<rpc::server*>(getServer()))->
-        bind("getGpsLocation", [&]() -> MultirotorRpcLibAdapators::GeoPoint { return getDroneApi()->getGpsLocation(); });
-    (static_cast<rpc::server*>(getServer()))->
-        bind("isSimulationMode", [&]() -> bool { return getDroneApi()->isSimulationMode(); });
-    (static_cast<rpc::server*>(getServer()))->
-        bind("getServerDebugInfo", [&]() -> std::string { return getDroneApi()->getServerDebugInfo(); });
+        bind("isSimulationMode", [&]() -> bool { 
+        return getDroneApi()->isSimulationMode(); 
+    });
 
 }
 
@@ -129,9 +143,9 @@ MultirotorRpcLibServer::~MultirotorRpcLibServer()
 {
 }
 
-DroneApi* MultirotorRpcLibServer::getDroneApi()
+MultirotorApi* MultirotorRpcLibServer::getDroneApi()
 {
-    return static_cast<DroneApi*>(RpcLibServerBase::getVehicleApi());
+    return static_cast<MultirotorApi*>(RpcLibServerBase::getVehicleApi());
 }
 
 }} //namespace

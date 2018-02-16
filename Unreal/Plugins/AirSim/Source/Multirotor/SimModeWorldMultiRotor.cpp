@@ -147,15 +147,15 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
 void ASimModeWorldMultiRotor::Tick(float DeltaSeconds)
 {
     //getFpvVehiclePawnWrapper()->setLogLine(getLogString());
-    getFpvVehiclePawnWrapper()->getBonePositions();
+    getFpvVehiclePawnWrapper()->getBonePositions(); //sena was here
     Super::Tick(DeltaSeconds);
 }
 
 //sena was here
 std::string ASimModeWorldMultiRotor::getLogString()
 {
-    const msr::airlib::Kinematics::State* kinematics = getFpvVehiclePawnWrapper()->getKinematics();
-    msr::airlib::Vector3r_arr bones = getFpvVehiclePawnWrapper()->getBonePositions();
+    const msr::airlib::Kinematics::State* kinematics = getFpvVehiclePawnWrapper()->getTrueKinematics();
+    msr::airlib::Vector3r_arr bones = getFpvVehiclePawnWrapper()->getBonePositions(); //sena was here
     uint64_t timestamp_millis = static_cast<uint64_t>(msr::airlib::ClockFactory::get()->nowNanos() / 1.0E6);
     
     //TODO: because this bug we are using alternative code with stringstream

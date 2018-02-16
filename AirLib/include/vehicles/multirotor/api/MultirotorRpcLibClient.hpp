@@ -41,7 +41,7 @@ public:
     bool rotateByYawRate(float yaw_rate, float duration);
     bool hover();
 
-  
+    MultirotorState getMultirotorState();
     Vector3r getPosition();
     //sena was here
     Vector3r getHumanPosition();
@@ -57,7 +57,6 @@ public:
     std::string getDebugInfo();
 
     DroneControllerBase::LandedState getLandedState();
-    TTimePoint timestampNow();
 
     bool setSafety(SafetyEval::SafetyViolationType enable_reasons, float obs_clearance, SafetyEval::ObsAvoidanceStrategy obs_startegy,
         float obs_avoidance_vel, const Vector3r& origin, float xy_length, float max_z, float min_z);
