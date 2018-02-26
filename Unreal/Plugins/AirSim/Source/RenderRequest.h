@@ -62,7 +62,6 @@ public:
     // read pixels from render target using render thread, then compress the result into PNG
     // argument on the thread that calls this method.
     
-    //sena was here
     void getScreenshot(std::shared_ptr<RenderParams> params[], std::vector<std::shared_ptr<RenderResult>>& results, unsigned int req_size);
     
     void ExecuteTask();

@@ -17,7 +17,7 @@ UnrealImageCapture::~UnrealImageCapture()
 
 //sena was here
 void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests,
-                                   std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, Vector3r_arr* bonePos)
+                                   std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, Vector3r_arr* bonePosPtr)
 {
     if (cameras_.size() == 0) {
         for (unsigned int i = 0; i < requests.size(); ++i) {
@@ -26,11 +26,11 @@ void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBa
         }
     }
     else
-        getSceneCaptureImage(requests, responses, false, bonePos); //sena was here
+        getSceneCaptureImage(requests, responses, false, bonePosPtr); //sena was here
 }
 
 //sena was here
-void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method, Vector3r_arr* bonePos)
+void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method, Vector3r_arr* bonePosPtr)
 {
     std::vector<std::shared_ptr<RenderRequest::RenderParams>> render_params;
     std::vector<std::shared_ptr<RenderRequest::RenderResult>> render_results;
@@ -57,7 +57,7 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         render_params.push_back(std::make_shared<RenderRequest::RenderParams>(textureTarget, requests[i].pixels_as_float, requests[i].compress));
     }
     
-    RenderRequest render_request(use_safe_method, bonePos); //sena was here
+    RenderRequest render_request(use_safe_method, bonePosPtr); //sena was here
     render_request.getScreenshot(render_params.data(), render_results, render_params.size());
     
     for (unsigned int i = 0; i < requests.size(); ++i) {

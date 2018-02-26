@@ -185,29 +185,11 @@ public:
         return controller_->getOrientation();
     }
 
-      //sena was here
-    Vector3r getHumanPosition()
-    {
-        return controller_->getHumanPosition();
-    }
     //sena was here
     Vector3r_arr* getBonePositions()
     {
         return controller_->getBonePositions();
     }
-    
-    //sena was here
-    Vector3r getDroneWorldPosition()
-    {
-        return controller_->getDroneWorldPosition();
-    }
-    
-    //sena was here
-    Vector3r getDroneWorldOrientation()
-    {
-        return controller_->getDroneWorldOrientation();
-    }
-        
 
     DroneControllerBase::LandedState getLandedState()
     {

@@ -687,17 +687,6 @@ void DroneControllerBase::setCollisionInfo(const CollisionInfo& collision_info)
 }
     
 //sena was here
-Vector3r DroneControllerBase::getHumanPosition()
-{
-    return humanPosition_;
-}
-
-void DroneControllerBase::setHumanPosition(const Vector3r& humanPosition)
-{
-    humanPosition_ = humanPosition;
-}
-
-//sena was here
 Vector3r_arr* DroneControllerBase::getBonePositions()
 {
     return bonePositions_;
@@ -706,26 +695,6 @@ void DroneControllerBase::setBonePositions(Vector3r_arr* bone_positions)
 {
     bonePositions_ = bone_positions;
 }
-
-//sena was here
-Vector3r DroneControllerBase::getDroneWorldPosition()
-{
-    return droneWorldPosition_;
-}
-void DroneControllerBase::setDroneWorldPosition(const Vector3r& pos)
-{
-    droneWorldPosition_ = pos;
-}
-
-//sena was here
-Vector3r DroneControllerBase::getDroneWorldOrientation()
-{
-    return droneWorldOrientation_;
-}
-void DroneControllerBase::setDroneWorldOrientation(const Vector3r& orientation)
-{
-    droneWorldOrientation_ = orientation;
-}
-
+    
 }} //namespace
 #endif

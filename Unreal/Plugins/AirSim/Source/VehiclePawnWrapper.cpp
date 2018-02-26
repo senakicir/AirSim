@@ -216,22 +216,6 @@ FRotator VehiclePawnWrapper::getOrientation() const
 }
 
 //sena was here
-FVector VehiclePawnWrapper::getHumanPosition() const
-{
-    TArray<AActor*> foundActors;
-    UGameplayStatics::GetAllActorsOfClass(pawn_, ACharacter::StaticClass(), foundActors);
-    for (AActor* actor : foundActors) {
-        FString str = actor->GetName();
-        std::string str2 = std::string(TCHAR_TO_UTF8(*str));
-        if(str2 == "Maximo_Adam_Blueprint"){
-            ICharacterInterface* TheInterface = Cast<ICharacterInterface>(actor);
-            return TheInterface->Execute_getHumanPositionUpdated(actor);
-        }
-    }
-    return FVector(05,10,17);
-}
-
-//sena was here
 FRotator VehiclePawnWrapper::getDroneWorldOrientation() const
 {
     IDroneInterface* TheDroneInterface = Cast<IDroneInterface>(pawn_);

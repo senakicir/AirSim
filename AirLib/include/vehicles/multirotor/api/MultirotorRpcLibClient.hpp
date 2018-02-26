@@ -44,10 +44,7 @@ public:
     MultirotorState getMultirotorState();
     Vector3r getPosition();
     //sena was here
-    Vector3r getHumanPosition();
     Vector3r_arr getBonePositions();
-    Vector3r getDroneWorldPosition();
-    Vector3r getDroneWorldOrientation();
     
     Vector3r getVelocity();
     Quaternionr getOrientation();

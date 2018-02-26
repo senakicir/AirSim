@@ -178,15 +178,8 @@ class AirSimClient:
             return self.client.call('aTestFunction')
         
         #sena was here
-        def getHumanPosition(self):
-            return Vector3r.from_msgpack(self.client.call('getHumanPosition'))
         def getBonePositions(self):
             return Vector3r_arr.from_msgpack(self.client.call('getBonePositions'))
-        def getDroneWorldPosition(self):
-            return Vector3r.from_msgpack(self.client.call('getDroneWorldPosition'))
-        def getDroneWorldOrientation(self):
-            return Vector3r.from_msgpack(self.client.call('getDroneWorldOrientation'))
-        
         def getVelocity(self):
             return Vector3r.from_msgpack(self.client.call('getVelocity'))
         def getOrientation(self):

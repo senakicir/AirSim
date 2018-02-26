@@ -164,27 +164,9 @@ namespace msr { namespace airlib {
         }
         
         //sena was here
-        virtual void setHumanPosition(const Vector3r& humanPosition)
-        {
-            getController()->setHumanPosition(humanPosition);
-        }
-        
-        //sena was here
         virtual void setBonePositions(Vector3r_arr* bonePositions)
         {
             getController()->setBonePositions(bonePositions);
-        }
-        
-        //sena was here
-        virtual void setDroneWorldPosition(const Vector3r& pos)
-        {
-            getController()->setDroneWorldPosition(pos);
-        }
-        
-        //sena was here
-        virtual void setDroneWorldOrientation(const Vector3r& orientation)
-        {
-            getController()->setDroneWorldOrientation(orientation);
         }
         
         virtual ~MultiRotor() = default;

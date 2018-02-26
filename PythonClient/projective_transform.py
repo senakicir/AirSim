@@ -12,10 +12,11 @@ def EulerToRotationMatrix(roll, pitch, yaw):
 
 
 def main():
-    filepath = 'temp1/bones.txt'
-    filepath2 = 'temp1/plots/groundtruth.txt'
-    filepath3 = 'temp1/plots'
-    filepath4 = 'temp1'
+    filepath = 'my_scripts/temp_main/2018-02-26-17-58/groundtruth.txt'
+    filepath2 = 'my_scripts/temp_main/2018-02-26-17-58/groundtruth_projected.txt'
+    filepath3 = 'my_scripts/temp_main/2018-02-26-17-58/images/test_gt'
+    filepath4 = 'my_scripts/temp_main/2018-02-26-17-58/images'
+
     if not os.path.exists(filepath3):
         os.makedirs(filepath3)
 
@@ -48,22 +49,22 @@ def main():
         numbers = list(map(float, numbers))
         
         #take the drone position and orientation
-        [roll, pitch, yaw] = numbers[4:7]
-        [Cx, Cy, Cz] = numbers[1:4]
+        [roll, pitch, yaw] = numbers[3:6]
+        [Cx, Cy, Cz] = numbers[0:3]
 
         ##take orientation info and find R, rotation matrix
         ##take translation info and find C
         R_drone = EulerToRotationMatrix (roll, pitch, yaw)
-        C_drone = np.array([[Cx, Cy, -Cz-1000]]).T
+        C_drone = np.array([[Cx, Cy, -Cz]]).T
         
         #plot everything
         photo_loc = filepath4 + '/img_'+ str(linecount)+'.png'
         #PlotDroneAndHuman(numbers, linecount, filepath3, photo_loc)
 
         ##Take projective transform
-        X = numbers[10:]
+        X = numbers[9:]
         P_world = np.reshape(X, (-1, 3)).T
-        P_world[2,:] = -P_world[2,:]-1000
+        P_world[2,:] = -P_world[2,:]
 
 
         P_drone = np.linalg.inv(np.vstack([np.hstack([R_drone, C_drone]), np.array([[0,0,0,1]])]))@np.vstack([P_world,  np.ones([1, P_world.shape[1]]) ] )

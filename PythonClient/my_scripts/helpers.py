@@ -30,7 +30,6 @@ FLIP_X_Y_inv = np.linalg.inv(FLIP_X_Y)
 
 K = np.array([[FOCAL_LENGTH,0,px],[0,FOCAL_LENGTH,py],[0,0,1]])
 K_inv = np.linalg.inv(K)
-ESTIMATE_NOISE_COV = np.array([[1e-2, 0, 0], [0, 1e-2, 0], [0, 0, 1]])
 
 def RangeAngle(angle, limit=360, is_radians = True):
     if is_radians == True:
@@ -79,11 +78,9 @@ def TakeBoneProjection(P_world, R_drone, C_drone):
 
     return x, z, inFrame
 
-def TakeBoneBackProjection(bone_pred, R_drone, C_drone, z_val, use_z = False):
+def TakeBoneBackProjection(bone_pred, R_drone, C_drone, cov_, z_val, use_z = False):
     img_torso_size = np.linalg.norm(bone_pred[:, 0] - bone_pred[:, 8])
     calculated_z_val = (FOCAL_LENGTH * TORSO_SIZE) / img_torso_size
-    error = abs((np.mean(z_val) - calculated_z_val) * 100 / np.mean(z_val))
-    print(error)
 
     if (use_z == False):
         z_val = calculated_z_val
@@ -101,9 +98,9 @@ def TakeBoneBackProjection(bone_pred, R_drone, C_drone, z_val, use_z = False):
     P_drone = np.hstack([R_cam, C_cam]).dot(P_camera)
     P_world = np.hstack([R_drone, C_drone]).dot(np.vstack([P_drone, np.ones([1, bone_pred.shape[1]])]))
 
-    cov = (R_drone@R_cam)@ESTIMATE_NOISE_COV@(R_drone@R_cam).T
+    transformed_cov = (R_drone@R_cam)@cov_@(R_drone@R_cam).T
 
-    return P_world, error, cov
+    return P_world, transformed_cov
 
 def resetAllFolders():
     folder_name = time.strftime("%Y-%m-%d-%H-%M")

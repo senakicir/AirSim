@@ -238,9 +238,7 @@ namespace msr { namespace airlib {
         
         CollisionInfo collision_info_;
         CollisionResponseInfo collision_response_info_;
-        
-        //sena was here
-        
+                
         Environment* environment_ = nullptr;
     };
     

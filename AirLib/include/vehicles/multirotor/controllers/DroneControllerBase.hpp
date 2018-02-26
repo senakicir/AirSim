@@ -182,14 +182,8 @@ public: //interface for outside world
     virtual Quaternionr getOrientation() = 0;
 
     //sena was here
-    virtual Vector3r getHumanPosition();
-    virtual void setHumanPosition(const Vector3r& humanPosition);
     virtual Vector3r_arr* getBonePositions();
     virtual void setBonePositions(Vector3r_arr* bonePositions);
-    virtual Vector3r getDroneWorldPosition();
-    virtual void setDroneWorldPosition(const Vector3r& pos);
-    virtual Vector3r getDroneWorldOrientation();
-    virtual void setDroneWorldOrientation(const Vector3r& orientation);
 
     /// Get debug pose, meaning of which is dependent on application usage. For example,
     /// this could be pose of real vehicle from log playback.
@@ -353,9 +347,6 @@ private:// vars
 
     CollisionInfo collision_info_;
     //sena was here
-    Vector3r humanPosition_ = Vector3r(42,42,42);
-    Vector3r droneWorldPosition_;
-    Vector3r droneWorldOrientation_;
     Vector3r_arr* bonePositions_;
     
     // we make this recursive so that DroneControllerBase subclass can grab StatusLock then call a 

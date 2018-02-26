@@ -83,7 +83,6 @@ public: //interface
     const GeoPoint& getHomePoint() const;
     const CollisionInfo& getCollisionInfo() const;
     //sena was here
-    FVector getHumanPosition() const;
     FVector getDroneWorldPosition() const;
     FRotator getDroneWorldOrientation() const;
     Vector3r_arr getBonePositions();
