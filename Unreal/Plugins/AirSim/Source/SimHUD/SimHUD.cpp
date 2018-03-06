@@ -243,14 +243,16 @@ std::vector<AirSimSettings::SubwindowSetting>& ASimHUD::getSubWindowSettings()
 
 std::string ASimHUD::getSimModeFromUser()
 {
-    if (EAppReturnType::No == UAirBlueprintLib::ShowMessage(EAppMsgType::YesNo,
+    //sena was here
+    /*if (EAppReturnType::No == UAirBlueprintLib::ShowMessage(EAppMsgType::YesNo,
         "Would you like to use car simulation? Choose no to use quadrotor simulation.",
         "Choose Vehicle"))
     {
         return "Multirotor";
     }
     else
-        return "Car";
+        return "Car";*/
+    return "Multirotor";
 }
 
 void ASimHUD::createSimMode()

@@ -236,7 +236,7 @@ struct Vector3r_arr {
                  const Vector3r& left_arm_val, const Vector3r& left_forearm_val, const Vector3r& left_hand_val,
                  const Vector3r& right_arm_val, const Vector3r& right_forearm_val, const Vector3r& right_hand_val,
                  const Vector3r& right_hand_tip_val, const Vector3r& left_hand_tip_val, const Vector3r& right_foot_tip_val, const Vector3r& left_foot_tip_val):
-    dronePos(dronePos_val), droneOrient(droneOrient_val), humanPos(humanPos_val),
+    dronePos(dronePos_val), droneOrient(droneOrient_val), humanPos(humanPos_val), hip(hip_val),
     right_up_leg(right_up_leg_val), right_leg(right_leg_val), right_foot(right_foot_val),
     left_up_leg(left_up_leg_val), left_leg(left_leg_val), left_foot(left_foot_val),
     spine1(spine1_val), neck(neck_val), head(head_val), head_top(head_top_val),
