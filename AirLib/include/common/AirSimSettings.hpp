@@ -36,16 +36,15 @@ public: //types
     };
 
     struct RecordingSettings {
-        bool record_on_move = false;
-        float record_interval = 0.05f;
+        bool record_on_move;
+        float record_interval;
         std::vector<std::string> header_columns;
 
         std::vector<msr::airlib::ImageCaptureBase::ImageRequest> requests;
 
         RecordingSettings(bool record_on_move_val = false, float record_interval_val = 0.05f)
+            : record_on_move(record_on_move_val), record_interval(record_interval_val)
         {
-            record_on_move = record_on_move_val;
-            record_interval = record_interval_val;
         }
     };
 
@@ -87,6 +86,9 @@ public: //types
         float auto_exposure_histogram_log_max = Utils::nan<float>(); // 4;
         float motion_blur_amount = Utils::nan<float>();
         float target_gamma = Utils::nan<float>(); //1.0f; //This would be reset to kSceneTargetGamma for scene as default
+        int projection_mode = 0; // ECameraProjectionMode::Perspective
+        float ortho_width = Utils::nan<float>();
+
     };
 
     struct NoiseSetting {
@@ -113,6 +115,28 @@ public: //types
 
     };
 
+    struct SegmentationSettings {
+        enum class InitMethodType {
+            None, CommonObjectsRandomIDs
+        };
+
+        enum class MeshNamingMethodType {
+            OwnerName, StaticMeshName
+        };
+
+        InitMethodType init_method = InitMethodType::CommonObjectsRandomIDs;
+        bool override_existing = false;
+        MeshNamingMethodType mesh_naming_method = MeshNamingMethodType::OwnerName;
+    };
+
+    struct TimeOfDaySettings {
+        bool enabled = false;
+        std::string start_datetime = "";    //format: %Y-%m-%d %H:%M:%S
+        bool is_start_datetime_dst = false;
+        float celestial_clock_speed = 1;
+        float update_interval_secs = 60;
+    };
+
 private: //fields
     float settings_version_actual;
     float settings_version_minimum = 1;
@@ -126,6 +150,8 @@ public: //fields
     std::map<int, NoiseSetting>  noise_settings;
 
     RecordingSettings recording_settings;
+    SegmentationSettings segmentation_settings;
+    TimeOfDaySettings tod_settings;
 
     std::vector<std::string> warning_messages;
 
@@ -141,6 +167,7 @@ public: //fields
     float clock_speed;
     bool engine_sound;
     bool log_messages_visible;
+    HomeGeoPoint origin_geopoint;
 
 public: //methods
     static AirSimSettings& singleton() 
@@ -169,6 +196,7 @@ public: //methods
         loadRecordingSettings(settings);
         loadCaptureSettings(settings);
         loadCameraNoiseSettings(settings);
+        loadSegmentationSettings(settings);
         loadOtherSettings(settings);
 
         return static_cast<unsigned int>(warning_messages.size());
@@ -180,6 +208,9 @@ public: //methods
 
         initializeSubwindowSettings();
         initializeImageTypeSettings();
+        segmentation_settings = SegmentationSettings();
+        noise_settings.clear();
+        capture_settings.clear();
 
         simmode_name = "";
         recording_settings = RecordingSettings();
@@ -195,6 +226,8 @@ public: //methods
         clock_speed = 1.0f;
         engine_sound = true;     
         log_messages_visible = true;
+        //0,0,0 in Unreal is mapped to this GPS coordinates
+        origin_geopoint = HomeGeoPoint(GeoPoint(47.641468, -122.140165, 122)); 
     }
 
     VehicleSettings getVehicleSettings(const std::string& vehicle_name)
@@ -293,17 +326,21 @@ private:
                 view_mode_string = "SpringArmChase";
         }
 
-        if (view_mode_string == "FlyWithMe")
-            initial_view_mode = 3; //ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FLY_WITH_ME;
-        else if (view_mode_string == "Fpv")
+        if (view_mode_string == "Fpv")
             initial_view_mode = 1; // ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FPV;
-        else if (view_mode_string == "Manual")
-            initial_view_mode = 4; // ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL;
         else if (view_mode_string == "GroundObserver")
             initial_view_mode = 2; // ECameraDirectorMode::CAMERA_DIRECTOR_MODE_GROUND_OBSERVER;
+        else if (view_mode_string == "FlyWithMe")
+            initial_view_mode = 3; //ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FLY_WITH_ME;
+        else if (view_mode_string == "Manual")
+            initial_view_mode = 4; // ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL;
         else if (view_mode_string == "SpringArmChase")
             initial_view_mode = 5; // ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE;
-        else 
+        else if (view_mode_string == "Backup")
+            initial_view_mode = 6; // ECameraDirectorMode::CAMREA_DIRECTOR_MODE_BACKUP;
+        else if (view_mode_string == "NoDisplay")
+            initial_view_mode = 7; // ECameraDirectorMode::CAMREA_DIRECTOR_MODE_NODISPLAY;
+        else
             warning_messages.push_back("ViewMode setting is not recognized: " + view_mode_string);
     }
 
@@ -353,37 +390,54 @@ private:
 
     void loadCaptureSettings(const Settings& settings)
     {
-        Settings json_settings_parent;
-        if (settings.getChild("CaptureSettings", json_settings_parent)) {
-            for (size_t child_index = 0; child_index < json_settings_parent.size(); ++child_index) {
+        Settings json_parent;
+        if (settings.getChild("CaptureSettings", json_parent)) {
+            for (size_t child_index = 0; child_index < json_parent.size(); ++child_index) {
                 Settings json_settings_child;     
-                if (json_settings_parent.getChild(child_index, json_settings_child)) {
+                if (json_parent.getChild(child_index, json_settings_child)) {
                     CaptureSetting capture_setting;
                     createCaptureSettings(json_settings_child, capture_setting);
-                    if (capture_setting.image_type >= -1 && capture_setting.image_type < static_cast<int>(capture_settings.size()))
-                        capture_settings[capture_setting.image_type] = capture_setting;
-                    else
-                        //TODO: below exception doesn't actually get raised right now because of issue in Unreal Engine?
-                        throw std::invalid_argument(std::string("ImageType must be >= -1 and < ") + std::to_string(capture_settings.size()));
+                    capture_settings[capture_setting.image_type] = capture_setting;
                 }
             }
         }
     }
 
+    void loadSegmentationSettings(const Settings& settings)
+    {
+        Settings json_parent;
+        if (settings.getChild("SegmentationSettings", json_parent)) {
+            std::string init_method = Utils::toLower(json_parent.getString("InitMethod", ""));
+            if (init_method == "" || init_method == "commonobjectsrandomids")
+                segmentation_settings.init_method = SegmentationSettings::InitMethodType::CommonObjectsRandomIDs;
+            else if (init_method == "none")
+                segmentation_settings.init_method = SegmentationSettings::InitMethodType::None;
+            else
+                //TODO: below exception doesn't actually get raised right now because of issue in Unreal Engine?
+                throw std::invalid_argument(std::string("SegmentationSettings init_method has invalid value in settings ") + init_method);
+
+            segmentation_settings.override_existing = json_parent.getBool("OverrideExisting", false);
+
+            std::string mesh_naming_method = Utils::toLower(json_parent.getString("MeshNamingMethod", ""));
+            if (mesh_naming_method == "" || mesh_naming_method == "ownername")
+                segmentation_settings.mesh_naming_method = SegmentationSettings::MeshNamingMethodType::OwnerName;
+            else if (mesh_naming_method == "staticmeshname")
+                segmentation_settings.mesh_naming_method = SegmentationSettings::MeshNamingMethodType::StaticMeshName;
+            else
+                throw std::invalid_argument(std::string("SegmentationSettings MeshNamingMethod has invalid value in settings ") + mesh_naming_method);
+        }
+    }
+
     void loadCameraNoiseSettings(const Settings& settings)
     {
-        Settings json_settings_parent;
-        if (settings.getChild("NoiseSettings", json_settings_parent)) {
-            for (size_t child_index = 0; child_index < json_settings_parent.size(); ++child_index) {
+        Settings json_parent;
+        if (settings.getChild("NoiseSettings", json_parent)) {
+            for (size_t child_index = 0; child_index < json_parent.size(); ++child_index) {
                 Settings json_settings_child;     
-                if (json_settings_parent.getChild(child_index, json_settings_child)) {
+                if (json_parent.getChild(child_index, json_settings_child)) {
                     NoiseSetting noise_setting;
                     createNoiseSettings(json_settings_child, noise_setting);
-                    if (noise_setting.ImageType >= -1 && noise_setting.ImageType < static_cast<int>(noise_settings.size()))
-                        noise_settings[noise_setting.ImageType] = noise_setting;
-                    else
-                        //TODO: below exception doesn't actually get raised right now because of issue in Unreal Engine?
-                        throw std::invalid_argument("ImageType must be >= -1 and < " + std::to_string(noise_settings.size()));
+                    noise_settings[noise_setting.ImageType] = noise_setting;
                 }
             }
         }
@@ -422,6 +476,16 @@ private:
         capture_setting.image_type = settings.getInt("ImageType", 0);
         capture_setting.target_gamma = settings.getFloat("TargetGamma", 
             capture_setting.image_type == 0 ? CaptureSetting::kSceneTargetGamma : Utils::nan<float>());
+
+        std::string projection_mode = Utils::toLower(settings.getString("ProjectionMode", ""));
+        if (projection_mode == "" || projection_mode == "perspective")
+            capture_setting.projection_mode = 0; // Perspective
+        else if (projection_mode == "orthographic")
+            capture_setting.projection_mode = 1; // Orthographic
+        else
+            throw std::invalid_argument(std::string("CaptureSettings projection_mode has invalid value in settings ") + projection_mode);
+
+        capture_setting.ortho_width = settings.getFloat("OrthoWidth", capture_setting.ortho_width);
     }
 
     void loadSubWindowsSettings(const Settings& settings)
@@ -429,11 +493,11 @@ private:
         //load default subwindows
         initializeSubwindowSettings();
 
-        Settings json_settings_parent;
-        if (settings.getChild("SubWindows", json_settings_parent)) {
-            for (size_t child_index = 0; child_index < json_settings_parent.size(); ++child_index) {
+        Settings json_parent;
+        if (settings.getChild("SubWindows", json_parent)) {
+            for (size_t child_index = 0; child_index < json_parent.size(); ++child_index) {
                 Settings json_settings_child;
-                if (json_settings_parent.getChild(child_index, json_settings_child)) {
+                if (json_parent.getChild(child_index, json_settings_child)) {
                     int window_index = json_settings_child.getInt("WindowID", 0);
                     SubwindowSetting& subwindow_setting = subwindow_settings.at(window_index);
                     subwindow_setting.window_index = window_index;
@@ -480,6 +544,28 @@ private:
 
         enable_collision_passthrough = settings.getBool("EnableCollisionPassthrogh", false);
         log_messages_visible = settings.getBool("LogMessagesVisible", true);
+
+        {   //load origin geopoint
+            Settings origin_geopoint_json;
+            if (settings.getChild("OriginGeopoint", origin_geopoint_json)) {
+                GeoPoint origin = origin_geopoint.home_point;
+                origin.latitude = origin_geopoint_json.getDouble("Latitude", origin.latitude);
+                origin.longitude = origin_geopoint_json.getDouble("Longitude", origin.longitude);
+                origin.altitude = origin_geopoint_json.getFloat("Altitude", origin.altitude);
+                origin_geopoint.initialize(origin);
+            }
+        }
+
+        {   //time of day settings
+            Settings tod_settings_json;
+            if (settings.getChild("TimeOfDay", tod_settings_json)) {
+                tod_settings.enabled = tod_settings_json.getBool("Enabled", tod_settings.enabled);
+                tod_settings.start_datetime = tod_settings_json.getString("StartDateTime", tod_settings.start_datetime);
+                tod_settings.celestial_clock_speed = tod_settings_json.getFloat("CelestialClockSpeed", tod_settings.celestial_clock_speed);
+                tod_settings.is_start_datetime_dst = tod_settings_json.getBool("StartDateTimeDst", tod_settings.is_start_datetime_dst);
+                tod_settings.update_interval_secs = tod_settings_json.getFloat("UpdateIntervalSecs", tod_settings.update_interval_secs);
+            }
+        }
     }
 
     void loadClockSettings(const Settings& settings)

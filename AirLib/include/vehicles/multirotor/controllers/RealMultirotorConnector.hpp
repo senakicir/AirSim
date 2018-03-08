@@ -94,6 +94,19 @@ public:
         return msr::airlib::Pose();
     }
 
+    virtual CameraInfo getCameraInfo(int camera_id) const override
+    {
+        unused(camera_id);
+        throw std::logic_error("getCameraInfo() call is not implemented for this vehicle");
+    }
+
+    virtual void setCameraOrientation(int camera_id, const Quaternionr& orientation) override
+    {
+        unused(camera_id);
+        unused(orientation);
+
+        throw std::logic_error("setCameraOrientation() call is not implemented for this vehicle");
+    }
 
 private:
     VehicleControllerBase* controller_;

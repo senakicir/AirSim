@@ -16,7 +16,6 @@
 
 #include "FlyingPawn.h"
 #include "AirBlueprintLib.h"
-#include "NedTransform.h"
 #include <exception>
 
 using namespace msr::airlib;
@@ -56,7 +55,8 @@ MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* vehicle_pawn_wrappe
     pending_pose_status_ = PendingPoseStatus::NonePending;
     
     reset_pending_ = false;
-    
+    did_reset_ = false;
+
     std::string message;
     if (!vehicle_.getController()->isAvailable(message)) {
         UAirBlueprintLib::LogMessage(FString("Vehicle was not initialized: "), FString(message.c_str()), LogDebugLevel::Failure);
@@ -152,6 +152,7 @@ void MultiRotorConnector::updateRenderedState(float dt)
     //if reset is pending then do it first, no need to do other things until next tick
     if (reset_pending_) {
         reset_task_();
+        did_reset_ = true;
         return;
     }
     
@@ -167,9 +168,9 @@ void MultiRotorConnector::updateRenderedState(float dt)
         manual_pose_controller_->updateDeltaPosition(dt);
         manual_pose_controller_->getDeltaPose(delta_position, delta_rotation);
         manual_pose_controller_->resetDelta();
-        Vector3r delta_position_ned = NedTransform::toNedMeters(delta_position, false);
-        Quaternionr delta_rotation_ned = NedTransform::toQuaternionr(delta_rotation.Quaternion(), true);
-        
+        Vector3r delta_position_ned = vehicle_pawn_wrapper_->getNedTransform().toNedMeters(delta_position, false);
+        Quaternionr delta_rotation_ned = vehicle_pawn_wrapper_->getNedTransform().toQuaternionr(delta_rotation.Quaternion(), true);
+
         auto pose = vehicle_.getPose();
         pose.position += delta_position_ned;
         pose.orientation = pose.orientation * delta_rotation_ned;
@@ -206,8 +207,15 @@ void MultiRotorConnector::updateRendering(float dt)
 {
     //if we did reset then don't worry about synchrnozing states for this tick
     if (reset_pending_) {
-        reset_pending_ = false;
-        return;
+        // Continue to wait for reset
+        if (!did_reset_) {
+            return;
+        }
+        else {
+            reset_pending_ = false;
+            did_reset_ = false;
+            return;
+        }
     }
     
     try {
@@ -312,6 +320,18 @@ int MultiRotorConnector::getSegmentationObjectID(const std::string& mesh_name)
     return UAirBlueprintLib::GetMeshStencilID(mesh_name);
 }
 
+CameraInfo MultiRotorConnector::getCameraInfo(int camera_id) const
+{
+    return vehicle_pawn_wrapper_->getCameraInfo(camera_id);
+}
+
+void MultiRotorConnector::setCameraOrientation(int camera_id, const Quaternionr& orientation) 
+{
+    UAirBlueprintLib::RunCommandOnGameThread([&camera_id, &orientation, this]() {
+        vehicle_pawn_wrapper_->setCameraOrientation(camera_id, orientation);
+    }, true);
+}
+
 void MultiRotorConnector::startApiServer()
 {
     if (enable_rpc_) {
@@ -358,6 +378,7 @@ void MultiRotorConnector::reset()
         reset_task_ = std::packaged_task<void()>([this]() { resetPrivate(); });
         std::future<void> reset_result = reset_task_.get_future();
         reset_pending_ = true;
+        did_reset_ = false;
         reset_result.wait();
     }
 }
@@ -386,8 +407,8 @@ void MultiRotorConnector::reportState(StateReporter& reporter)
 {
     // report actual location in unreal coordinates so we can plug that into the UE editor to move the drone.
     if (vehicle_pawn_wrapper_ != nullptr) {
-        FVector unrealPosition = vehicle_pawn_wrapper_->getPosition();
-        reporter.writeValue("unreal pos", NedTransform::toVector3r(unrealPosition, 1.0f, false));
+        FVector unrealPosition = vehicle_pawn_wrapper_->getUUPosition();
+        reporter.writeValue("unreal pos", Vector3r(unrealPosition.X, unrealPosition.Y, unrealPosition.Z));
         vehicle_.reportState(reporter);
     }
 }

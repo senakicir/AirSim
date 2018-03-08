@@ -65,7 +65,9 @@ public:
     
     virtual void printLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0) override;
     virtual Pose getActorPose(const std::string& actor_name) override;
-    
+    virtual CameraInfo getCameraInfo(int camera_id) const override;
+    virtual void setCameraOrientation(int camera_id, const Quaternionr& orientation) override;
+
 private:
     void detectUsbRc();
     const msr::airlib::RCData& getRCData();
@@ -110,6 +112,7 @@ private:
     
     //reset must happen while World is locked so its async task initiated from API thread
     bool reset_pending_;
+    bool did_reset_;
     std::packaged_task<void()> reset_task_;
     
     Pose last_pose_; //for trace lines showing vehicle path

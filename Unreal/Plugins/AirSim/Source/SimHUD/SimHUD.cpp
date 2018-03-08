@@ -21,6 +21,7 @@ void ASimHUD::BeginPlay()
     Super::BeginPlay();
 
     try {
+        UAirBlueprintLib::OnBeginPlay();
         initializeSettings();
         setUnrealEngineSettings();
         createSimMode();
@@ -51,6 +52,8 @@ void ASimHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
         simmode_->Destroy();
         simmode_ = nullptr;
     }
+
+    UAirBlueprintLib::OnEndPlay();
 
     Super::EndPlay(EndPlayReason);
 }
@@ -196,8 +199,14 @@ void ASimHUD::setUnrealEngineSettings()
     //use two different methods to set console var because sometime it doesn't seem to work
     static const auto custom_depth_var = IConsoleManager::Get().FindConsoleVariable(TEXT("r.CustomDepth"));
     custom_depth_var->Set(3);
+
     //Equivalent to enabling Custom Stencil in Project > Settings > Rendering > Postprocessing
     UKismetSystemLibrary::ExecuteConsoleCommand(GetWorld(), FString("r.CustomDepth 3"));
+
+    //during startup we init stencil IDs to random hash and it takes long time for large environments
+    //we get error that GameThread has timed out after 30 sec waiting on render thread
+    static const auto render_timeout_var = IConsoleManager::Get().FindConsoleVariable(TEXT("g.TimeoutForBlockOnRenderFence"));
+    render_timeout_var->Set(300000);
 }
 
 void ASimHUD::setupInputBindings()

@@ -13,6 +13,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/MeshComponent.h"
 #include "LandscapeProxy.h"
+#include "common/AirSimSettings.hpp"
 #include "AirBlueprintLib.generated.h"
 
 
@@ -33,6 +34,8 @@ class UAirBlueprintLib : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 
 public:
+    static void OnBeginPlay();
+    static void OnEndPlay();
     static void LogMessageString(const std::string &prefix, const std::string &suffix, LogDebugLevel level, float persist_sec = 60);
     UFUNCTION(BlueprintCallable, Category = "Utils")
     static void LogMessage(const FString &prefix, const FString &suffix, LogDebugLevel level, float persist_sec = 60);
@@ -52,7 +55,7 @@ public:
     static bool SetMeshStencilID(const std::string& mesh_name, int object_id,
         bool is_name_regex = false);
     static int GetMeshStencilID(const std::string& mesh_name);
-    static void InitializeMeshStencilIDs();
+    static void InitializeMeshStencilIDs(bool ignore_existing);
 
     static bool IsInGameThread();
     
@@ -91,6 +94,16 @@ public:
     {
         log_messages_hidden = is_hidden;
     }
+    static void SetMeshNamingMethod(msr::airlib::AirSimSettings::SegmentationSettings::MeshNamingMethodType method)
+    {
+        mesh_naming_method = method;
+    }
+
+    static void enableWorldRendering(AActor* context, bool enable);
+    static void enableViewportRendering(AActor* context, bool enable);
+    static void setSimulatePhysics(AActor* actor, bool simulate_physics);
+    static void resetSimulatePhysics(AActor* actor);
+    static std::vector<UPrimitiveComponent*> getPhysicsComponents(AActor* actor);
 
 private:
     template<typename T>
@@ -108,5 +121,8 @@ private:
 
 private:
     static bool log_messages_hidden;
+    //FViewPort doesn't expose this field so we are doing dirty work around by maintaining count by ourselves
+    static uint32_t FlushOnDrawCount;
+    static msr::airlib::AirSimSettings::SegmentationSettings::MeshNamingMethodType mesh_naming_method;
 };
 

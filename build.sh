@@ -28,13 +28,15 @@ if [ ! -d "./cmake_build" ]; then
     exit 1
 fi
 
-CMAKE="$(greadlink -f cmake_build/bin/cmake)"
-
 # set up paths of clang compiler
 if [ "$(uname)" == "Darwin" ]; then
+    CMAKE="$(greadlink -f cmake_build/bin/cmake)"
+
     export CC=/usr/local/opt/llvm\@3.9/bin/clang
     export CXX=/usr/local/opt/llvm\@3.9/bin/clang++
 else
+    CMAKE="$(readlink -f cmake_build/bin/cmake)"
+
     export CC="clang-3.9"
     export CXX="clang++-3.9"
 fi
@@ -98,7 +100,7 @@ set +x
 echo ""
 echo ""
 echo "=================================================================="
-echo " AirSim plugin is build! Here's how to build Unreal project."
+echo " AirSim plugin is built! Here's how to build Unreal project."
 echo "=================================================================="
 echo "If you are using Blocks environment, its already updated."
 echo "If you are using your own environment, update plugin using,"

@@ -2,8 +2,8 @@
 #include "AirBlueprintLib.h"
 
 
-CarPawnApi::CarPawnApi(VehiclePawnWrapper* pawn, UWheeledVehicleMovementComponent* movement_)
-    : pawn_(pawn), movement_(movement_)
+CarPawnApi::CarPawnApi(VehiclePawnWrapper* pawn, UWheeledVehicleMovementComponent* movement)
+    : pawn_(pawn), movement_(movement)
 {
 }
 
@@ -87,6 +87,18 @@ const CarApiBase::CarControls& CarPawnApi::getCarControls() const
     return last_controls_;
 }
 
+msr::airlib::CameraInfo CarPawnApi::getCameraInfo(int camera_id) const
+{
+    return pawn_->getCameraInfo(camera_id);
+}
+
+void CarPawnApi::setCameraOrientation(int camera_id, const msr::airlib::Quaternionr& orientation)
+{
+    UAirBlueprintLib::RunCommandOnGameThread([&camera_id, &orientation, this]() {
+        pawn_->setCameraOrientation(camera_id, orientation);
+    }, true);
+}
+
 CarApiBase::CarState CarPawnApi::getCarState()
 {
     CarApiBase::CarState state(
@@ -102,13 +114,24 @@ CarApiBase::CarState CarPawnApi::getCarState()
 void CarPawnApi::reset()
 {
     last_controls_ = CarControls();
-    UAirBlueprintLib::RunCommandOnGameThread([this]() {
+    auto phys_comps = UAirBlueprintLib::getPhysicsComponents(pawn_->getPawn());
+    UAirBlueprintLib::RunCommandOnGameThread([this, &phys_comps]() {
         pawn_->reset();
+        for (auto* phys_comp : phys_comps) {
+            phys_comp->SetPhysicsAngularVelocity(FVector::ZeroVector);
+            phys_comp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+            phys_comp->SetSimulatePhysics(false);
+        }
         //movement_->ResetMoveState();
         //movement_->SetActive(false);
         //movement_->SetActive(true, true);
         setCarControls(CarControls());
         
+    }, true);
+
+    UAirBlueprintLib::RunCommandOnGameThread([this, &phys_comps]() {
+        for (auto* phys_comp : phys_comps)
+            phys_comp->SetSimulatePhysics(true);
     }, true);
 }
 

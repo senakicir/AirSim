@@ -51,6 +51,7 @@
     <ClInclude Include="include\common\common_utils\type_utils.hpp" />
     <ClInclude Include="include\common\common_utils\Utils.hpp" />
     <ClInclude Include="include\common\common_utils\WorkerThread.hpp" />
+    <ClInclude Include="include\common\EarthCelestial.hpp" />
     <ClInclude Include="include\common\SteppableClock.hpp" />
     <ClInclude Include="include\common\DelayLine.hpp" />
     <ClInclude Include="include\common\EarthUtils.hpp" />
@@ -68,6 +69,7 @@
     <ClInclude Include="include\common\common_utils\AsyncTasker.hpp" />
     <ClInclude Include="include\common\ImageCaptureBase.hpp" />
     <ClInclude Include="include\controllers\VehicleConnectorBase.hpp" />
+    <ClInclude Include="include\sensors\SensorFactory.hpp" />
     <ClInclude Include="include\vehicles\car\api\CarApiBase.hpp" />
     <ClInclude Include="include\vehicles\multirotor\api\MultirotorRpcLibAdapators.hpp" />
     <ClInclude Include="include\vehicles\multirotor\api\MultirotorRpcLibClient.hpp" />
@@ -96,10 +98,12 @@
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\AirSimSimpleFlightCommLink.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\AirSimSimpleFlightEstimator.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\AirSimSimpleFlightCommon.hpp" />
+    <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\AdaptiveController.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\AngleLevelController.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\AngleRateController.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\CascadeController.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\ConstantOutputController.hpp" />
+    <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\interfaces\IPidIntegrator.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\OffboardApi.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\Firmware.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\interfaces\CommonStructs.hpp" />
@@ -122,6 +126,8 @@
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\PidController.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\PositionController.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\RemoteControl.hpp" />
+    <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\RungKuttaPidIntegrator.hpp" />
+    <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\StdPidIntegrator.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\firmware\VelocityController.hpp" />
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\SimpleFlightDroneController.hpp" />
     <ClInclude Include="include\physics\DebugPhysicsBody.hpp" />
