@@ -23,13 +23,13 @@ void VehiclePawnWrapper::setupCamerasFromSettings()
     typedef msr::airlib::Settings Settings;
     typedef msr::airlib::ImageCaptureBase::ImageType ImageType;
     typedef msr::airlib::AirSimSettings AirSimSettings;
-
+    
     int image_count = static_cast<int>(Utils::toNumeric(ImageType::Count));
     for (int image_type = -1; image_type < image_count; ++image_type) {
         for (int camera_index = 0; camera_index < getCameraCount(); ++camera_index) {
             APIPCamera* camera = getCamera(camera_index);
-            camera->setImageTypeSettings(image_type, AirSimSettings::singleton().capture_settings[image_type], 
-                AirSimSettings::singleton().noise_settings[image_type]);
+            camera->setImageTypeSettings(image_type, AirSimSettings::singleton().capture_settings[image_type],
+                                         AirSimSettings::singleton().noise_settings[image_type]);
         }
     }
 }
@@ -90,23 +90,23 @@ void VehiclePawnWrapper::setKinematics(const msr::airlib::Kinematics::State* kin
     kinematics_ = kinematics;
 }
 
-std::string VehiclePawnWrapper::getVehicleConfigName() const 
+std::string VehiclePawnWrapper::getVehicleConfigName() const
 {
     return getConfig().vehicle_config_name == "" ? msr::airlib::AirSimSettings::singleton().default_vehicle_config
-        : getConfig().vehicle_config_name;
+    : getConfig().vehicle_config_name;
 }
 
 int VehiclePawnWrapper::getRemoteControlID() const
 {
     typedef msr::airlib::AirSimSettings AirSimSettings;
-
+    
     //find out which RC we should use
     AirSimSettings::VehicleSettings vehicle_settings =
-        AirSimSettings::singleton().getVehicleSettings(getVehicleConfigName());
-
+    AirSimSettings::singleton().getVehicleSettings(getVehicleConfigName());
+    
     msr::airlib::Settings settings;
     vehicle_settings.getRawSettings(settings);
-
+    
     msr::airlib::Settings rc_settings;
     settings.getChild("RC", rc_settings);
     return rc_settings.getInt("RemoteControlID", -1);
@@ -115,32 +115,32 @@ int VehiclePawnWrapper::getRemoteControlID() const
 void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras, const WrapperConfig& config)
 {
     typedef msr::airlib::AirSimSettings AirSimSettings;
-
+    
     pawn_ = pawn;
     cameras_ = cameras;
-
+    
     config_ = config;
-
+    
     image_capture_.reset(new UnrealImageCapture(cameras_));
-
+    
     ned_transform_.initialize(pawn);
-
+    
     //initialize state
     pawn_->GetActorBounds(true, initial_state_.mesh_origin, initial_state_.mesh_bounds);
     initial_state_.ground_offset = FVector(0, 0, initial_state_.mesh_bounds.Z);
     initial_state_.transformation_offset = pawn_->GetActorLocation() - initial_state_.ground_offset;
     ground_margin_ = FVector(0, 0, 20); //TODO: can we explain pawn_ experimental setting? 7 seems to be minimum
-    ground_trace_end_ = initial_state_.ground_offset + ground_margin_; 
-
+    ground_trace_end_ = initial_state_.ground_offset + ground_margin_;
+    
     initial_state_.start_location = getUUPosition();
     initial_state_.last_position = initial_state_.start_location;
     initial_state_.last_debug_position = initial_state_.start_location;
     initial_state_.start_rotation = getUUOrientation();
-
+    
     //compute our home point
     Vector3r nedWrtOrigin = ned_transform_.toNedMeters(getUUPosition(), false);
     home_point_ = msr::airlib::EarthUtils::nedToGeodetic(nedWrtOrigin, AirSimSettings::singleton().origin_geopoint);
-
+    
     initial_state_.tracing_enabled = config.enable_trace;
     initial_state_.collisions_enabled = config.enable_collisions;
     initial_state_.passthrough_enabled = config.enable_passthrough_on_collisions;
@@ -151,6 +151,20 @@ void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>&
     initial_state_.was_last_move_teleport = canTeleportWhileMove();
     
     setupCamerasFromSettings();
+    
+    //sena was here
+    TArray<AActor*> foundActors;
+    UGameplayStatics::GetAllActorsOfClass(pawn_, ACharacter::StaticClass(), foundActors);
+    for (AActor* actor : foundActors) {
+        FString str = actor->GetName();
+        std::string str2 = std::string(TCHAR_TO_UTF8(*str));
+        
+        if(str2 == "Human_Blueprint"){
+            human_ = actor;
+            UAirBlueprintLib::LogMessageString("Human is missing!", "", LogDebugLevel::Failure);
+        }
+        
+    }
 }
 
 VehiclePawnWrapper::WrapperConfig& VehiclePawnWrapper::getConfig()
@@ -174,7 +188,7 @@ const APIPCamera* VehiclePawnWrapper::getCamera(int index) const
 APIPCamera* VehiclePawnWrapper::getCamera(int index)
 {
     return const_cast<APIPCamera*>(
-        static_cast<const VehiclePawnWrapper*>(this)->getCamera(index));
+                                   static_cast<const VehiclePawnWrapper*>(this)->getCamera(index));
 }
 
 UnrealImageCapture* VehiclePawnWrapper::getImageCapture()
@@ -190,13 +204,13 @@ int VehiclePawnWrapper::getCameraCount()
 void VehiclePawnWrapper::reset()
 {
     state_ = initial_state_;
-
+    
     //if (pawn_->GetRootPrimitiveComponent()->IsAnySimulatingPhysics()) {
     //    pawn_->GetRootPrimitiveComponent()->SetSimulatePhysics(false);
     //    pawn_->GetRootPrimitiveComponent()->SetSimulatePhysics(true);
     //}
     pawn_->SetActorLocationAndRotation(state_.start_location, state_.start_rotation, false, nullptr, ETeleportType::TeleportPhysics);
-
+    
     //TODO: refactor below code used for playback
     //std::ifstream sim_log("C:\\temp\\mavlogs\\circle\\sim_cmd_006_orbit 5 1.txt.pos.txt");
     //plot(sim_log, FColor::Purple, Vector3r(0, 0, -3));
@@ -239,82 +253,84 @@ FRotator VehiclePawnWrapper::getDroneWorldOrientation() const
 Vector3r_arr VehiclePawnWrapper::getBonePositions()
 {
     
-    TArray<AActor*> foundActors;
-    UGameplayStatics::GetAllActorsOfClass(pawn_, ACharacter::StaticClass(), foundActors);
     FRotator droneOrient_f = this -> getDroneWorldOrientation();
     float pi = 3.14159265358979323846;
     Vector3r droneOrient(droneOrient_f.Roll*pi/180, droneOrient_f.Pitch*pi/180, droneOrient_f.Yaw*pi/180);
     FVector dronePos_f = this -> getDroneWorldPosition();
     Vector3r dronePos(dronePos_f.X, dronePos_f.Y, dronePos_f.Z);
     
-    for (AActor* actor : foundActors) {
-        FString str = actor->GetName();
-        std::string str2 = std::string(TCHAR_TO_UTF8(*str));
-        if(str2 == "Maximo_Adam_Blueprint"){
-            Vector3r_arr bonePositions;
-            ICharacterInterface* TheInterface = Cast<ICharacterInterface>(actor);
-            
-            if (TheInterface){
-                FVector humanloc = TheInterface->Execute_getHumanPositionUpdated(actor);
-                Vector3r humanloc_3r(humanloc.X, humanloc.Y, humanloc.Z);
-                bonePositions.humanPos = humanloc_3r; //save human's position
-                
-                TArray<FVector> bones =TheInterface->Execute_getBonePositionsUpdated(actor);
-                for (int j=0; j<21; j++){
-                    Vector3r boneloc_3r(bones[j].X, bones[j].Y, bones[j].Z);
-                    if (j==0)
-                        bonePositions.hip = boneloc_3r;
-                    if (j==1)
-                        bonePositions.right_up_leg = boneloc_3r;
-                    if (j==2)
-                        bonePositions.right_leg = boneloc_3r;
-                    if (j==3)
-                        bonePositions.right_foot = boneloc_3r;
-                    if (j==4)
-                        bonePositions.left_up_leg = boneloc_3r;
-                    if (j==5)
-                        bonePositions.left_leg = boneloc_3r;
-                    if (j==6)
-                        bonePositions.left_foot = boneloc_3r;
-                    if (j==7)
-                        bonePositions.spine1 = boneloc_3r;
-                    if (j==8)
-                        bonePositions.neck = boneloc_3r;
-                    if (j==9)
-                        bonePositions.head = boneloc_3r;
-                    if (j==10)
-                        bonePositions.head_top = boneloc_3r;
-                    if (j==11)
-                        bonePositions.left_arm = boneloc_3r;
-                    if (j==12)
-                        bonePositions.left_forearm = boneloc_3r;
-                    if (j==13)
-                        bonePositions.left_hand = boneloc_3r;
-                    if (j==14)
-                        bonePositions.right_arm = boneloc_3r;
-                    if (j==15)
-                        bonePositions.right_forearm = boneloc_3r;
-                    if (j==16)
-                        bonePositions.right_hand = boneloc_3r;
-                    if (j==17)
-                        bonePositions.right_hand_tip = boneloc_3r;
-                    if (j==18)
-                        bonePositions.left_hand_tip = boneloc_3r;
-                    if (j==19)
-                        bonePositions.right_foot_tip = boneloc_3r;
-                    if (j==20)
-                        bonePositions.left_foot_tip = boneloc_3r;
-                }
-            }
-            bonePositions.dronePos = dronePos;
-            bonePositions.droneOrient = droneOrient;
-            setBonePos(bonePositions);
-            return bonePositions;
+    
+    Vector3r_arr bonePositions;
+    ICharacterInterface* TheInterface = Cast<ICharacterInterface>(human_);
+    
+    if (TheInterface){
+        FVector humanloc = TheInterface->Execute_getHumanPositionUpdated(human_);
+        Vector3r humanloc_3r(humanloc.X, humanloc.Y, humanloc.Z);
+        bonePositions.humanPos = humanloc_3r; //save human's position
+        
+        TArray<FVector> bones =TheInterface->Execute_getBonePositionsUpdated(human_);
+        for (int j=0; j<21; j++){
+            Vector3r boneloc_3r(bones[j].X, bones[j].Y, bones[j].Z);
+            if (j==0)
+                bonePositions.hip = boneloc_3r;
+            if (j==1)
+                bonePositions.right_up_leg = boneloc_3r;
+            if (j==2)
+                bonePositions.right_leg = boneloc_3r;
+            if (j==3)
+                bonePositions.right_foot = boneloc_3r;
+            if (j==4)
+                bonePositions.left_up_leg = boneloc_3r;
+            if (j==5)
+                bonePositions.left_leg = boneloc_3r;
+            if (j==6)
+                bonePositions.left_foot = boneloc_3r;
+            if (j==7)
+                bonePositions.spine1 = boneloc_3r;
+            if (j==8)
+                bonePositions.neck = boneloc_3r;
+            if (j==9)
+                bonePositions.head = boneloc_3r;
+            if (j==10)
+                bonePositions.head_top = boneloc_3r;
+            if (j==11)
+                bonePositions.left_arm = boneloc_3r;
+            if (j==12)
+                bonePositions.left_forearm = boneloc_3r;
+            if (j==13)
+                bonePositions.left_hand = boneloc_3r;
+            if (j==14)
+                bonePositions.right_arm = boneloc_3r;
+            if (j==15)
+                bonePositions.right_forearm = boneloc_3r;
+            if (j==16)
+                bonePositions.right_hand = boneloc_3r;
+            if (j==17)
+                bonePositions.right_hand_tip = boneloc_3r;
+            if (j==18)
+                bonePositions.left_hand_tip = boneloc_3r;
+            if (j==19)
+                bonePositions.right_foot_tip = boneloc_3r;
+            if (j==20)
+                bonePositions.left_foot_tip = boneloc_3r;
         }
+        
+        bonePositions.dronePos = dronePos;
+        bonePositions.droneOrient = droneOrient;
+        setBonePos(bonePositions);
+        return bonePositions;
     }
     
-    UAirBlueprintLib::LogMessageString("Adam is missing!", "", LogDebugLevel::Failure);
     return Vector3r_arr();
+}
+
+//sena was here
+void VehiclePawnWrapper::changeAnimation(int anim_num){
+    UAirBlueprintLib::LogMessageString("Change animation now!", "", LogDebugLevel::Failure);
+    ICharacterInterface* TheInterface = Cast<ICharacterInterface>(human_);
+    if (TheInterface){
+        TheInterface->Execute_changeAnimation(human_, anim_num);
+    }
 }
 
 //sena was here
@@ -380,7 +396,7 @@ void VehiclePawnWrapper::printLogMessage(const std::string& message, const std::
 msr::airlib::CameraInfo VehiclePawnWrapper::getCameraInfo(int camera_id) const
 {
     msr::airlib::CameraInfo camera_info;
-
+    
     const APIPCamera* camera = getCamera(camera_id);
     camera_info.pose.position = ned_transform_.toNedMeters(camera->GetActorLocation(), true);
     camera_info.pose.orientation = ned_transform_.toQuaternionr(camera->GetActorRotation().Quaternion(), true);
@@ -416,7 +432,7 @@ void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
     
     //quaternion formula comes from http://stackoverflow.com/a/40334755/207661
     FQuat orientation = ned_transform_.toFQuat(pose.orientation, true);
-
+    
     bool enable_teleport = ignore_collision || canTeleportWhileMove();
     
     //must reset collision before we set pose. Setting pose will immediately call NotifyHit if there was collision
@@ -479,7 +495,8 @@ msr::airlib::Pose VehiclePawnWrapper::getActorPose(std::string actor_name)
 {
     AActor* actor = UAirBlueprintLib::FindActor<AActor>(pawn_, FString(actor_name.c_str()));
     return actor ? toPose(actor->GetActorLocation(), actor->GetActorQuat())
-        : Pose::nanPose();
+    : Pose::nanPose();
 }
+
 
 

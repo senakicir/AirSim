@@ -25,4 +25,8 @@ public:
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "MyCategory")
     TArray<FVector> getBonePositionsUpdated();
     
+    //classes using this interface must implement this
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
+    void changeAnimation(int new_anim_num);
 };
+

@@ -53,6 +53,7 @@ public:
     virtual void reportState(StateReporter& reporter) override;
     virtual UpdatableObject* getPhysicsBody() override;
     virtual void setPose(const Pose& pose, bool ignore_collision) override;
+    virtual bool changeAnimation(int new_anim) override; //sena was here
     virtual Pose getPose() override;
     virtual Kinematics::State getTrueKinematics() override;
 

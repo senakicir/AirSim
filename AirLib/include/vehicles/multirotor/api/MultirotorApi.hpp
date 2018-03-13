@@ -190,6 +190,11 @@ public:
     {
         return controller_->getBonePositions();
     }
+    //sena was here
+    bool changeAnimation(int new_anim)
+    {
+        return vehicle_->changeAnimation(new_anim);
+    }
 
     DroneControllerBase::LandedState getLandedState()
     {

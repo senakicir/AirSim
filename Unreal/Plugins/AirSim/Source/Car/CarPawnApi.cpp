@@ -118,7 +118,7 @@ void CarPawnApi::reset()
     UAirBlueprintLib::RunCommandOnGameThread([this, &phys_comps]() {
         pawn_->reset();
         for (auto* phys_comp : phys_comps) {
-            phys_comp->SetPhysicsAngularVelocity(FVector::ZeroVector);
+            phys_comp->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector); //sena was here
             phys_comp->SetPhysicsLinearVelocity(FVector::ZeroVector);
             phys_comp->SetSimulatePhysics(false);
         }

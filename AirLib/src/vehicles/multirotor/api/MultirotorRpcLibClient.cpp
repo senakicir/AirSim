@@ -137,6 +137,12 @@ Vector3r_arr MultirotorRpcLibClient::getBonePositions()
 {
     return (static_cast<rpc::client*>(getClient())->call("getBonePositions")).as<MultirotorRpcLibAdapators::Vector3r_arr>().to();
 }
+
+//sena was here
+bool MultirotorRpcLibClient::changeAnimation(int new_anim)
+{
+    return static_cast<rpc::client*>(getClient())->call("changeAnimation", new_anim).as<bool>();
+}
     
 Vector3r MultirotorRpcLibClient::getVelocity()
 {

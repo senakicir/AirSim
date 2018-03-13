@@ -29,35 +29,36 @@ public: //types
     
 public:
     struct WrapperConfig {
-        bool is_fpv_vehicle; 
+        bool is_fpv_vehicle;
         std::string vehicle_config_name;
-        bool enable_collisions; 
-        bool enable_passthrough_on_collisions; 
+        bool enable_collisions;
+        bool enable_passthrough_on_collisions;
         bool enable_trace;
-
+        
         WrapperConfig() :
-            is_fpv_vehicle(false),
-            vehicle_config_name(""), //use the default config name
-            enable_collisions(true),
-            enable_passthrough_on_collisions(false),
-            enable_trace(false)
+        is_fpv_vehicle(false),
+        vehicle_config_name(""), //use the default config name
+        enable_collisions(true),
+        enable_passthrough_on_collisions(false),
+        enable_trace(false)
         {
         }
     };
-
+    
     void toggleTrace();
     
 public: //interface
     Vector3r_arr bones; //sena was here
+    AActor* human_; //sena was here
     
     VehiclePawnWrapper();
-
+    
     void initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras, const WrapperConfig& config = WrapperConfig());
-
+    
     void reset();
-    void onCollision(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, 
-        bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit);
-
+    void onCollision(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp,
+                     bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit);
+    
     const APIPCamera* getCamera(int index = 0) const;
     APIPCamera* getCamera(int index = 0);
     UnrealImageCapture* getImageCapture();
@@ -72,7 +73,7 @@ public: //interface
     void setDebugPose(const Pose& debug_pose);
     void setKinematics(const msr::airlib::Kinematics::State* kinematics);
     const msr::airlib::Kinematics::State* getTrueKinematics();
-
+    
     const GeoPoint& getHomePoint() const;
     const CollisionInfo& getCollisionInfo() const;
     //sena was here
@@ -80,27 +81,28 @@ public: //interface
     FRotator getDroneWorldOrientation() const;
     Vector3r_arr getBonePositions();
     void setBonePos(Vector3r_arr bonePos_);
+    void changeAnimation(int anim_num);
     
     void setLogLine(std::string line);
     std::string getLogLine();
-
+    
     void printLogMessage(const std::string& message, const std::string& message_param = "", unsigned char severity = 0);
     msr::airlib::CameraInfo getCameraInfo(int camera_id) const;
     void setCameraOrientation(int camera_id, const Quaternionr& orientation);
-
+    
     WrapperConfig& getConfig();
     const WrapperConfig& getConfig() const;
-
+    
     msr::airlib::Pose getActorPose(std::string actor_name);
     std::string getVehicleConfigName() const;
-
+    
     int getRemoteControlID() const;
-
+    
     FVector getUUPosition() const;
     FRotator getUUOrientation() const;
-
+    
     const NedTransform& getNedTransform() const;
-
+    
 protected:
     UPROPERTY(VisibleAnywhere)
     UParticleSystem* collision_display_template;
@@ -114,8 +116,8 @@ private: //methods
     //these methods are for future usage
     void plot(std::istream& s, FColor color, const Vector3r& offset);
     VehiclePawnWrapper::Pose toPose(const FVector& u_position, const FQuat& u_quat) const;
-
-
+    
+    
 private: //vars
     
     FVector ground_trace_end_;
@@ -128,7 +130,7 @@ private: //vars
     std::string log_line_;
     WrapperConfig config_;
     NedTransform ned_transform_;
-
+    
     struct State {
         FVector start_location;
         FRotator start_rotation;

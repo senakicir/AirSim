@@ -284,6 +284,12 @@ void MultiRotorConnector::setPose(const Pose& pose, bool ignore_collision)
     pending_pose_status_ = PendingPoseStatus::RenderStatePending;
 }
 
+//sena was here
+bool MultiRotorConnector::changeAnimation(int new_anim){
+    vehicle_pawn_wrapper_->changeAnimation(new_anim);
+    return true;
+}
+
 Pose MultiRotorConnector::getPose()
 {
     return vehicle_.getPose();

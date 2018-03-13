@@ -45,6 +45,7 @@ public:
     Vector3r getPosition();
     //sena was here
     Vector3r_arr getBonePositions();
+    bool changeAnimation(int new_anim);
     
     Vector3r getVelocity();
     Quaternionr getOrientation();

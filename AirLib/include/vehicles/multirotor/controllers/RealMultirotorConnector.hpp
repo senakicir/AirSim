@@ -56,6 +56,11 @@ public:
         unused(ignore_collision);
         throw std::logic_error("setPose() call is only supported for simulation");
     }
+    //sena was here
+    virtual bool changeAnimation(int new_anim) override
+    {
+        
+    }
 
     virtual Pose getPose() override
     {
