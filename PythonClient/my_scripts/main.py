@@ -9,6 +9,11 @@ gt_hv = []
 est_hv = []
 f_output_str = ''
 USE_AIRSIM = False
+NUM_OF_ANIMATIONS = 3
+
+def setUseAirSim(use):
+    global USE_AIRSIM
+    USE_AIRSIM = use
 
 def determineAllPositions(bone_pred, measurement_cov_, client):
     drone_pos_vec = client.getPosition() #airsim gives us the drone coordinates with initial drone loc. as origin
@@ -135,14 +140,7 @@ def main(kalman_arguments = None, other_arguments = None):
         USE_AIRSIM = other_arguments[2]
         PLOT_EVERYTHING = other_arguments[3]
         SAVE_VALUES = other_arguments[4]
-
-
-    if (SAVE_VALUES == True):
-        global datetime_folder_name
-        datetime_folder_name = resetAllFolders()
-        f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
-        f_bones = open('temp_main/' + datetime_folder_name + '/bones.txt', 'w')
-        f_groundtruth = open('temp_main/' + datetime_folder_name + '/grountruth.txt', 'w')
+        ANIMATION_NUM = other_arguments[5]
 
     #connect to the AirSim simulator
     if (USE_AIRSIM == True):
@@ -152,10 +150,19 @@ def main(kalman_arguments = None, other_arguments = None):
         client.armDisarm(True)
         print('Taking off')
         client.takeoff()
+        client.changeAnimation(ANIMATION_NUM)
     else:
         filename_bones = 'temp_main/test_set_1/bones.txt'
         filename_output = 'temp_main/test_set_1/a_flight.txt'
         client = NonAirSimClient(filename_bones, filename_output)
+
+    if (SAVE_VALUES == True):
+        global datetime_folder_name
+        datetime_folder_name = resetAllFolders()
+        f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
+        f_bones = open('temp_main/' + datetime_folder_name + '/bones.txt', 'w')
+        f_groundtruth = open('temp_main/' + datetime_folder_name + '/grountruth.txt', 'w')
+
 
     #find initial human and drone positions, and find the distance between them, find initial angle of drone
     if (SAVE_VALUES == True):
@@ -323,6 +330,9 @@ def main(kalman_arguments = None, other_arguments = None):
 
         if (USE_AIRSIM == False):
             end_test = client.end
+        else:
+            if linecount == 15:
+                end_test = True
 
     print('End it!')
     error_arr_pos = np.asarray(errors_pos)
@@ -337,6 +347,8 @@ def main(kalman_arguments = None, other_arguments = None):
     f_groundtruth.close()
     f_output.close()
 
+    client.reset()
+
     return error_ave_pos, error_std_pos, error_ave_vel, error_std_vel
 
 if __name__ == "__main__":
@@ -345,9 +357,12 @@ if __name__ == "__main__":
     #kalman_arguments = [2.68269579528e-12, 2.68269579528e-09, 2.68269579528e-09*599.484250319]
     kalman_arguments = [3.72759372031e-11, 7.19685673001e-08, 7.19685673001e-08*77.4263682681]
 
+    setUseAirSim(use = True)
 
-                    #USE_TRACKBAR, USE_GROUNDTRUTH, USE_AIRSIM, PLOT_EVERYTHING, SAVE_VALUES
-    other_arguments = [False,       0,               True,       True,            True]
-    (err1, err2, err3, err4) = main(kalman_arguments, other_arguments)
-    print((err1, err2, err3, err4))
+    for animation_num in range(1, NUM_OF_ANIMATIONS+1):
+                            #USE_TRACKBAR, USE_GROUNDTRUTH, USE_AIRSIM, PLOT_EVERYTHING, SAVE_VALUES, ANIM_NUM
+        other_arguments = [False,       0,              USE_AIRSIM,       True,            True,      animation_num  ]
+
+        (err1, err2, err3, err4) = main(kalman_arguments, other_arguments)
+        print((err1, err2, err3, err4))
 

@@ -503,18 +503,14 @@ class MultirotorClient(AirSimClientBase, object):
         return self.toEulerianAngle(self.getOrientation())
     
     #sena was here
-    def getHumanPosition(self):
-        return Vector3r.from_msgpack(self.client.call('getHumanPosition'))
     def getBonePositions(self):
         return Vector3r_arr.from_msgpack(self.client.call('getBonePositions'))
     #sena was here
     def getAllPositions(self):
         return self.toArrayFromVector3r_arr(self.getBonePositions())
-    def getDroneWorldPosition(self):
-        return Vector3r.from_msgpack(self.client.call('getDroneWorldPosition'))
-    def getDroneWorldOrientation(self):
-        return Vector3r.from_msgpack(self.client.call('getDroneWorldOrientation'))
-
+    #sena was here
+    def changeAnimation(self, newAnimNum):
+        return self.client.call('changeAnimation', newAnimNum)
 
     #def getRCData(self):
     #    return self.client.call('getRCData')
