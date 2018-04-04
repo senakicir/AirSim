@@ -1,12 +1,10 @@
 #include "CarPawn.h"
 #include "CarWheelFront.h"
 #include "CarWheelRear.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "common/common_utils/Utils.hpp"
 #include "Components/TextRenderComponent.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
-#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "WheeledVehicleMovementComponent4W.h"
 #include "Engine/SkeletalMesh.h"
 #include "GameFramework/Controller.h"
@@ -14,7 +12,8 @@
 #include "common/ClockFactory.hpp"
 #include "PIPCamera.h"
 #include <vector>
-#include "UObject/ConstructorHelpers.h"
+
+
 
 // Needed for VR Headset
 #if HMD_MODULE_INCLUDED
@@ -32,20 +31,13 @@ ACarPawn::ACarPawn()
     this->AutoPossessPlayer = EAutoReceiveInput::Player0;
     //this->AutoReceiveInput = EAutoReceiveInput::Player0;
 
-    // Car mesh
-    static ConstructorHelpers::FObjectFinder<USkeletalMesh> CarMesh(TEXT("/AirSim/VehicleAdv/Vehicle/Vehicle_SkelMesh.Vehicle_SkelMesh"));
-    GetMesh()->SetSkeletalMesh(CarMesh.Object);
+    static MeshContructionHelpers helpers(AirSimSettings::singleton().car_mesh_paths);
 
-    static ConstructorHelpers::FClassFinder<UObject> AnimBPClass(TEXT("/AirSim/VehicleAdv/Vehicle/VehicleAnimationBlueprint"));
+    GetMesh()->SetSkeletalMesh(helpers.skeleton);
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
-    GetMesh()->SetAnimInstanceClass(AnimBPClass.Class);
-
-    // Setup friction materials
-    static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> SlipperyMat(TEXT("/AirSim/VehicleAdv/PhysicsMaterials/Slippery.Slippery"));
-    SlipperyMaterial = SlipperyMat.Object;
-
-    static ConstructorHelpers::FObjectFinder<UPhysicalMaterial> NonSlipperyMat(TEXT("/AirSim/VehicleAdv/PhysicsMaterials/NonSlippery.NonSlippery"));
-    NonSlipperyMaterial = NonSlipperyMat.Object;
+    GetMesh()->SetAnimInstanceClass(helpers.bp->GeneratedClass);
+    SlipperyMaterial = helpers.slippery_mat;
+    NonSlipperyMaterial = helpers.non_slippery_mat;
 
     static ConstructorHelpers::FClassFinder<APIPCamera> pip_camera_class(TEXT("Blueprint'/AirSim/Blueprints/BP_PIPCamera'"));
     pip_camera_class_ = pip_camera_class.Succeeded() ? pip_camera_class.Class : nullptr;
@@ -297,10 +289,10 @@ void ACarPawn::setupInputBindings()
     UAirBlueprintLib::BindAxisToKey(FInputAxisKeyMapping("MoveForward", EKeys::Down, -1), this,
         this, &ACarPawn::MoveForward);
 
-    UAirBlueprintLib::BindAxisToKey(FInputAxisKeyMapping("MoveRight", EKeys::Right, 0.1), this,
+    UAirBlueprintLib::BindAxisToKey(FInputAxisKeyMapping("MoveRight", EKeys::Right, 0.5), this,
         this, &ACarPawn::MoveRight);
 
-    UAirBlueprintLib::BindAxisToKey(FInputAxisKeyMapping("MoveRight", EKeys::Left, -0.1), this,
+    UAirBlueprintLib::BindAxisToKey(FInputAxisKeyMapping("MoveRight", EKeys::Left, -0.5), this,
         this, &ACarPawn::MoveRight);
 
     UAirBlueprintLib::BindActionToKey("Handbrake", EKeys::End, this, &ACarPawn::OnHandbrakePressed, true);
@@ -413,7 +405,6 @@ void ACarPawn::Tick(float Delta)
 
 void ACarPawn::updateCarControls()
 {
-    const msr::airlib::CarApiBase::CarControls* current_controls = nullptr;
     if (wrapper_->getRemoteControlID() >= 0 && joystick_state_.is_initialized) {
         joystick_.getJoyStickState(0, joystick_state_);
 
@@ -441,25 +432,25 @@ void ACarPawn::updateCarControls()
         }
 
         UAirBlueprintLib::LogMessageString("Control Mode: ", "Wheel/Joystick", LogDebugLevel::Informational);
-        current_controls = &joystick_controls_;
+        current_controls_ = joystick_controls_;
     }
     else {
         UAirBlueprintLib::LogMessageString("Control Mode: ", "Keyboard", LogDebugLevel::Informational);
-        current_controls = &keyboard_controls_;
+        current_controls_ = keyboard_controls_;
     }
 
     if (!api_->isApiControlEnabled()) {
-        api_->setCarControls(* current_controls);
+        api_->setCarControls(current_controls_);
     }
     else {
         UAirBlueprintLib::LogMessageString("Control Mode: ", "API", LogDebugLevel::Informational);
-        current_controls = & api_->getCarControls();
+        current_controls_ = api_->getCarControls();
     }
-    UAirBlueprintLib::LogMessageString("Accel: ", std::to_string(current_controls->throttle), LogDebugLevel::Informational);
-    UAirBlueprintLib::LogMessageString("Break: ", std::to_string(current_controls->brake), LogDebugLevel::Informational);
-    UAirBlueprintLib::LogMessageString("Steering: ", std::to_string(current_controls->steering), LogDebugLevel::Informational);
-    UAirBlueprintLib::LogMessageString("Handbreak: ", std::to_string(current_controls->handbrake), LogDebugLevel::Informational);
-    UAirBlueprintLib::LogMessageString("Target Gear: ", std::to_string(current_controls->manual_gear), LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("Accel: ", std::to_string(current_controls_.throttle), LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("Break: ", std::to_string(current_controls_.brake), LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("Steering: ", std::to_string(current_controls_.steering), LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("Handbreak: ", std::to_string(current_controls_.handbrake), LogDebugLevel::Informational);
+    UAirBlueprintLib::LogMessageString("Target Gear: ", std::to_string(current_controls_.manual_gear), LogDebugLevel::Informational);
 }
 
 void ACarPawn::BeginPlay()
@@ -551,9 +542,9 @@ std::string ACarPawn::getLogString()
 
     std::string logString = std::to_string(timestamp_millis).append("\t")
         .append(std::to_string(KPH_int).append("\t"))
-        .append(std::to_string(keyboard_controls_.throttle)).append("\t")
-        .append(std::to_string(keyboard_controls_.steering)).append("\t")
-        .append(std::to_string(keyboard_controls_.brake)).append("\t")
+        .append(std::to_string(current_controls_.throttle)).append("\t")
+        .append(std::to_string(current_controls_.steering)).append("\t")
+        .append(std::to_string(current_controls_.brake)).append("\t")
         .append(gear).append("\t");
 
     return logString;

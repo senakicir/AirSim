@@ -54,7 +54,7 @@ void ASimModeCar::setupVehiclesAndCamera(std::vector<VehiclePtr>& vehicles)
 {
     //get player controller
     APlayerController* player_controller = this->GetWorld()->GetFirstPlayerController();
-    FTransform actor_transform = player_controller->GetActorTransform();
+    FTransform actor_transform = player_controller->GetViewTarget()->GetActorTransform();
     //put camera little bit above vehicle
     FTransform camera_transform(actor_transform.GetLocation() + FVector(follow_distance_, 0, 400));
 
@@ -128,14 +128,8 @@ void ASimModeCar::setupVehiclesAndCamera(std::vector<VehiclePtr>& vehicles)
 
 int ASimModeCar::getRemoteControlID(const VehiclePawnWrapper& pawn)
 {
-    typedef msr::airlib::AirSimSettings AirSimSettings;
-
-    //find out which RC we should use
-    AirSimSettings::VehicleSettings vehicle_settings =
-        AirSimSettings::singleton().getVehicleSettings(fpv_vehicle_pawn_wrapper_->getVehicleConfigName());
-
     msr::airlib::Settings settings;
-    vehicle_settings.getRawSettings(settings);
+    fpv_vehicle_pawn_wrapper_->getRawVehicleSettings(settings);
 
     msr::airlib::Settings rc_settings;
     settings.getChild("RC", rc_settings);

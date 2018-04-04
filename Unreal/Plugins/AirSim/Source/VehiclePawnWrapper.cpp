@@ -90,7 +90,18 @@ void VehiclePawnWrapper::setKinematics(const msr::airlib::Kinematics::State* kin
     kinematics_ = kinematics;
 }
 
-std::string VehiclePawnWrapper::getVehicleConfigName() const
+void VehiclePawnWrapper::getRawVehicleSettings(msr::airlib::Settings& settings) const
+{
+    typedef msr::airlib::AirSimSettings AirSimSettings;
+
+    //find out which RC we should use
+    AirSimSettings::VehicleSettings vehicle_settings =
+        AirSimSettings::singleton().getVehicleSettings(this->getVehicleConfigName());
+
+    vehicle_settings.getRawSettings(settings);
+}
+
+std::string VehiclePawnWrapper::getVehicleConfigName() const 
 {
     return getConfig().vehicle_config_name == "" ? msr::airlib::AirSimSettings::singleton().default_vehicle_config
     : getConfig().vehicle_config_name;

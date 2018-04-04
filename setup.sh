@@ -39,6 +39,7 @@ else
     wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
     sudo apt-get update
     sudo apt-get install -y clang-3.9 clang++-3.9
+    sudo apt-get install -y unzip
 
     export C_COMPILER=clang-3.9
     export COMPILER=clang++-3.9
@@ -85,7 +86,7 @@ fi
 if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv" ]; then
     mkdir -p "Unreal/Plugins/AirSim/Content/VehicleAdv"
 fi
-if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv/SUV/v1.1.7" ]; then
+if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv/SUV/v1.1.9" ]; then
     if $downloadHighPolySuv; then
         echo "*********************************************************************************************"
         echo "Downloading high-poly car assets.... The download is ~37MB and can take some time."
@@ -97,7 +98,10 @@ if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv/SUV/v1.1.7" ]; then
         fi
         mkdir -p "suv_download_tmp"
         cd suv_download_tmp
-        wget  https://github.com/Microsoft/AirSim/releases/download/v1.1.7/car_assets.zip
+        wget  https://github.com/Microsoft/AirSim/releases/download/v1.1.9/car_assets.zip
+        if [ -d "../Unreal/Plugins/AirSim/Content/VehicleAdv/SUV" ]; then
+            rm -rf "../Unreal/Plugins/AirSim/Content/VehicleAdv/SUV"
+        fi        
         unzip car_assets.zip -d ../Unreal/Plugins/AirSim/Content/VehicleAdv
         cd ..
         rm -rf "suv_download_tmp" 

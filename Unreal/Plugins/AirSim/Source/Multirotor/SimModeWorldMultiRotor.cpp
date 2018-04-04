@@ -62,7 +62,7 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
 {
     //get player controller
     APlayerController* player_controller = this->GetWorld()->GetFirstPlayerController();
-    FTransform actor_transform = player_controller->GetActorTransform();
+    FTransform actor_transform = player_controller->GetViewTarget()->GetActorTransform();
     //put camera little bit above vehicle
     FTransform camera_transform(actor_transform.GetLocation() + FVector(-300, 0, 200));
     
@@ -117,8 +117,8 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
         {
             //initialize each vehicle pawn we found
             TMultiRotorPawn* vehicle_pawn = static_cast<TMultiRotorPawn*>(pawn);
-            vehicle_pawn->initializeForBeginPlay();
-            
+            vehicle_pawn->initializeForBeginPlay(getSettings().additional_camera_settings);
+
             //chose first pawn as FPV if none is designated as FPV
             VehiclePawnWrapper* wrapper = vehicle_pawn->getVehiclePawnWrapper();
 
