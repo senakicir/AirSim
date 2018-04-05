@@ -10,6 +10,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "common/AirSimSettings.hpp"
+#include "AirBlueprintLib.h"
 #include "CarPawn.generated.h"
 
 class UPhysicalMaterial;
@@ -63,6 +64,11 @@ class ACarPawn : public AWheeledVehicle
     /** Audio component for the engine sound */
     UPROPERTY(Category = Display, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     UAudioComponent* EngineSoundComponent;
+
+
+    /** Whether to load the default meshes */
+    UPROPERTY(Category = Display, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+    bool UseDefaultMesh = false;
 
 public:
     ACarPawn();
@@ -165,15 +171,12 @@ private:
 
         MeshContructionHelpers(const msr::airlib::AirSimSettings::CarMeshPaths& paths)
         {
-            skeleton = Cast<USkeletalMesh>(StaticLoadObject(UObject::StaticClass(), 
-                nullptr, * (FString(paths.skeletal.c_str()))));
-            bp = Cast<UBlueprint>(StaticLoadObject(UObject::StaticClass(), 
-                nullptr, * (FString(paths.bp.c_str()))));
-            slippery_mat = Cast<UPhysicalMaterial>(StaticLoadObject(UObject::StaticClass(), 
-                nullptr, * (FString(paths.slippery_mat.c_str()))));
-            non_slippery_mat = Cast<UPhysicalMaterial>(StaticLoadObject(UObject::StaticClass(), 
-                nullptr, * (FString(paths.non_slippery_mat.c_str()))));
+            skeleton = Cast<USkeletalMesh>(UAirBlueprintLib::LoadObject(paths.skeletal));
+            bp = Cast<UBlueprint>(UAirBlueprintLib::LoadObject(paths.bp));
+            slippery_mat = Cast<UPhysicalMaterial>(UAirBlueprintLib::LoadObject(paths.slippery_mat));
+            non_slippery_mat = Cast<UPhysicalMaterial>(UAirBlueprintLib::LoadObject(paths.non_slippery_mat));
         }
+
     };
 
 
