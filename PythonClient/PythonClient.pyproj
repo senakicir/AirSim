@@ -31,6 +31,28 @@
     <Compile Include="cv_mode.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DQNcar.py" />
+    <Compile Include="DQNdrone.py" />
+    <Compile Include="drive_straight.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="drone_stress_test.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="manual_mode_demo.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="objects.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="orbit.py" />
+    <Compile Include="point_cloud.py" />
+    <Compile Include="seg_pallete.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="hello_car.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="hello_drone.py">
       <SubType>Code</SubType>
     </Compile>

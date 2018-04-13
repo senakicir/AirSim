@@ -163,19 +163,19 @@ void UAirBlueprintLib::LogMessage(const FString &prefix, const FString &suffix, 
     switch (level) {
     case LogDebugLevel::Informational: 
         color = FColor(147, 231, 237); 
-        UE_LOG(LogAirSim, Log, TEXT("%s%s"), *prefix, *suffix);
+        //UE_LOG(LogAirSim, Log, TEXT("%s%s"), *prefix, *suffix);
         break;
     case LogDebugLevel::Success: 
         color = FColor(156, 237, 147); 
-        UE_LOG(LogAirSim, Log, TEXT("%s%s"), *prefix, *suffix);
+        //UE_LOG(LogAirSim, Log, TEXT("%s%s"), *prefix, *suffix);
         break;
     case LogDebugLevel::Failure: 
         color = FColor(237, 147, 168);
-        UE_LOG(LogAirSim, Error, TEXT("%s%s"), *prefix, *suffix); 
+        //UE_LOG(LogAirSim, Error, TEXT("%s%s"), *prefix, *suffix); 
         break;
     case LogDebugLevel::Unimportant: 
         color = FColor(237, 228, 147);
-        UE_LOG(LogAirSim, Verbose, TEXT("%s%s"), *prefix, *suffix); 
+        //UE_LOG(LogAirSim, Verbose, TEXT("%s%s"), *prefix, *suffix); 
         break;
     default: color = FColor::Black; break;
     }
@@ -604,10 +604,23 @@ UObject* UAirBlueprintLib::LoadObject(const std::string& name)
     FString str(name.c_str());
     UObject *obj = StaticLoadObject(UObject::StaticClass(), nullptr, *str);
     if (obj == nullptr) {
-        std::string msg = "Failed to load asset - " + name;
+        std::string msg = "Failed to load asset object - " + name;
         FString fmsg(msg.c_str());
         LogMessage(TEXT("Load: "), fmsg, LogDebugLevel::Failure);
         throw std::invalid_argument(msg);
     }
     return obj;
+}
+
+UClass* UAirBlueprintLib::LoadClass(const std::string& name)
+{
+    FString str(name.c_str());
+    UClass *cls = StaticLoadClass(UObject::StaticClass(), nullptr, *str);
+    if (cls == nullptr) {
+        std::string msg = "Failed to load asset class - " + name;
+        FString fmsg(msg.c_str());
+        LogMessage(TEXT("Load: "), fmsg, LogDebugLevel::Failure);
+        throw std::invalid_argument(msg);
+    }
+    return cls;
 }

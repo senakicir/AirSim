@@ -15,8 +15,6 @@ ASimModeWorldMultiRotor::ASimModeWorldMultiRotor()
     external_camera_class_ = external_camera_class.Succeeded() ? external_camera_class.Class : nullptr;
     static ConstructorHelpers::FClassFinder<ACameraDirector> camera_director_class(TEXT("Blueprint'/AirSim/Blueprints/BP_CameraDirector'"));
     camera_director_class_ = camera_director_class.Succeeded() ? camera_director_class.Class : nullptr;
-    static ConstructorHelpers::FClassFinder<TMultiRotorPawn> vehicle_pawn_class(TEXT("Blueprint'/AirSim/Blueprints/BP_FlyingPawn'"));
-    vehicle_pawn_class_ = vehicle_pawn_class.Succeeded() ? vehicle_pawn_class.Class : nullptr;
 }
 
 void ASimModeWorldMultiRotor::BeginPlay()
@@ -101,13 +99,16 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
         
         //if no vehicle pawns exists in environment
         if (pawns.Num() == 0) {
+            auto vehicle_bp_class = UAirBlueprintLib::LoadClass(
+                getSettings().pawn_paths.at("DefaultQuadrotor").pawn_bp);
+
             //create vehicle pawn
             FActorSpawnParameters pawn_spawn_params;
             pawn_spawn_params.SpawnCollisionHandlingOverride =
             ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
             TMultiRotorPawn* spawned_pawn = this->GetWorld()->SpawnActor<TMultiRotorPawn>(
-                                                                                          vehicle_pawn_class_, actor_transform, pawn_spawn_params);
-            
+                vehicle_bp_class, actor_transform, pawn_spawn_params);
+
             spawned_actors_.Add(spawned_pawn);
             pawns.Add(spawned_pawn);
         }
@@ -136,7 +137,8 @@ void ASimModeWorldMultiRotor::setupVehiclesAndCamera(std::vector<VehiclePtr>& ve
             //else we don't have vehicle for this pawn
         }
     }
-    
+
+    fpv_vehicle_pawn_wrapper_->possess();
     CameraDirector->initializeForBeginPlay(getInitialViewMode(), fpv_vehicle_pawn_wrapper_, external_camera);
 }
 
@@ -267,4 +269,44 @@ ASimModeWorldBase::VehiclePtr ASimModeWorldMultiRotor::createVehicle(VehiclePawn
     return std::static_pointer_cast<VehicleConnectorBase>(vehicle);
 }
 
+void ASimModeWorldMultiRotor::setupClockSpeed()
+{
+    float clock_speed = getSettings().clock_speed;
+
+    //setup clock in ClockFactory
+    std::string clock_type = getSettings().clock_type;
+
+    if (clock_type == "ScalableClock") {
+        //scalable clock returns interval same as wall clock but multiplied by a scale factor
+        msr::airlib::ClockFactory::get(std::make_shared<msr::airlib::ScalableClock>(clock_speed == 1 ? 1 : 1 / clock_speed));
+    }
+    else if (clock_type == "SteppableClock") {
+        //steppable clock returns interval that is a constant number irrespective of wall clock
+        //we can either multiply this fixed interval by scale factor to speed up/down the clock
+        //but that would cause vehicles like quadrotors to become unstable
+        //so alternative we use here is instead to scale control loop frequency. The downside is that
+        //depending on compute power available, we will max out control loop frequency and therefore can no longer
+        //get increase in clock speed
+
+        //Approach 1: scale clock period, no longer used now due to quadrotor unstability
+        //ClockFactory::get(std::make_shared<msr::airlib::SteppableClock>(
+        //static_cast<msr::airlib::TTimeDelta>(getPhysicsLoopPeriod() * 1E-9 * clock_speed)));
+
+        //Approach 2: scale control loop frequency if clock is speeded up
+        if (clock_speed >= 1) {
+            msr::airlib::ClockFactory::get(std::make_shared<msr::airlib::SteppableClock>(
+                static_cast<msr::airlib::TTimeDelta>(getPhysicsLoopPeriod() * 1E-9))); //no clock_speed multiplier
+
+            setPhysicsLoopPeriod(getPhysicsLoopPeriod() / static_cast<long long>(clock_speed));
+        }
+        else {
+            //for slowing down, this don't generate instability
+            msr::airlib::ClockFactory::get(std::make_shared<msr::airlib::SteppableClock>(
+            static_cast<msr::airlib::TTimeDelta>(getPhysicsLoopPeriod() * 1E-9 * clock_speed)));
+        }
+    }
+    else
+        throw std::invalid_argument(common_utils::Utils::stringf(
+            "clock_type %s is not recognized", clock_type.c_str()));
+}
 

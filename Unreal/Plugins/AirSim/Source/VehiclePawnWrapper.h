@@ -105,6 +105,7 @@ public: //interface
 
     void getRawVehicleSettings(msr::airlib::Settings& settings) const;
 
+    void possess();
 
 protected:
     UPROPERTY(VisibleAnywhere)
