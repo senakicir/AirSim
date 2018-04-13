@@ -170,10 +170,8 @@ void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>&
         FString str = actor->GetName();
         std::string str2 = std::string(TCHAR_TO_UTF8(*str));
         
-        if(str2 == "Human_Blueprint"){
-            human_ = actor;
-            UAirBlueprintLib::LogMessageString("Human is missing!", "", LogDebugLevel::Failure);
-        }
+        human_ = actor;
+        UAirBlueprintLib::LogMessageString("Actor name is:", str2, LogDebugLevel::Success);
         
     }
 }

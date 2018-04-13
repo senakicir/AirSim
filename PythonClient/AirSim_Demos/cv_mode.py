@@ -9,16 +9,6 @@ pp = pprint.PrettyPrinter(indent=4)
 client = MultirotorClient()
 client.confirmConnection()
 
-
-AirSimClientBase.wait_key('Press any key to set camera-0 gimble to 15-degree pitch')
-client.setCameraOrientation(0, AirSimClientBase.toQuaternion(0.261799, 0, 0)); #radians
-
-AirSimClientBase.wait_key('Press any key to get camera parameters')
-for camera_id in range(5):
-    camera_info = client.getCameraInfo(camera_id)
-    print("CameraInfo %d: %s" % (camera_id, pp.pprint(camera_info)))
-
-AirSimClientBase.wait_key('Press any key to get images')
 for x in range(3): # do few times
     z = x * -20 - 5 # some random number
     client.simSetPose(Pose(Vector3r(z, z, z), AirSimClientBase.toQuaternion(x / 3.0, 0, x / 3.0)), True)
@@ -26,17 +16,17 @@ for x in range(3): # do few times
     responses = client.simGetImages([
         ImageRequest(0, AirSimImageType.DepthVis),
         ImageRequest(1, AirSimImageType.DepthPerspective, True),
-        ImageRequest(2, AirSimImageType.Segmentation),
-        ImageRequest(3, AirSimImageType.Scene),
-        ImageRequest(4, AirSimImageType.DisparityNormalized),
-        ImageRequest(4, AirSimImageType.SurfaceNormals)])
+        ImageRequest(0, AirSimImageType.Segmentation),
+        ImageRequest(0, AirSimImageType.Scene),
+        ImageRequest(0, AirSimImageType.DisparityNormalized),
+        ImageRequest(0, AirSimImageType.SurfaceNormals)])
 
     for i, response in enumerate(responses):
         if response.pixels_as_float:
-            print("Type %d, size %d, pos %s" % (response.image_type, len(response.image_data_float), pprint.pformat(response.camera_position)))
+            print("Type %d, size %d" % (response.image_type, len(response.image_data_float)))
             AirSimClientBase.write_pfm(os.path.normpath('/temp/cv_mode_' + str(x) + "_" + str(i) + '.pfm'), AirSimClientBase.getPfmArray(response))
         else:
-            print("Type %d, size %d, pos %s" % (response.image_type, len(response.image_data_uint8), pprint.pformat(response.camera_position)))
+            print("Type %d, size %d" % (response.image_type, len(response.image_data_uint8)))
             AirSimClientBase.write_file(os.path.normpath('/temp/cv_mode_' + str(x) + "_" + str(i) + '.png'), response.image_data_uint8)
 
     pose = client.simGetPose()

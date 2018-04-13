@@ -12,10 +12,10 @@ def EulerToRotationMatrix(roll, pitch, yaw):
 
 
 def main():
-    filepath = 'my_scripts/temp_main/2018-02-26-17-58/groundtruth.txt'
-    filepath2 = 'my_scripts/temp_main/2018-02-26-17-58/groundtruth_projected.txt'
-    filepath3 = 'my_scripts/temp_main/2018-02-26-17-58/images/test_gt'
-    filepath4 = 'my_scripts/temp_main/2018-02-26-17-58/images'
+    filepath = 'my_scripts/temp_main/2018-03-14-14-01/groundtruth.txt'
+    filepath2 = 'my_scripts/temp_main/2018-03-14-14-01/groundtruth_projected.txt'
+    filepath3 = 'my_scripts/temp_main/2018-03-14-14-01/images/test_gt'
+    filepath4 = 'my_scripts/temp_main/2018-03-14-14-01/images'
 
     if not os.path.exists(filepath3):
         os.makedirs(filepath3)
