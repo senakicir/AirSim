@@ -1,8 +1,9 @@
+import helpers as my_helpers
 from human_2dpos import *
-from helpers import *
 from State import *
 from NonAirSimClient import *
-from mpl_toolkits.mplot3d import Axes3D
+from pose3d_optimizer import *
+from project_bones import *
 
 datetime_folder_name = ''
 gt_hv = []
@@ -10,10 +11,8 @@ est_hv = []
 f_output_str = ''
 USE_AIRSIM = False
 NUM_OF_ANIMATIONS = 3
+LENGTH_OF_SIMULATION = 90
 
-def setUseAirSim(use):
-    global USE_AIRSIM
-    USE_AIRSIM = use
 
 def determineAllPositions(bone_pred, measurement_cov_, client):
     drone_pos_vec = client.getPosition() #airsim gives us the drone coordinates with initial drone loc. as origin
@@ -105,8 +104,12 @@ def TakePhoto(client, index, f_groundtruth = None):
         
         loc = 'temp_main/' + datetime_folder_name + '/images/img_' + str(index) + '.png'
         AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
+
     else:
         response = client.simGetImages()
+        loc = 'temp_main/' + datetime_folder_name + '/images/img_' + str(index) + '.png'
+        AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
+
         bone_pos = response.bones
 
     return response.image_data_uint8, bone_pos
@@ -115,6 +118,7 @@ def main(kalman_arguments = None, other_arguments = None):
 
     errors_pos = []
     errors_vel = []
+    errors = {}
     end_test = False
 
     if (kalman_arguments == None):
@@ -127,20 +131,19 @@ def main(kalman_arguments = None, other_arguments = None):
         KALMAN_MEASUREMENT_NOISE_AMOUNT_XY = kalman_arguments[1]
         KALMAN_MEASUREMENT_NOISE_AMOUNT_Z = kalman_arguments[2]
         MEASUREMENT_NOISE_COV = np.array([[KALMAN_MEASUREMENT_NOISE_AMOUNT_XY, 0, 0], [0, KALMAN_MEASUREMENT_NOISE_AMOUNT_XY, 0], [0, 0, KALMAN_MEASUREMENT_NOISE_AMOUNT_Z]])
+    
     if (other_arguments == None):
         USE_TRACKBAR = False
         USE_GROUNDTRUTH = 1 #0 is groundtruth, 1 is mild-GT, 2 is real system
         global USE_AIRSIM
         USE_AIRSIM = False
         PLOT_EVERYTHING = False
-        SAVE_VALUES = False
     else:
         USE_TRACKBAR = other_arguments[0]
         USE_GROUNDTRUTH = other_arguments[1] #0 is groundtruth, 1 is mild-GT, 2 is real system
         USE_AIRSIM = other_arguments[2]
         PLOT_EVERYTHING = other_arguments[3]
-        SAVE_VALUES = other_arguments[4]
-        ANIMATION_NUM = other_arguments[5]
+        ANIMATION_NUM = other_arguments[4]
 
     #connect to the AirSim simulator
     if (USE_AIRSIM == True):
@@ -156,19 +159,14 @@ def main(kalman_arguments = None, other_arguments = None):
         filename_output = 'temp_main/test_set_1/a_flight.txt'
         client = NonAirSimClient(filename_bones, filename_output)
 
-    if (SAVE_VALUES == True):
-        global datetime_folder_name
-        datetime_folder_name = resetAllFolders()
-        f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
-        f_bones = open('temp_main/' + datetime_folder_name + '/bones.txt', 'w')
-        f_groundtruth = open('temp_main/' + datetime_folder_name + '/grountruth.txt', 'w')
 
+    global datetime_folder_name
+    datetime_folder_name = my_helpers.resetAllFolders()
+    f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
+    f_bones = open('temp_main/' + datetime_folder_name + '/bones.txt', 'w')
+    f_groundtruth = open('temp_main/' + datetime_folder_name + '/grountruth.txt', 'w')
 
-    #find initial human and drone positions, and find the distance between them, find initial angle of drone
-    if (SAVE_VALUES == True):
-        photo, bone_pos_GT = TakePhoto(client, 0, f_groundtruth)
-    else:
-        photo, bone_pos_GT = TakePhoto(client, 0)
+    photo, bone_pos_GT = TakePhoto(client, 0, f_groundtruth)
     
     if (USE_GROUNDTRUTH == 0):
         # read unreal coordinate positions
@@ -197,14 +195,14 @@ def main(kalman_arguments = None, other_arguments = None):
     if (USE_TRACKBAR == True):
         # create trackbars for angle change
         cv2.namedWindow('Drone Control')
-        cv2.createTrackbar('Angle','Drone Control', 0, 360, doNothing)
+        cv2.createTrackbar('Angle','Drone Control', 0, 360, my_helpers.doNothing)
         #cv2.setTrackbarPos('Angle', 'Angle Control', int(degrees(some_angle-INITIAL_HUMAN_ORIENTATION)))
         cv2.setTrackbarPos('Angle', 'Drone Control', int(degrees(current_state.some_angle)))
 
-        cv2.createTrackbar('Radius','Drone Control', 3, 10, doNothing)
+        cv2.createTrackbar('Radius','Drone Control', 3, 10, my_helpers.doNothing)
         cv2.setTrackbarPos('Radius', 'Drone Control', int(current_state.radius))
 
-        cv2.createTrackbar('Z','Drone Control', 3, 10, doNothing)
+        cv2.createTrackbar('Z','Drone Control', 3, 10, my_helpers.doNothing)
         cv2.setTrackbarPos('Z', 'Drone Control', z_pos)
 
     while (end_test == False):
@@ -214,10 +212,7 @@ def main(kalman_arguments = None, other_arguments = None):
         if k == 27:
             break
 
-        if (SAVE_VALUES == True):
-            photo, bone_pos_GT = TakePhoto(client, num_of_photos, f_groundtruth)
-        else:
-            photo, bone_pos_GT = TakePhoto(client, num_of_photos)
+        photo, bone_pos_GT = TakePhoto(client, num_of_photos, f_groundtruth)
         num_of_photos = num_of_photos +1
 
         if (USE_GROUNDTRUTH == 0):
@@ -238,37 +233,12 @@ def main(kalman_arguments = None, other_arguments = None):
         est_hp.append(current_state.human_pos)
         gt_hp_arr = np.asarray(gt_hp)
         est_hp_arr = np.asarray(est_hp)
+        
         errors_pos.append(np.linalg.norm(unreal_positions[HUMAN_POS_IND, :]-current_state.human_pos))
-        if (linecount > 5):
+        if (linecount > 0):
+            gt_hv.append((gt_hp_arr[linecount, :]-gt_hp_arr[linecount-1, :])/DELTA_T)
+            est_hv.append(current_state.human_vel)
             errors_vel.append(np.linalg.norm( (gt_hp_arr[linecount, :]-gt_hp_arr[linecount-1, :])/DELTA_T - current_state.human_vel))
-
-        #PLOT STUFF HERE AND CALCULATE ERROR#
-        if PLOT_EVERYTHING == True:
-            fig1 = plt.figure()
-            ax = fig1.add_subplot(111, projection='3d')
-            ax.plot(gt_hp_arr[:, 0], gt_hp_arr[:, 1], gt_hp_arr[:, 2], c='b', marker='^')
-            ax.plot(est_hp_arr[:, 0], est_hp_arr[:, 1], est_hp_arr[:, 2], c='r', marker='^')
-            error_ave_pos = np.mean(np.asarray(errors_pos))
-            plt.title(str(error_ave_pos))
-            plt.savefig('temp_main/' + datetime_folder_name + '/estimates/est_pos' + str(linecount) + '.png', bbox_inches='tight', pad_inches=0)
-            plt.close()
-
-            if linecount > 0: 
-                gt_hv.append((gt_hp_arr[linecount, :]-gt_hp_arr[linecount-1, :])/DELTA_T)
-                est_hv.append(current_state.human_vel)
-                gt_hv_arr = np.asarray(gt_hv)
-                est_hv_arr = np.asarray(est_hv)
-
-                fig2 = plt.figure()
-                ax = fig2.add_subplot(111, projection='3d')
-                ax.plot(gt_hv_arr[:, 0], gt_hv_arr[:, 1], gt_hv_arr[:, 2], c='b', marker='^')
-                ax.plot(est_hv_arr[:, 0], est_hv_arr[:, 1], est_hv_arr[:, 2], c='r', marker='^')
-                if (linecount > 5):
-                    error_ave_vel = np.mean(np.asarray(errors_vel))
-                    plt.title(str(error_ave_vel))
-                plt.savefig('temp_main/' + datetime_folder_name + '/estimates/est_vel' + str(linecount) + '.png', bbox_inches='tight', pad_inches=0)
-                plt.close()
-        #################
 
         #finds desired position and angle
         if (USE_TRACKBAR == True):
@@ -288,24 +258,26 @@ def main(kalman_arguments = None, other_arguments = None):
         #angle required to face the hiker
         angle = current_state.drone_orientation
         current_yaw_deg = degrees(angle[2])
-        yaw_candidates = np.array([degrees(desired_yaw), degrees(desired_yaw) - 360, degrees(desired_yaw) +360])
-        min_diff = np.array([abs(current_yaw_deg -  yaw_candidates[0]), abs(current_yaw_deg -  yaw_candidates[1]), abs(current_yaw_deg -  yaw_candidates[2])])
-        desired_yaw_deg_BACKUP = yaw_candidates[np.argmin(min_diff)]
-
-        desired_yaw_deg = RangeAngle(degrees(desired_yaw), 360, False)
+        if (True): # new version
+            yaw_candidates = np.array([degrees(desired_yaw), degrees(desired_yaw) - 360, degrees(desired_yaw) +360])
+            min_diff = np.array([abs(current_yaw_deg -  yaw_candidates[0]), abs(current_yaw_deg -  yaw_candidates[1]), abs(current_yaw_deg -  yaw_candidates[2])])
+            desired_yaw_deg = yaw_candidates[np.argmin(min_diff)]
+        else:
+            current_yaw = radians(current_yaw_deg)
+            rotation_amount = desired_yaw - current_yaw
+            damping_yaw_rate = 1/pi
+            desired_yaw_deg = degrees(my_helpers.RangeAngle(rotation_amount, 180, True))*damping_yaw_rate #in degrees
 
         #move drone!
         damping_speed = 1
 
         print(current_yaw_deg, desired_yaw_deg)
-        #client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.MaxDegreeOfFreedom, YawMode(is_rate=False, yaw_or_rate=current_yaw_deg+5), lookahead=-1, adaptive_lookahead=0)
         client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.MaxDegreeOfFreedom, YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
-
         #client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.ForwardOnly, YawMode(is_rate=False, yaw_or_rate=270), lookahead=-1, adaptive_lookahead=0)
-
 
         end = time.time()
         elapsed_time = end - start
+        print("elapsed time: ", elapsed_time)
         
         if (USE_AIRSIM == True):
             if DELTA_T - elapsed_time > 0:
@@ -314,16 +286,15 @@ def main(kalman_arguments = None, other_arguments = None):
             elapsed_time = end - start
 
         #SAVE ALL VALUES OF THIS SIMULATION       
-        if SAVE_VALUES == True:
-            global f_output_str
-            f_output_str = str(linecount)+f_output_str
-            f_output.write(f_output_str)
+        global f_output_str
+        f_output_str = str(linecount)+f_output_str
+        f_output.write(f_output_str)
+        line = ""
+        for i in range(0, bone_pos_GT.shape[1]):
+            line = line+'\t'+str(bone_pos_GT[0,i])+'\t'+str(bone_pos_GT[1,i])+'\t'+str(bone_pos_GT[2,i])
+        line = line+'\n'
+        f_bones.write(line)
 
-            line = ""
-            for i in range(0, bone_pos_GT.shape[1]):
-                line = line+'\t'+str(bone_pos_GT[0,i])+'\t'+str(bone_pos_GT[1,i])+'\t'+str(bone_pos_GT[2,i])
-            line = line+'\n'
-            f_bones.write(line)
 
         linecount = linecount + 1
         print('linecount', linecount)
@@ -331,38 +302,41 @@ def main(kalman_arguments = None, other_arguments = None):
         if (USE_AIRSIM == False):
             end_test = client.end
         else:
-            if linecount == 15:
+            if (linecount == LENGTH_OF_SIMULATION):
                 end_test = True
 
-    print('End it!')
+    #calculate errors
     error_arr_pos = np.asarray(errors_pos)
-    error_ave_pos = np.mean(error_arr_pos)
-    error_std_pos = np.std(error_arr_pos)
+    errors["error_ave_pos"] = np.mean(error_arr_pos)
+    errors["error_std_pos"] = np.std(error_arr_pos)
 
     error_arr_vel = np.asarray(errors_vel)
-    error_ave_vel = np.mean(error_arr_vel)
-    error_std_vel = np.std(error_arr_vel)
+    errors["error_ave_vel"] = np.mean(error_arr_vel)
+    errors["error_std_vel"] = np.std(error_arr_vel)
 
+    gt_hp_arr = np.asarray(gt_hp)
+    est_hp_arr = np.asarray(est_hp)
+    gt_hv_arr = np.asarray(gt_hv)
+    est_hv_arr = np.asarray(est_hv)
+    my_helpers.plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, datetime_folder_name)
+
+    print('End it!')
     f_bones.close()
     f_groundtruth.close()
     f_output.close()
 
     client.reset()
+    client.changeAnimation(0) #reset animation
 
-    return error_ave_pos, error_std_pos, error_ave_vel, error_std_vel
+    return errors
 
 if __name__ == "__main__":
-    #kalman_arguments = [3.72759372031e-15, 3.72759372031e-12,  3.72759372031e-12*100]
-    #kalman_arguments = [1e-11, 1.93069772888e-11,  1.93069772888e-11*10000]
-    #kalman_arguments = [2.68269579528e-12, 2.68269579528e-09, 2.68269579528e-09*599.484250319]
     kalman_arguments = [3.72759372031e-11, 7.19685673001e-08, 7.19685673001e-08*77.4263682681]
 
-    setUseAirSim(use = True)
-
     for animation_num in range(1, NUM_OF_ANIMATIONS+1):
-                            #USE_TRACKBAR, USE_GROUNDTRUTH, USE_AIRSIM, PLOT_EVERYTHING, SAVE_VALUES, ANIM_NUM
-        other_arguments = [False,       0,              USE_AIRSIM,       True,            True,      animation_num  ]
+                        #USE_TRACKBAR, USE_GROUNDTRUTH, USE_AIRSIM, PLOT_EVERYTHING, ANIM_NUM
+        other_arguments = [False,       1,              True,       False,     animation_num  ]
 
-        (err1, err2, err3, err4) = main(kalman_arguments, other_arguments)
-        print((err1, err2, err3, err4))
+        errors = main(kalman_arguments, other_arguments)
+        print(errors)
 
