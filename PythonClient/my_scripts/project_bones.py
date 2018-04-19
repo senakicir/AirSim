@@ -1,4 +1,7 @@
 from helpers import *
+import torch
+from torch.autograd import Variable
+
 
 SIZE_X = 1280
 SIZE_Y = 720
@@ -13,17 +16,25 @@ CAMERA_PITCH_OFFSET = -pi/4
 CAMERA_YAW_OFFSET = 0
 TORSO_SIZE = 0.424 #in meters
 
-def EulerToRotationMatrix(roll, pitch, yaw):
+def EulerToRotationMatrix(roll, pitch, yaw, returnTensor=False):
+    if (returnTensor == True):
+        return torch.FloatTensor([[cos(yaw)*cos(pitch), cos(yaw)*sin(pitch)*sin(roll)-sin(yaw)*cos(roll), cos(yaw)*sin(pitch)*cos(roll)+sin(yaw)*sin(roll)],
+                    [sin(yaw)*cos(pitch), sin(yaw)*sin(pitch)*sin(roll)+cos(yaw)*cos(roll), sin(yaw)*sin(pitch)*cos(roll)-cos(yaw)*sin(roll)],
+                    [-sin(pitch), cos(pitch)*sin(roll), cos(pitch)*cos(roll)]])
     return np.array([[cos(yaw)*cos(pitch), cos(yaw)*sin(pitch)*sin(roll)-sin(yaw)*cos(roll), cos(yaw)*sin(pitch)*cos(roll)+sin(yaw)*sin(roll)],
                     [sin(yaw)*cos(pitch), sin(yaw)*sin(pitch)*sin(roll)+cos(yaw)*cos(roll), sin(yaw)*sin(pitch)*cos(roll)-cos(yaw)*sin(roll)],
                     [-sin(pitch), cos(pitch)*sin(roll), cos(pitch)*cos(roll)]])
 
-R_cam = EulerToRotationMatrix (CAMERA_ROLL_OFFSET, -CAMERA_PITCH_OFFSET, CAMERA_YAW_OFFSET)
+R_cam = EulerToRotationMatrix (CAMERA_ROLL_OFFSET, -CAMERA_PITCH_OFFSET, CAMERA_YAW_OFFSET, returnTensor = False)
 C_cam = np.array([[CAMERA_OFFSET_X, CAMERA_OFFSET_Y, -CAMERA_OFFSET_Z]]).T
+R_cam_torch = Variable(torch.from_numpy(R_cam).float(), requires_grad = False)
+C_cam_torch = Variable(torch.FloatTensor([[CAMERA_OFFSET_X], [CAMERA_OFFSET_Y], [-CAMERA_OFFSET_Z]]), requires_grad = False)
 FLIP_X_Y = np.array([[0,1,0],[-1,0,0],[0,0,1]])
+FLIP_X_Y_torch = Variable(torch.from_numpy(FLIP_X_Y).float(), requires_grad = False)
 FLIP_X_Y_inv = np.linalg.inv(FLIP_X_Y)
 
 K = np.array([[FOCAL_LENGTH,0,px],[0,FOCAL_LENGTH,py],[0,0,1]])
+K_torch = Variable(torch.FloatTensor([[FOCAL_LENGTH,0,px],[0,FOCAL_LENGTH,py],[0,0,1]]), requires_grad = False)
 K_inv = np.linalg.inv(K)
 
 def TakeBoneProjection(P_world, R_drone, C_drone):
@@ -40,16 +51,38 @@ def TakeBoneProjection(P_world, R_drone, C_drone):
     x = x[0:2, :]
 
     inFrame = True
-    if np.any(x[0,:] < 0):
-        inFrame = False
-    if np.any(x[0,:] > SIZE_X):
-        inFrame = False
-    if np.any(x[1,:] < 0):
-        inFrame = False
-    if np.any(x[1,:] > SIZE_Y):
-        inFrame = False
+    #if np.any(x[0,:] < 0):
+    #    inFrame = False
+    #if np.any(x[0,:] > SIZE_X):
+    #    inFrame = False
+    #if np.any(x[1,:] < 0):
+    #    inFrame = False
+    #if np.any(x[1,:] > SIZE_Y):
+    #    inFrame = False
 
     return x, z, inFrame
+
+def TakeBoneProjection_Pytorch(P_world, R_drone, C_drone):
+    num_of_bones = 21
+
+    neat_tensor = Variable(torch.FloatTensor([[0, 0, 0, 1]]), requires_grad=False)
+    ones_tensor = Variable(torch.ones([1, num_of_bones]), requires_grad=False)*1.0
+    
+    P_drone = torch.mm(torch.inverse(torch.cat((torch.cat((R_drone, C_drone), 1), neat_tensor), 0) ), torch.cat((P_world, ones_tensor), 0) )
+
+    P_camera = torch.mm(torch.inverse(torch.cat((torch.cat((R_cam_torch, C_cam_torch), 1), neat_tensor), 0) ), P_drone)
+    P_camera = P_camera[0:3,:]
+
+    x = torch.mm(torch.mm(K_torch, FLIP_X_Y_torch), P_camera)
+    
+    z = x[2,:]
+
+    result = Variable(torch.zeros([2,num_of_bones]), requires_grad = False)
+    result[0,:] = x[0,:]/z
+    result[1,:] = x[1,:]/z
+    
+    return result, z
+
 
 def TakeBoneBackProjection(bone_pred, R_drone, C_drone, cov_, z_val, use_z = False):
     img_torso_size = np.linalg.norm(bone_pred[:, 0] - bone_pred[:, 8])
@@ -71,6 +104,10 @@ def TakeBoneBackProjection(bone_pred, R_drone, C_drone, cov_, z_val, use_z = Fal
     P_drone = np.hstack([R_cam, C_cam]).dot(P_camera)
     P_world = np.hstack([R_drone, C_drone]).dot(np.vstack([P_drone, np.ones([1, bone_pred.shape[1]])]))
 
-    transformed_cov = (R_drone@R_cam)@cov_@(R_drone@R_cam).T
+    transformed_cov = TransformCovMatrix(R_drone, cov_)
 
     return P_world, transformed_cov
+
+def TransformCovMatrix(R_drone, cov_):
+    transformed_cov = (R_drone@R_cam)@cov_@(R_drone@R_cam).T
+    return transformed_cov

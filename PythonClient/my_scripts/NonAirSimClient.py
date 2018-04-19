@@ -38,6 +38,12 @@ class NonAirSimClient(object):
         response.bones  = np.reshape(X, (-1, 3)).T
         return response
 
+    def reset(self):
+        return 0
+
+    def changeAnimation(self, newAnim):
+        return 0
+
 class DummyPhotoResponse(object):
     bones = np.array([])
     image_data_uint8 = np.uint8(0)
