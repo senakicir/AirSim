@@ -176,8 +176,11 @@ class AirSimClientBase:
     
     def __init__(self, ip, port):
         self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = 3600)
+        #sena was here
         self.program_started = False #sena was here
         self.DRONE_INITIAL_POS = np.array([0, 0, 0])
+        self.unreal_positions = np.zeros([4,3])
+        self.bone_positions = np.zeros([17,3])
         
     def ping(self):
         return self.client.call('ping')
@@ -301,18 +304,20 @@ class AirSimClientBase:
         return (pitch, roll, yaw)
 
     #sena was here
-    def toArrayFromVector3r_arr(self, bonePos):
+    def initInitialDronePos2(self, bonePos):
         if (self.program_started == False):
             self.program_started = True
             self.DRONE_INITIAL_POS = np.array([bonePos.dronePos[b'x_val'], bonePos.dronePos[b'y_val'], -bonePos.dronePos[b'z_val']])
-        positionsArr = np.zeros((4,3))
-        positionsArr[0,:]= [bonePos.dronePos[b'x_val'], bonePos.dronePos[b'y_val'], -bonePos.dronePos[b'z_val']]
-        positionsArr[1,:]= [bonePos.humanPos[b'x_val'], bonePos.humanPos[b'y_val'], -bonePos.humanPos[b'z_val']]
-        positionsArr[2,:]= [bonePos.right_arm[b'x_val'], bonePos.right_arm[b'y_val'], -bonePos.right_arm[b'z_val']]
-        positionsArr[3,:]= [bonePos.left_arm[b'x_val'], bonePos.left_arm[b'y_val'], -bonePos.left_arm[b'z_val']]
-        
-        positionsArr = (positionsArr - self.DRONE_INITIAL_POS)/100
-        return positionsArr
+        return 0
+
+    #sena was here
+    def updateSynchronizedData(self, unreal_positions_, bone_positions_):
+        self.unreal_positions = unreal_positions_
+        self.bone_positions = bone_positions_
+    
+    #sena was here
+    def getSynchronizedData(self):
+        return self.unreal_positions, self.bone_positions
 
     @staticmethod
     def toQuaternion(pitch, roll, yaw):
@@ -506,8 +511,8 @@ class MultirotorClient(AirSimClientBase, object):
     def getBonePositions(self):
         return Vector3r_arr.from_msgpack(self.client.call('getBonePositions'))
     #sena was here
-    def getAllPositions(self):
-        return self.toArrayFromVector3r_arr(self.getBonePositions())
+    def initInitialDronePos(self):
+        return self.initInitialDronePos2(self.getBonePositions())
     #sena was here
     def changeAnimation(self, newAnimNum):
         return self.client.call('changeAnimation', newAnimNum)

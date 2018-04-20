@@ -13,41 +13,54 @@ USE_AIRSIM = False
 NUM_OF_ANIMATIONS = 1
 LENGTH_OF_SIMULATION = 50
 
+def get_client_unreal_values(client, X):
+    unreal_positions = np.zeros([5,3])
+    if (USE_AIRSIM == True):
+        DRONE_INITIAL_POS = client.DRONE_INITIAL_POS
+        keys = {b'humanPos': HUMAN_POS_IND, b'dronePos' : DRONE_POS_IND, b'droneOrient': DRONE_ORIENTATION_IND, b'left_arm': L_SHOULDER_IND, b'right_arm': R_SHOULDER_IND}
+        for key, value in keys.items():
+            element = X[key]
+            if (key != b'droneOrient'):
+                unreal_positions[value, :] = np.array([element[b'x_val'], element[b'y_val'], -element[b'z_val']])
+                unreal_positions[value, :]  = (unreal_positions[value, :] - DRONE_INITIAL_POS)/100
+            else:
+                unreal_positions[value, :] = np.array([element[b'x_val'], element[b'y_val'], element[b'z_val']])
 
-def TakePhoto(client, index, f_groundtruth = None):
+    else:
+        doNothing()
+    return unreal_positions
+
+def TakePhoto(client, index, saveImage = True):
     if (USE_AIRSIM == True):
         response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
         response = response[0]
-        X = response.bones            
+        X = response.bones  
 
-        if (f_groundtruth != None):
-            gt_numbers = [ v for v in X.values() ]
-            gt_str = ""
-            for bone_i in range(0, len(gt_numbers)):
-                gt_str = gt_str + str(gt_numbers[bone_i][b'x_val']) + '\t' + str(gt_numbers[bone_i][b'y_val']) + '\t' +  str(gt_numbers[bone_i][b'z_val']) + '\t'
-            gt_str = gt_str + '\n'
-            f_groundtruth.write(gt_str)
+        unreal_positions = get_client_unreal_values(client, X)
+    
+        gt_numbers = [ v for v in X.values() ]
+        gt_str = ""
+        bone_pos = np.zeros([3, len(gt_numbers)-3])
+        DRONE_INITIAL_POS = client.DRONE_INITIAL_POS
+        for bone_i in range(0, len(gt_numbers)):
+            gt_str = gt_str + str(gt_numbers[bone_i][b'x_val']) + '\t' + str(gt_numbers[bone_i][b'y_val']) + '\t' +  str(gt_numbers[bone_i][b'z_val']) + '\t'
+            if (bone_i >= 3):
+                bone_pos[:, bone_i-3] = np.array([gt_numbers[bone_i][b'x_val'], gt_numbers[bone_i][b'y_val'], -gt_numbers[bone_i][b'z_val']]) - DRONE_INITIAL_POS
 
-        numbers = [ v for v in X.values() ]
-        numbers = numbers[3:]
-        bone_pos = np.zeros([3,len(numbers)])
-        client.getAllPositions()
-        unreal_drone_init_pos = client.DRONE_INITIAL_POS
-        for i in range(0, len(numbers)):
-            bone_pos[:,i] = np.array([numbers[i][b'x_val'], numbers[i][b'y_val'], -numbers[i][b'z_val']]) - unreal_drone_init_pos
         bone_pos = bone_pos / 100
-        
-        loc = 'temp_main/' + datetime_folder_name + '/images/img_' + str(index) + '.png'
-        AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
+        client.updateSynchronizedData(unreal_positions, bone_pos)
 
+        if (saveImage == True):
+            loc = 'temp_main/' + datetime_folder_name + '/images/img_' + str(index) + '.png'
+            AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
     else:
         response = client.simGetImages()
-        loc = 'temp_main/' + datetime_folder_name + '/images/img_' + str(index) + '.png'
-        AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
+        bone_pos = response.bone_pos
+        unreal_positions = response.unreal_positions
+        client.updateSynchronizedData(unreal_positions, bone_pos)
+        gt_str = ""
 
-        bone_pos = response.bones
-
-    return response.image_data_uint8, bone_pos
+    return response.image_data_uint8, gt_str
 
 def main(kalman_arguments = None, parameters = None):
 
@@ -63,13 +76,14 @@ def main(kalman_arguments = None, parameters = None):
     MEASUREMENT_NOISE_COV = np.array([[kalman_arguments["KALMAN_PROCESS_NOISE_AMOUNT"], 0, 0], [0, kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"], 0], [0, 0, kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"]]])
 
     if (parameters == None):
-        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": True, "ANIMATION_NUM": 1}
+        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": True, "ANIMATION_NUM": 1, "TEST_SET_NAME": "test_set_1"}
     
     USE_TRACKBAR = parameters["USE_TRACKBAR"]
     USE_GROUNDTRUTH = parameters["USE_GROUNDTRUTH"] #0 is groundtruth, 1 is mild-GT, 2 is real system
     global USE_AIRSIM
     USE_AIRSIM = parameters["USE_AIRSIM"]
     ANIMATION_NUM = parameters["ANIMATION_NUM"]
+    test_set_name = parameters["TEST_SET_NAME"]
 
     #connect to the AirSim simulator
     if (USE_AIRSIM == True):
@@ -80,34 +94,30 @@ def main(kalman_arguments = None, parameters = None):
         print('Taking off')
         client.takeoff()
         #client.changeAnimation(ANIMATION_NUM)
+        client.initInitialDronePos()
     else:
-        filename_bones = 'temp_main/test_set_1/bones.txt'
-        filename_output = 'temp_main/test_set_1/a_flight.txt'
+        filename_bones = 'temp_main/'+test_set_name+'/groundtruth.txt'
+        filename_output = 'temp_main/'+test_set_name+'/a_flight.txt'
         client = NonAirSimClient(filename_bones, filename_output)
-
 
     global datetime_folder_name
     datetime_folder_name = my_helpers.resetAllFolders()
-    f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
-    f_bones = open('temp_main/' + datetime_folder_name + '/bones.txt', 'w')
-    f_groundtruth = open('temp_main/' + datetime_folder_name + '/grountruth.txt', 'w')
 
-    photo, bone_pos_GT = TakePhoto(client, 0, f_groundtruth)
+    f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
+    f_groundtruth = open('temp_main/' + datetime_folder_name + '/groundtruth.txt', 'w')
+
+    photo, f_groundtruth_str = TakePhoto(client, 0, saveImage=False)
 
     if (USE_GROUNDTRUTH == 3):
         objective = pose3d_optimizer()
-        optimizer = torch.optim.SGD(objective.parameters(), lr = 10000, momentum=0.5)
+        optimizer = torch.optim.SGD(objective.parameters(), lr = 1000, momentum=0.5)
     else:
         optimizer = 0
         objective = 0
 
-    if (USE_GROUNDTRUTH == 2):
-        net = initNet()
-        pose_2d = FindJointPos2D(photo, num_of_photos, net, make_plot = False)
-    else:
-        pose_2d = bone_pos_GT
-    initial_positions, _, _, _, _ = determineAllPositions(USE_GROUNDTRUTH, client, pose_2d, MEASUREMENT_NOISE_COV, optimizer, objective)
-    
+    init_pose3d = True
+    initial_positions, _, _, _, f_output_str = determineAllPositions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, optimizer, objective, init_pose3d)
+
     current_state = State(initial_positions, kalman_arguments['KALMAN_PROCESS_NOISE_AMOUNT'])
     
     #shoulder_vector = initial_positions[R_SHOULDER_IND, :] - initial_positions[L_SHOULDER_IND, :] #find initial human orientation!
@@ -116,9 +126,7 @@ def main(kalman_arguments = None, parameters = None):
     print ('Drone started %.2f m. from the hiker.\n' % current_state.radius)
 
     #define some variables
-    drone_loc = np.array([0 ,0, 0])
     linecount = 0
-    num_of_photos = 1
     gt_hp = []
     est_hp = []
 
@@ -142,14 +150,14 @@ def main(kalman_arguments = None, parameters = None):
         if k == 27:
             break
 
-        photo, bone_pos_GT = TakePhoto(client, num_of_photos, f_groundtruth)
-        num_of_photos = num_of_photos +1
+        photo, f_groundtruth_str = TakePhoto(client, linecount)
 
-        if (USE_GROUNDTRUTH == 2):
-            pose_2d = FindJointPos2D(photo, num_of_photos, net, make_plot = False)
+        plot_loc_ = 'temp_main/' + datetime_folder_name + '/superimposed_images/superimposed_img_' + str(linecount) + '.png'
+        if (USE_AIRSIM==True):
+            photo_loc_ = 'temp_main/' + datetime_folder_name + '/images/img_' + str(linecount) + '.png'
         else:
-            pose_2d = bone_pos_GT
-        positions, unreal_positions, cov, inFrame, f_output_str = determineAllPositions(USE_GROUNDTRUTH, client, pose_2d, MEASUREMENT_NOISE_COV, optimizer, objective)
+            photo_loc_ = 'temp_main/'+test_set_name+'/images/img_' + str(linecount) + '.png'
+        positions, unreal_positions, cov, inFrame, f_output_str = determineAllPositions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, optimizer, objective, plot_loc = plot_loc_, photo_loc = photo_loc_)
         inFrame = True #TO DO
         
         current_state.updateState(positions, inFrame, cov) #updates human pos, human orientation, human vel, drone pos
@@ -212,15 +220,10 @@ def main(kalman_arguments = None, parameters = None):
             elapsed_time = end - start
 
         #SAVE ALL VALUES OF THIS SIMULATION       
-        f_output_str = str(linecount)+f_output_str
+        f_output_str = str(linecount)+f_output_str + '\n'
         f_output.write(f_output_str)
-
-        line = ""
-        for i in range(0, bone_pos_GT.shape[1]):
-            line = line+'\t'+str(bone_pos_GT[0,i])+'\t'+str(bone_pos_GT[1,i])+'\t'+str(bone_pos_GT[2,i])
-        line = line+'\n'
-        f_bones.write(line)
-
+        f_groundtruth_str =  str(linecount) + '\t' +f_groundtruth_str + '\n'
+        f_groundtruth.write(f_groundtruth_str)
 
         linecount = linecount + 1
         print('linecount', linecount)
@@ -247,7 +250,6 @@ def main(kalman_arguments = None, parameters = None):
     my_helpers.plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, datetime_folder_name)
 
     print('End it!')
-    f_bones.close()
     f_groundtruth.close()
     f_output.close()
 
@@ -261,6 +263,6 @@ if __name__ == "__main__":
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 77.4263682681 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
 
     for animation_num in range(1, NUM_OF_ANIMATIONS+1):
-        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 3, "USE_AIRSIM": False, "ANIMATION_NUM": animation_num}
+        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": False, "ANIMATION_NUM": animation_num, "TEST_SET_NAME":"test_set_1"}
         errors = main(kalman_arguments, parameters)
         print(errors)

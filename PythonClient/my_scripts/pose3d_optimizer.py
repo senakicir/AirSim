@@ -16,3 +16,6 @@ class pose3d_optimizer(torch.nn.Module):
         projected_3d, _ = TakeBoneProjection_Pytorch(self.pose3d, R_drone, C_drone)
         output = mse_loss(projected_3d, pose_2d)
         return output
+    
+    def init_pose3d(pose3d_):
+        self.pose3d = torch.nn.Parameter(torch.from_numpy(pose3d_).float(), requires_grad=True)
