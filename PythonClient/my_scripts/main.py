@@ -48,7 +48,10 @@ def TakePhoto(client, index, saveImage = True):
                 bone_pos[:, bone_i-3] = np.array([gt_numbers[bone_i][b'x_val'], gt_numbers[bone_i][b'y_val'], -gt_numbers[bone_i][b'z_val']]) - DRONE_INITIAL_POS
 
         bone_pos = bone_pos / 100
-        client.updateSynchronizedData(unreal_positions, bone_pos)
+
+        drone_orient = client.getPitchRollYaw()    
+        drone_pos = client.getPosition()
+        client.updateSynchronizedData(unreal_positions, bone_pos, drone_pos, drone_orient)
 
         if (saveImage == True):
             loc = 'temp_main/' + datetime_folder_name + '/images/img_' + str(index) + '.png'
@@ -57,7 +60,9 @@ def TakePhoto(client, index, saveImage = True):
         response = client.simGetImages()
         bone_pos = response.bone_pos
         unreal_positions = response.unreal_positions
-        client.updateSynchronizedData(unreal_positions, bone_pos)
+        drone_orient = client.getPitchRollYaw()
+        drone_pos = client.getPosition()
+        client.updateSynchronizedData(unreal_positions, bone_pos, drone_pos, drone_orient)
         gt_str = ""
 
     return response.image_data_uint8, gt_str
@@ -92,9 +97,11 @@ def main(kalman_arguments = None, parameters = None):
         client.enableApiControl(True)
         client.armDisarm(True)
         print('Taking off')
-        client.takeoff()
-        #client.changeAnimation(ANIMATION_NUM)
         client.initInitialDronePos()
+        client.takeoff()
+        client.moveToZ(-z_pos, 2, max_wait_seconds = 5, yaw_mode = YawMode(), lookahead = -1, adaptive_lookahead = 1)
+        time.sleep(5)
+        client.changeAnimation(ANIMATION_NUM)
     else:
         filename_bones = 'temp_main/'+test_set_name+'/groundtruth.txt'
         filename_output = 'temp_main/'+test_set_name+'/a_flight.txt'
@@ -105,8 +112,11 @@ def main(kalman_arguments = None, parameters = None):
 
     f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
     f_groundtruth = open('temp_main/' + datetime_folder_name + '/groundtruth.txt', 'w')
-
-    photo, f_groundtruth_str = TakePhoto(client, 0, saveImage=False)
+    f_groundtruth_prefix = "-1\t" + str(client.DRONE_INITIAL_POS[0,]) + "\t" + str(client.DRONE_INITIAL_POS[1,]) + "\t" + str(client.DRONE_INITIAL_POS[2,])
+    for i in range(0,70):
+        f_groundtruth_prefix = f_groundtruth_prefix + "\t"
+    f_groundtruth.write(f_groundtruth_prefix + "\n")
+    photo, _ = TakePhoto(client, 0, saveImage=False)
 
     if (USE_GROUNDTRUTH == 3):
         objective = pose3d_optimizer()
@@ -116,7 +126,7 @@ def main(kalman_arguments = None, parameters = None):
         objective = 0
 
     init_pose3d = True
-    initial_positions, _, _, _, f_output_str = determineAllPositions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, optimizer, objective, init_pose3d)
+    initial_positions, _, _, _, _ = determineAllPositions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, optimizer, objective, init_pose3d)
 
     current_state = State(initial_positions, kalman_arguments['KALMAN_PROCESS_NOISE_AMOUNT'])
     
@@ -140,7 +150,7 @@ def main(kalman_arguments = None, parameters = None):
         cv2.createTrackbar('Radius','Drone Control', 3, 10, my_helpers.doNothing)
         cv2.setTrackbarPos('Radius', 'Drone Control', int(current_state.radius))
 
-        cv2.createTrackbar('Z','Drone Control', 3, 10, my_helpers.doNothing)
+        cv2.createTrackbar('Z','Drone Control', 3, 20, my_helpers.doNothing)
         cv2.setTrackbarPos('Z', 'Drone Control', z_pos)
 
     while (end_test == False):
@@ -157,22 +167,20 @@ def main(kalman_arguments = None, parameters = None):
             photo_loc_ = 'temp_main/' + datetime_folder_name + '/images/img_' + str(linecount) + '.png'
         else:
             photo_loc_ = 'temp_main/'+test_set_name+'/images/img_' + str(linecount) + '.png'
+
         positions, unreal_positions, cov, inFrame, f_output_str = determineAllPositions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, optimizer, objective, plot_loc = plot_loc_, photo_loc = photo_loc_)
         inFrame = True #TO DO
         
         current_state.updateState(positions, inFrame, cov) #updates human pos, human orientation, human vel, drone pos
         
-
         gt_hp.append(unreal_positions[HUMAN_POS_IND, :])
         est_hp.append(current_state.human_pos)
-        gt_hp_arr = np.asarray(gt_hp)
-        est_hp_arr = np.asarray(est_hp)
-        
         errors_pos.append(np.linalg.norm(unreal_positions[HUMAN_POS_IND, :]-current_state.human_pos))
+        
         if (linecount > 0):
-            gt_hv.append((gt_hp_arr[linecount, :]-gt_hp_arr[linecount-1, :])/DELTA_T)
+            gt_hv.append((gt_hp[-1]-gt_hp[-2])/DELTA_T)
             est_hv.append(current_state.human_vel)
-            errors_vel.append(np.linalg.norm( (gt_hp_arr[linecount, :]-gt_hp_arr[linecount-1, :])/DELTA_T - current_state.human_vel))
+            errors_vel.append(np.linalg.norm( (gt_hp[-1]-gt_hp[-2])/DELTA_T - current_state.human_vel))
 
         #finds desired position and angle
         if (USE_TRACKBAR == True):
@@ -192,22 +200,14 @@ def main(kalman_arguments = None, parameters = None):
         #angle required to face the hiker
         angle = current_state.drone_orientation
         current_yaw_deg = degrees(angle[2])
-        if (True): # new version
-            yaw_candidates = np.array([degrees(desired_yaw), degrees(desired_yaw) - 360, degrees(desired_yaw) +360])
-            min_diff = np.array([abs(current_yaw_deg -  yaw_candidates[0]), abs(current_yaw_deg -  yaw_candidates[1]), abs(current_yaw_deg -  yaw_candidates[2])])
-            desired_yaw_deg = yaw_candidates[np.argmin(min_diff)]
-        else:
-            current_yaw = radians(current_yaw_deg)
-            rotation_amount = desired_yaw - current_yaw
-            damping_yaw_rate = 1/pi
-            desired_yaw_deg = degrees(my_helpers.RangeAngle(rotation_amount, 180, True))*damping_yaw_rate #in degrees
+        yaw_candidates = np.array([degrees(desired_yaw), degrees(desired_yaw) - 360, degrees(desired_yaw) +360])
+        min_diff = np.array([abs(current_yaw_deg -  yaw_candidates[0]), abs(current_yaw_deg -  yaw_candidates[1]), abs(current_yaw_deg -  yaw_candidates[2])])
+        desired_yaw_deg = yaw_candidates[np.argmin(min_diff)]
 
         #move drone!
         damping_speed = 1
-
-        print(current_yaw_deg, desired_yaw_deg)
+        
         client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.MaxDegreeOfFreedom, YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
-        #client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.ForwardOnly, YawMode(is_rate=False, yaw_or_rate=270), lookahead=-1, adaptive_lookahead=0)
 
         end = time.time()
         elapsed_time = end - start
@@ -259,8 +259,8 @@ def main(kalman_arguments = None, parameters = None):
     return errors
 
 if __name__ == "__main__":
-    kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 3.72759372031e-11, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 7.19685673001e-08}
-    kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 77.4263682681 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
+    kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 7.19685673001e-11, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 7.19685673001e-8}
+    kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 77 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
 
     for animation_num in range(1, NUM_OF_ANIMATIONS+1):
         parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": False, "ANIMATION_NUM": animation_num, "TEST_SET_NAME":"test_set_1"}

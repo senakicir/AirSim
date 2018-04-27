@@ -17,5 +17,5 @@ class pose3d_optimizer(torch.nn.Module):
         output = mse_loss(projected_3d, pose_2d)
         return output
     
-    def init_pose3d(pose3d_):
-        self.pose3d = torch.nn.Parameter(torch.from_numpy(pose3d_).float(), requires_grad=True)
+    def init_pose3d(self, pose3d_):
+        self.pose3d = torch.nn.Parameter(pose3d_.data, requires_grad=True)

@@ -53,7 +53,7 @@ def plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, datetim
     ax = fig2.add_subplot(111, projection='3d')
     ax.plot(gt_hv_arr[:, 0], gt_hv_arr[:, 1], gt_hv_arr[:, 2], c='b', marker='^')
     ax.plot(est_hv_arr[:, 0], est_hv_arr[:, 1], est_hv_arr[:, 2], c='r', marker='^')
-    plt.title(str(errors["error_ave_pos"]))
+    plt.title(str(errors["error_ave_vel"]))
     plt.savefig('temp_main/' + datetime_folder_name + '/estimates/est_vel_final' + '.png', bbox_inches='tight', pad_inches=0)
     plt.close()
     #################
@@ -87,3 +87,39 @@ def SuperImposeOnImage(numbers, location, photo_location):
     plt.savefig(location, bbox_inches='tight', pad_inches=0)
     plt.close()
 
+def PlotDroneAndHuman(bones_GT, backprojected_bones, location):
+    fig = plt.figure()
+    gs1 = gridspec.GridSpec(1, 1)
+    ax = fig.add_subplot(gs1[0], projection='3d')
+    
+    # maintain aspect ratio
+    X = bones_GT[0,:]
+    Y = bones_GT[1,:]
+    Z = bones_GT[2,:]
+    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() * 2
+    mid_x = (X.max()+X.min()) * 0.5
+    mid_y = (Y.max()+Y.min()) * 0.5
+    mid_z = (Z.max()+Z.min()) * 0.5
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
+    #plot drone
+    #plot1 = ax.scatter(drone[0], drone[1], drone[2], c='r', marker='o')
+    #plot joints
+    for i, bone in enumerate(bones_h36m):
+        plot1 = ax.plot(bones_GT[0,bone], bones_GT[1,bone], bones_GT[2,bone], c='b', marker='^')
+    for i, bone in enumerate(bones_h36m):
+        plot2 = ax.plot(backprojected_bones[0,bone], backprojected_bones[1,bone], backprojected_bones[2,bone], c='r', marker='^')
+
+    text1 = 'actual   :\n'+str(bones_GT[0])+'\n'+str(bones_GT[1])+'\n'+str(bones_GT[2])
+    text2 = 'predicted:\n'+str(backprojected_bones[0])+'\n'+str(backprojected_bones[1])+'\n'+str(backprojected_bones[2])
+
+    plt.legend((plot1,plot1),(text1,text2), bbox_to_anchor=(1.6, 0.7))
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    plt.savefig(location)
+    plt.close()

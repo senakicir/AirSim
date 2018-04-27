@@ -13,7 +13,7 @@ DRONE_ORIENTATION_IND = 4
 
 INCREMENT_DEGREE_AMOUNT = radians(-20)
 
-z_pos = 10
+z_pos = 8
 DELTA_T = 1
 N = 3
 TIME_HORIZON = N*DELTA_T
@@ -25,6 +25,7 @@ class State(object):
         #self.human_orientation = np.arctan2(-shoulder_vector[0], shoulder_vector[1])
         #self.human_rotation_speed = 0
         self.human_pos = positions_[HUMAN_POS_IND,:]
+        print(self.human_pos)
         self.human_vel = 0
         self.human_speed = 0
         self.drone_pos = np.array([0,0,0])
@@ -34,6 +35,7 @@ class State(object):
         projected_distance_vect = positions_[HUMAN_POS_IND, :]
         self.inFrame = True
         self.radius = np.linalg.norm(projected_distance_vect[0:2,]) #to do
+        self.prev_human_pos = 0 #DELETE LATER
 
         drone_polar_pos = - positions_[HUMAN_POS_IND, :] #find the drone initial angle (needed for trackbar)
         self.some_angle = RangeAngle(np.arctan2(drone_polar_pos[1], drone_polar_pos[0]), 360, True)
@@ -54,7 +56,6 @@ class State(object):
         self.kalman.errorCovPost = 1. * np.eye(9, 9)
         #9x1 initial state, no need to modify
         self.kalman.statePost = np.array([[self.human_pos[0], self.human_pos[1], self.human_pos[2], 0, 0, 0, self.human_pos[0], self.human_pos[1], self.human_pos[2]]]).T
-    
     def updateState(self, positions_, inFrame_, cov_):
         self.kalman.measurementNoiseCov = cov_
         self.positions = positions_
@@ -66,6 +67,13 @@ class State(object):
 
         self.human_pos = np.copy(estimated_human_state[0:3,0])
         self.human_vel = np.copy(estimated_human_state[3:6,0])
+
+        ####DELETE LATER
+        #self.human_pos  = self.positions[HUMAN_POS_IND,:]
+        #self.human_vel =  (self.human_pos - self.prev_human_pos)/DELTA_T
+        #self.prev_human_pos = self.human_pos
+        print("self.human_pos ", self.human_pos  )
+
         self.human_speed = np.linalg.norm(self.human_vel) #the speed of the human (scalar)
         
         #what angle and polar position is the drone at currently

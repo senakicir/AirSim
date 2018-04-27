@@ -5,14 +5,16 @@ from State import HUMAN_POS_IND, DRONE_POS_IND, DRONE_ORIENTATION_IND, L_SHOULDE
 
 class NonAirSimClient(object):
     def __init__(self, filename_bones, filename_others):
-
         self.groundtruth = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')
-        self.groundtruth = self.groundtruth[:,:-1]
+        self.DRONE_INITIAL_POS = self.groundtruth[0,0:3]
+        self.groundtruth = self.groundtruth[1:,:-1]
         self.a_flight = pd.read_csv(filename_others, sep='\t', header=None).ix
         self.a_flight = self.a_flight[:,1:].as_matrix().astype('float')
         self.linenumber = 0
         self.current_bone_pos = 0
         self.current_unreal_pos = 0
+        self.current_drone_pos = 0
+        self.current_drone_orient = 0
         self.num_of_data = self.groundtruth.shape[0]
         self.end = False
 
@@ -30,13 +32,15 @@ class NonAirSimClient(object):
         (pitch, roll, yaw) = self.a_flight[self.linenumber, 3:6]
         return (pitch, roll, yaw)
 
-    def updateSynchronizedData(self, unreal_positions_, bone_positions_):
+    def updateSynchronizedData(self, unreal_positions_, bone_positions_, drone_pos_, drone_orient_):
         self.current_bone_pos = bone_positions_
         self.current_unreal_pos = unreal_positions_
+        self.current_drone_pos = drone_pos_
+        self.current_drone_orient = drone_orient_
         return 0
     
     def getSynchronizedData(self):
-        return self.current_unreal_pos, self.current_bone_pos
+        return self.current_unreal_pos, self.current_bone_pos, self.current_drone_pos, self.current_drone_orient
 
     def simGetImages(self):
         response = DummyPhotoResponse()
@@ -48,9 +52,9 @@ class NonAirSimClient(object):
             response.unreal_positions[key, :] = line[value, :] #dronepos
             if (key != DRONE_ORIENTATION_IND):
                 response.unreal_positions[key, 2] = -response.unreal_positions[key, 2] #dronepos
-                response.unreal_positions[key, :] = response.unreal_positions[key, :]/100
+                response.unreal_positions[key, :] = (response.unreal_positions[key, :] - self.DRONE_INITIAL_POS)/100
         response.bone_pos[2, :] = -response.bone_pos[2, :] 
-        response.bone_pos = response.bone_pos/100
+        response.bone_pos = (response.bone_pos - self.DRONE_INITIAL_POS[:, np.newaxis])/100
 
         return response
 
