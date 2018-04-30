@@ -6,11 +6,9 @@ from pose3d_optimizer import *
 from project_bones import *
 from determine_positions import *
 
-datetime_folder_name = ''
 gt_hv = []
 est_hv = []
 USE_AIRSIM = False
-NUM_OF_ANIMATIONS = 1
 LENGTH_OF_SIMULATION = 50
 
 def get_client_unreal_values(client, X):
@@ -30,7 +28,7 @@ def get_client_unreal_values(client, X):
         doNothing()
     return unreal_positions
 
-def TakePhoto(client, index, saveImage = True):
+def TakePhoto(client, index, image_folder_loc, saveImage = True):
     if (USE_AIRSIM == True):
         response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
         response = response[0]
@@ -54,7 +52,7 @@ def TakePhoto(client, index, saveImage = True):
         client.updateSynchronizedData(unreal_positions, bone_pos, drone_pos, drone_orient)
 
         if (saveImage == True):
-            loc = 'temp_main/' + datetime_folder_name + '/images/img_' + str(index) + '.png'
+            loc = image_folder_loc + '/img_' + str(index) + '.png'
             AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
     else:
         response = client.simGetImages()
@@ -77,11 +75,10 @@ def main(kalman_arguments = None, parameters = None):
     if (kalman_arguments == None):
         kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 3.72759372031e-11, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 7.19685673001e-08}
         kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 77.4263682681 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
-    
     MEASUREMENT_NOISE_COV = np.array([[kalman_arguments["KALMAN_PROCESS_NOISE_AMOUNT"], 0, 0], [0, kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"], 0], [0, 0, kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"]]])
 
     if (parameters == None):
-        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": True, "ANIMATION_NUM": 1, "TEST_SET_NAME": "test_set_1"}
+        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": True, "ANIMATION_NUM": 1, "TEST_SET_NAME": "test_set_1", "FILE_NAMES": "", "FOLDER_NAMES": ""}
     
     USE_TRACKBAR = parameters["USE_TRACKBAR"]
     USE_GROUNDTRUTH = parameters["USE_GROUNDTRUTH"] #0 is groundtruth, 1 is mild-GT, 2 is real system
@@ -89,6 +86,8 @@ def main(kalman_arguments = None, parameters = None):
     USE_AIRSIM = parameters["USE_AIRSIM"]
     ANIMATION_NUM = parameters["ANIMATION_NUM"]
     test_set_name = parameters["TEST_SET_NAME"]
+    file_names = parameters["FILE_NAMES"]
+    folder_names = parameters["FOLDER_NAMES"]
 
     #connect to the AirSim simulator
     if (USE_AIRSIM == True):
@@ -103,20 +102,22 @@ def main(kalman_arguments = None, parameters = None):
         time.sleep(5)
         client.changeAnimation(ANIMATION_NUM)
     else:
+        print(test_set_name)
         filename_bones = 'temp_main/'+test_set_name+'/groundtruth.txt'
         filename_output = 'temp_main/'+test_set_name+'/a_flight.txt'
         client = NonAirSimClient(filename_bones, filename_output)
 
-    global datetime_folder_name
-    datetime_folder_name = my_helpers.resetAllFolders()
+    filenames_anim = file_names[ANIMATION_NUM]
+    foldernames_anim = folder_names[ANIMATION_NUM]
+    f_output = open(filenames_anim["f_output"], 'w')
+    f_groundtruth = open(filenames_anim["f_groundtruth"], 'w')
 
-    f_output = open('temp_main/' + datetime_folder_name + '/a_flight.txt', 'w')
-    f_groundtruth = open('temp_main/' + datetime_folder_name + '/groundtruth.txt', 'w')
+    #save drone initial position
     f_groundtruth_prefix = "-1\t" + str(client.DRONE_INITIAL_POS[0,]) + "\t" + str(client.DRONE_INITIAL_POS[1,]) + "\t" + str(client.DRONE_INITIAL_POS[2,])
     for i in range(0,70):
         f_groundtruth_prefix = f_groundtruth_prefix + "\t"
     f_groundtruth.write(f_groundtruth_prefix + "\n")
-    photo, _ = TakePhoto(client, 0, saveImage=False)
+    photo, _ = TakePhoto(client, 0, foldernames_anim["images"], saveImage=False)
 
     if (USE_GROUNDTRUTH == 3):
         objective = pose3d_optimizer()
@@ -160,11 +161,11 @@ def main(kalman_arguments = None, parameters = None):
         if k == 27:
             break
 
-        photo, f_groundtruth_str = TakePhoto(client, linecount)
+        photo, f_groundtruth_str = TakePhoto(client, linecount, foldernames_anim["images"])
 
-        plot_loc_ = 'temp_main/' + datetime_folder_name + '/superimposed_images/superimposed_img_' + str(linecount) + '.png'
+        plot_loc_ = foldernames_anim["superimposed_images"] + '/superimposed_img_' + str(linecount) + '.png'
         if (USE_AIRSIM==True):
-            photo_loc_ = 'temp_main/' + datetime_folder_name + '/images/img_' + str(linecount) + '.png'
+            photo_loc_ = foldernames_anim["images"] + '/img_' + str(linecount) + '.png'
         else:
             photo_loc_ = 'temp_main/'+test_set_name+'/images/img_' + str(linecount) + '.png'
 
@@ -206,7 +207,6 @@ def main(kalman_arguments = None, parameters = None):
 
         #move drone!
         damping_speed = 1
-        
         client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.MaxDegreeOfFreedom, YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
 
         end = time.time()
@@ -221,9 +221,9 @@ def main(kalman_arguments = None, parameters = None):
 
         #SAVE ALL VALUES OF THIS SIMULATION       
         f_output_str = str(linecount)+f_output_str + '\n'
-        f_output.write(f_output_str)
+        #f_output.write(f_output_str)
         f_groundtruth_str =  str(linecount) + '\t' +f_groundtruth_str + '\n'
-        f_groundtruth.write(f_groundtruth_str)
+        #f_groundtruth.write(f_groundtruth_str)
 
         linecount = linecount + 1
         print('linecount', linecount)
@@ -247,7 +247,8 @@ def main(kalman_arguments = None, parameters = None):
     est_hp_arr = np.asarray(est_hp)
     gt_hv_arr = np.asarray(gt_hv)
     est_hv_arr = np.asarray(est_hv)
-    my_helpers.plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, datetime_folder_name)
+    estimate_folder_name = foldernames_anim["estimates"]
+    my_helpers.plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, estimate_folder_name)
 
     print('End it!')
     f_groundtruth.close()
@@ -259,10 +260,28 @@ def main(kalman_arguments = None, parameters = None):
     return errors
 
 if __name__ == "__main__":
-    kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 7.19685673001e-11, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 7.19685673001e-8}
-    kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 77 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
+    kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 5.17947467923e-10, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 1.38949549437e-08}
+    kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
 
-    for animation_num in range(1, NUM_OF_ANIMATIONS+1):
-        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": False, "ANIMATION_NUM": animation_num, "TEST_SET_NAME":"test_set_1"}
-        errors = main(kalman_arguments, parameters)
-        print(errors)
+    animations = [0,1,2,3]
+    animations = [0]
+
+    file_names, folder_names = my_helpers.resetAllFolders(animations)
+
+    test_sets = {"test_set_1":0, "test_set_2":1, "test_set_3":2, "test_set_4":3}
+    use_airsim = True
+    use_groundtruth = 1
+    use_trackbar = False
+    parameters = {"USE_TRACKBAR": use_trackbar, "USE_GROUNDTRUTH": use_groundtruth, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
+    if (use_airsim):
+         for animation_num in animations:
+            parameters["ANIMATION_NUM"]= animation_num
+            parameters["TEST_SET_NAME"]= ""
+            errors = main(kalman_arguments, parameters)
+            print(errors)
+    else:
+        for test_set, animation_num in test_sets.items():
+            parameters["ANIMATION_NUM"]= animation_num
+            parameters["TEST_SET_NAME"]= test_set
+            errors = main(kalman_arguments, parameters)
+            print(errors)

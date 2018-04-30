@@ -5,15 +5,15 @@ from State import HUMAN_POS_IND, DRONE_POS_IND, DRONE_ORIENTATION_IND, L_SHOULDE
 
 class NonAirSimClient(object):
     def __init__(self, filename_bones, filename_others):
-        self.groundtruth = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')
-        self.DRONE_INITIAL_POS = self.groundtruth[0,0:3]
-        self.groundtruth = self.groundtruth[1:,:-1]
-        self.a_flight = pd.read_csv(filename_others, sep='\t', header=None).ix
-        self.a_flight = self.a_flight[:,1:].as_matrix().astype('float')
+        groundtruth_matrix = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')                
+        self.DRONE_INITIAL_POS = groundtruth_matrix[0,0:3]
+        self.groundtruth = groundtruth_matrix[1:,:-1]
+        a_flight_matrix = pd.read_csv(filename_others, sep='\t', header=None).ix
+        self.a_flight = a_flight_matrix[:,1:].as_matrix().astype('float')
         self.linenumber = 0
         self.current_bone_pos = 0
         self.current_unreal_pos = 0
-        self.current_drone_pos = 0
+        self.current_drone_pos = Vector3r()
         self.current_drone_orient = 0
         self.num_of_data = self.groundtruth.shape[0]
         self.end = False
@@ -33,10 +33,10 @@ class NonAirSimClient(object):
         return (pitch, roll, yaw)
 
     def updateSynchronizedData(self, unreal_positions_, bone_positions_, drone_pos_, drone_orient_):
-        self.current_bone_pos = bone_positions_
-        self.current_unreal_pos = unreal_positions_
+        self.current_bone_pos = np.copy(bone_positions_)
+        self.current_unreal_pos = np.copy(unreal_positions_)
         self.current_drone_pos = drone_pos_
-        self.current_drone_orient = drone_orient_
+        self.current_drone_orient = np.copy(drone_orient_)
         return 0
     
     def getSynchronizedData(self):
@@ -44,7 +44,7 @@ class NonAirSimClient(object):
 
     def simGetImages(self):
         response = DummyPhotoResponse()
-        X = self.groundtruth[self.linenumber, :]
+        X = np.copy(self.groundtruth[self.linenumber, :])
         line = np.reshape(X, (-1, 3))
         response.bone_pos = line[3:,:].T
         keys = {DRONE_POS_IND: 0, DRONE_ORIENTATION_IND: 1, HUMAN_POS_IND: 2}

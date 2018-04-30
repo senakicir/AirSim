@@ -40,6 +40,7 @@ K_inv = np.linalg.inv(K)
 K_inv_torch = torch.inverse(K_torch)
 
 def TakeBoneProjection(P_world, R_drone, C_drone):
+
     P_drone = np.linalg.inv(np.vstack([np.hstack([R_drone, C_drone]), np.array([[0,0,0,1]])]))@np.vstack([P_world,  np.ones([1, P_world.shape[1]]) ] )
     P_camera =  np.linalg.inv(np.vstack([np.hstack([R_cam, C_cam]), np.array([[0,0,0,1]])]))@P_drone
     P_camera = P_camera[0:3,:]
@@ -108,24 +109,28 @@ def TakeBoneBackProjection(bone_pred, R_drone, C_drone, z_val, use_z = False):
     return P_world
 
 def TakeBoneBackProjection_Pytorch(bone_pred, R_drone, C_drone, z_val, use_z = False):
-    img_torso_size = np.linalg.norm(bone_pred[:, 0] - bone_pred[:, 8])
+    num_of_bones = 21
+
+    ones_tensor = Variable(torch.ones([1, num_of_bones]), requires_grad=False)*1.0
+
+    img_torso_size = torch.norm(bone_pred[:, 0] - bone_pred[:, 8])
     calculated_z_val = (FOCAL_LENGTH * TORSO_SIZE) / img_torso_size
 
     if (use_z == False):
         z_val = calculated_z_val
     else:
-        z_val = np.mean(z_val)
+        z_val = torch.mean(z_val)
 
-    bone_pos_3d = np.zeros([3, bone_pred.shape[1]])
+    bone_pos_3d = Variable(torch.zeros([3, 21]))
     bone_pos_3d[0,:] = bone_pred[0,:]*z_val
     bone_pos_3d[1,:] = bone_pred[1,:]*z_val
-    bone_pos_3d[2,:] = z_val
+    bone_pos_3d[2,:] = ones_tensor*z_val
     
-    bone_pos_3d = FLIP_X_Y_inv.dot(K_inv.dot(bone_pos_3d))
+    bone_pos_3d = torch.mm(FLIP_X_Y_inv_torch, torch.mm(K_inv_torch, bone_pos_3d))
 
-    P_camera = np.vstack([bone_pos_3d, np.ones([1,bone_pos_3d.shape[1]]) ])
-    P_drone = np.hstack([R_cam, C_cam]).dot(P_camera)
-    P_world = np.hstack([R_drone, C_drone]).dot(np.vstack([P_drone, np.ones([1, bone_pred.shape[1]])]))
+    P_camera = torch.cat((bone_pos_3d, ones_tensor),0)
+    P_drone = torch.mm(torch.cat((R_cam_torch, C_cam_torch),1), P_camera)
+    P_world = torch.mm(torch.cat((R_drone, C_drone), 1) ,torch.cat((P_drone, ones_tensor),0))
 
     return P_world
 

@@ -30,23 +30,36 @@ def SaveBonePositions2(index, bones, f_output):
 def doNothing(x):
     pass
 
-def resetAllFolders():
-    folder_name = time.strftime("%Y-%m-%d-%H-%M")
+def resetAllFolders(animation_list):
+    date_time_name = time.strftime("%Y-%m-%d-%H-%M")
 
-    folder_names = ['temp_main', 'temp_main/' + folder_name, 'temp_main/' + folder_name + '/estimates', 'temp_main/' + folder_name + '/images', 'temp_main/' + folder_name + '/superimposed_images']
+    folder_names = ['temp_main', 'temp_main/' + date_time_name]
     for a_folder_name in folder_names:
         if not os.path.exists(a_folder_name):
             os.makedirs(a_folder_name)
-    return folder_name
+    
+    main_folder_name = 'temp_main/' + date_time_name
+    f_notes = open(main_folder_name + "/notes.txt", 'w')
+    f_notes.write("")
+    file_names = {}
+    folder_names = {}
+    for animation in animation_list:
+        sub_folder_name = main_folder_name + "/animation_" + str(animation)
+        folder_names[animation] = {"images": sub_folder_name + '/images', "estimates": sub_folder_name + '/estimates', "superimposed_images":  sub_folder_name + '/superimposed_images'}
+        for a_folder_name in folder_names[animation].values():
+            if not os.path.exists(a_folder_name):
+                os.makedirs(a_folder_name)
+        file_names[animation] = {"f_output": sub_folder_name +  '/a_flight.txt', "f_groundtruth": sub_folder_name +  '/groundtruth.txt'}
+    return file_names, folder_names
 
-def plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, datetime_folder_name):
+def plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, folder_name):
     #PLOT STUFF HERE AT THE END OF SIMULATION
     fig1 = plt.figure()
     ax = fig1.add_subplot(111, projection='3d')
     ax.plot(gt_hp_arr[:, 0], gt_hp_arr[:, 1], gt_hp_arr[:, 2], c='b', marker='^')
     ax.plot(est_hp_arr[:, 0], est_hp_arr[:, 1], est_hp_arr[:, 2], c='r', marker='^')
     plt.title(str(errors["error_ave_pos"]))
-    plt.savefig('temp_main/' + datetime_folder_name + '/estimates/est_pos_final' + '.png', bbox_inches='tight', pad_inches=0)
+    plt.savefig(folder_name + '/est_pos_final' + '.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 
     fig2 = plt.figure()
@@ -54,7 +67,7 @@ def plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, datetim
     ax.plot(gt_hv_arr[:, 0], gt_hv_arr[:, 1], gt_hv_arr[:, 2], c='b', marker='^')
     ax.plot(est_hv_arr[:, 0], est_hv_arr[:, 1], est_hv_arr[:, 2], c='r', marker='^')
     plt.title(str(errors["error_ave_vel"]))
-    plt.savefig('temp_main/' + datetime_folder_name + '/estimates/est_vel_final' + '.png', bbox_inches='tight', pad_inches=0)
+    plt.savefig(folder_name + '/est_vel_final' + '.png', bbox_inches='tight', pad_inches=0)
     plt.close()
     #################
 
@@ -115,7 +128,7 @@ def PlotDroneAndHuman(bones_GT, backprojected_bones, location):
     text1 = 'actual   :\n'+str(bones_GT[0])+'\n'+str(bones_GT[1])+'\n'+str(bones_GT[2])
     text2 = 'predicted:\n'+str(backprojected_bones[0])+'\n'+str(backprojected_bones[1])+'\n'+str(backprojected_bones[2])
 
-    plt.legend((plot1,plot1),(text1,text2), bbox_to_anchor=(1.6, 0.7))
+    #plt.legend((plot1,plot1),(text1,text2), bbox_to_anchor=(1.6, 0.7))
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')

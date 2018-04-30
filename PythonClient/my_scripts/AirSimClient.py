@@ -181,11 +181,15 @@ class AirSimClientBase:
         self.DRONE_INITIAL_POS = np.array([0, 0, 0])
         self.unreal_positions = np.zeros([4,3])
         self.bone_positions = np.zeros([17,3])
+        self.drone_pos = Vector3r()
+        self.drone_orient = np.array([0, 0, 0])
         
     def ping(self):
         return self.client.call('ping')
     
     def reset(self):
+        self.DRONE_INITIAL_POS = np.array([0, 0, 0])
+        self.program_started = False #sena was here
         self.client.call('reset')
 
     def confirmConnection(self):
@@ -311,13 +315,15 @@ class AirSimClientBase:
         return 0
 
     #sena was here
-    def updateSynchronizedData(self, unreal_positions_, bone_positions_):
-        self.unreal_positions = unreal_positions_
-        self.bone_positions = bone_positions_
+    def updateSynchronizedData(self, unreal_positions_, bone_positions_, drone_pos_, drone_orient_):
+        self.unreal_positions = np.copy(unreal_positions_)
+        self.bone_positions = np.copy(bone_positions_)
+        self.drone_pos = drone_pos_
+        self.drone_orient = np.copy(drone_orient_)
     
     #sena was here
     def getSynchronizedData(self):
-        return self.unreal_positions, self.bone_positions
+        return self.unreal_positions, self.bone_positions, self.drone_pos, self.drone_orient
 
     @staticmethod
     def toQuaternion(pitch, roll, yaw):
