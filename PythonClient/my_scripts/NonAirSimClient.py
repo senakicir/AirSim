@@ -15,12 +15,15 @@ class NonAirSimClient(object):
         self.current_unreal_pos = 0
         self.current_drone_pos = Vector3r()
         self.current_drone_orient = 0
-        self.num_of_data = self.groundtruth.shape[0]
+        self.num_of_data = self.a_flight.shape[0]
+        self.error_2d = []
+        self.error_3d = []
+        self.required_estimation_data = []
         self.end = False
 
     def moveToPosition(self, arg1, arg2, arg3, arg4, arg5, arg6, arg7, yaw_or_rate=0 ,lookahead=0, adaptive_lookahead=0):
         self.linenumber = self.linenumber + 1
-        if (self.linenumber == self.num_of_data-1):
+        if (self.linenumber == self.num_of_data):
             self.end = True
 
     def getPosition(self):
@@ -59,10 +62,17 @@ class NonAirSimClient(object):
         return response
 
     def reset(self):
+        self.error_2d = []
+        self.error_3d = []
         return 0
 
     def changeAnimation(self, newAnim):
         return 0
+
+    def addNewFrame(self, pose_2d, R_drone, C_drone):
+        self.required_estimation_data.insert(0, [pose_2d, R_drone, C_drone])
+        if (len(self.required_estimation_data) > 6):
+            self.required_estimation_data.pop()
 
 class DummyPhotoResponse(object):
     bone_pos = np.array([])

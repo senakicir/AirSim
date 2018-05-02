@@ -183,6 +183,9 @@ class AirSimClientBase:
         self.bone_positions = np.zeros([17,3])
         self.drone_pos = Vector3r()
         self.drone_orient = np.array([0, 0, 0])
+        self.error_2d = []
+        self.error_3d = []
+        self.required_estimation_data = []
         
     def ping(self):
         return self.client.call('ping')
@@ -324,6 +327,12 @@ class AirSimClientBase:
     #sena was here
     def getSynchronizedData(self):
         return self.unreal_positions, self.bone_positions, self.drone_pos, self.drone_orient
+    
+    #sena was here
+    def addNewFrame(self, pose_2d, R_drone, C_drone):
+        self.required_estimation_data.insert(0, [pose_2d, R_drone, C_drone])
+        if (len(self.required_estimation_data) > 6):
+            self.required_estimation_data.pop()
 
     @staticmethod
     def toQuaternion(pitch, roll, yaw):

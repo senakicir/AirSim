@@ -3,7 +3,7 @@ from main import *
 def grid_search():
     #USE_TRACKBAR, USE_GROUNDTRUTH, USE_AIRSIM, PLOT_EVERYTHING, SAVE_VALUES
     animations = [0]
-    file_names, folder_names = my_helpers.resetAllFolders(animations)
+    file_names, folder_names = my_helpers.reset_all_folders(animations)
     parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": False, "ANIMATION_NUM": 0, "TEST_SET_NAME":"test_set_1", "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
 
     process_noise_list = np.logspace(-15, -7, 15)

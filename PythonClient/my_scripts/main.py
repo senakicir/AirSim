@@ -25,10 +25,10 @@ def get_client_unreal_values(client, X):
                 unreal_positions[value, :] = np.array([element[b'x_val'], element[b'y_val'], element[b'z_val']])
 
     else:
-        doNothing()
+        do_nothing()
     return unreal_positions
 
-def TakePhoto(client, index, image_folder_loc, saveImage = True):
+def take_photo(client, index, image_folder_loc, saveImage = True):
     if (USE_AIRSIM == True):
         response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
         response = response[0]
@@ -117,17 +117,9 @@ def main(kalman_arguments = None, parameters = None):
     for i in range(0,70):
         f_groundtruth_prefix = f_groundtruth_prefix + "\t"
     f_groundtruth.write(f_groundtruth_prefix + "\n")
-    photo, _ = TakePhoto(client, 0, foldernames_anim["images"], saveImage=False)
+    photo, _ = take_photo(client, 0, foldernames_anim["images"], saveImage=False)
 
-    if (USE_GROUNDTRUTH == 3):
-        objective = pose3d_optimizer()
-        optimizer = torch.optim.SGD(objective.parameters(), lr = 1000, momentum=0.5)
-    else:
-        optimizer = 0
-        objective = 0
-
-    init_pose3d = True
-    initial_positions, _, _, _, _ = determineAllPositions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, optimizer, objective, init_pose3d)
+    initial_positions, _, _, _, _ = determine_all_positions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, linecount = 0)
 
     current_state = State(initial_positions, kalman_arguments['KALMAN_PROCESS_NOISE_AMOUNT'])
     
@@ -144,14 +136,14 @@ def main(kalman_arguments = None, parameters = None):
     if (USE_TRACKBAR == True):
         # create trackbars for angle change
         cv2.namedWindow('Drone Control')
-        cv2.createTrackbar('Angle','Drone Control', 0, 360, my_helpers.doNothing)
+        cv2.createTrackbar('Angle','Drone Control', 0, 360, my_helpers.do_nothing)
         #cv2.setTrackbarPos('Angle', 'Angle Control', int(degrees(some_angle-INITIAL_HUMAN_ORIENTATION)))
         cv2.setTrackbarPos('Angle', 'Drone Control', int(degrees(current_state.some_angle)))
 
-        cv2.createTrackbar('Radius','Drone Control', 3, 10, my_helpers.doNothing)
+        cv2.createTrackbar('Radius','Drone Control', 3, 10, my_helpers.do_nothing)
         cv2.setTrackbarPos('Radius', 'Drone Control', int(current_state.radius))
 
-        cv2.createTrackbar('Z','Drone Control', 3, 20, my_helpers.doNothing)
+        cv2.createTrackbar('Z','Drone Control', 3, 20, my_helpers.do_nothing)
         cv2.setTrackbarPos('Z', 'Drone Control', z_pos)
 
     while (end_test == False):
@@ -161,15 +153,15 @@ def main(kalman_arguments = None, parameters = None):
         if k == 27:
             break
 
-        photo, f_groundtruth_str = TakePhoto(client, linecount, foldernames_anim["images"])
+        photo, f_groundtruth_str = take_photo(client, linecount, foldernames_anim["images"])
 
-        plot_loc_ = foldernames_anim["superimposed_images"] + '/superimposed_img_' + str(linecount) + '.png'
+        plot_loc_ = foldernames_anim["superimposed_images"]
         if (USE_AIRSIM==True):
             photo_loc_ = foldernames_anim["images"] + '/img_' + str(linecount) + '.png'
         else:
             photo_loc_ = 'temp_main/'+test_set_name+'/images/img_' + str(linecount) + '.png'
 
-        positions, unreal_positions, cov, inFrame, f_output_str = determineAllPositions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, optimizer, objective, plot_loc = plot_loc_, photo_loc = photo_loc_)
+        positions, unreal_positions, cov, inFrame, f_output_str = determine_all_positions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, plot_loc = plot_loc_, photo_loc = photo_loc_, linecount = linecount)
         inFrame = True #TO DO
         
         current_state.updateState(positions, inFrame, cov) #updates human pos, human orientation, human vel, drone pos
@@ -221,9 +213,9 @@ def main(kalman_arguments = None, parameters = None):
 
         #SAVE ALL VALUES OF THIS SIMULATION       
         f_output_str = str(linecount)+f_output_str + '\n'
-        #f_output.write(f_output_str)
+        f_output.write(f_output_str)
         f_groundtruth_str =  str(linecount) + '\t' +f_groundtruth_str + '\n'
-        #f_groundtruth.write(f_groundtruth_str)
+        f_groundtruth.write(f_groundtruth_str)
 
         linecount = linecount + 1
         print('linecount', linecount)
@@ -248,7 +240,10 @@ def main(kalman_arguments = None, parameters = None):
     gt_hv_arr = np.asarray(gt_hv)
     est_hv_arr = np.asarray(est_hv)
     estimate_folder_name = foldernames_anim["estimates"]
-    my_helpers.plotErrorPlots(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, estimate_folder_name)
+    my_helpers.plot_error(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, estimate_folder_name)
+    if (USE_GROUNDTRUTH == 3):
+        my_helpers.plot_loss_2d(client, estimate_folder_name)
+    my_helpers.plot_loss_3d(client, estimate_folder_name)
 
     print('End it!')
     f_groundtruth.close()
@@ -264,13 +259,13 @@ if __name__ == "__main__":
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
 
     animations = [0,1,2,3]
-    animations = [0]
+    #animations = [0]
 
-    file_names, folder_names = my_helpers.resetAllFolders(animations)
+    file_names, folder_names = my_helpers.reset_all_folders(animations)
 
     test_sets = {"test_set_1":0, "test_set_2":1, "test_set_3":2, "test_set_4":3}
-    use_airsim = True
-    use_groundtruth = 1
+    use_airsim = False
+    use_groundtruth = 3
     use_trackbar = False
     parameters = {"USE_TRACKBAR": use_trackbar, "USE_GROUNDTRUTH": use_groundtruth, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
     if (use_airsim):

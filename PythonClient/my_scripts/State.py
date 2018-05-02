@@ -1,7 +1,7 @@
 import cv2 as cv2
 from math import radians, cos, sin, pi
 import numpy as np
-from helpers import RangeAngle
+from helpers import range_angle
 
 #constants
 BETA = 0.35
@@ -11,10 +11,10 @@ R_SHOULDER_IND = 2
 L_SHOULDER_IND = 3
 DRONE_ORIENTATION_IND = 4
 
-INCREMENT_DEGREE_AMOUNT = radians(-20)
+INCREMENT_DEGREE_AMOUNT = radians(-50)
 
 z_pos = 8
-DELTA_T = 1
+DELTA_T = 3
 N = 3
 TIME_HORIZON = N*DELTA_T
 
@@ -38,7 +38,7 @@ class State(object):
         self.prev_human_pos = 0 #DELETE LATER
 
         drone_polar_pos = - positions_[HUMAN_POS_IND, :] #find the drone initial angle (needed for trackbar)
-        self.some_angle = RangeAngle(np.arctan2(drone_polar_pos[1], drone_polar_pos[0]), 360, True)
+        self.some_angle = range_angle(np.arctan2(drone_polar_pos[1], drone_polar_pos[0]), 360, True)
 
         self.kalman = cv2.KalmanFilter(6, 3, 0) #6, state variables. 3 measurement variables 
 
@@ -56,6 +56,7 @@ class State(object):
         self.kalman.errorCovPost = 1. * np.eye(9, 9)
         #9x1 initial state, no need to modify
         self.kalman.statePost = np.array([[self.human_pos[0], self.human_pos[1], self.human_pos[2], 0, 0, 0, self.human_pos[0], self.human_pos[1], self.human_pos[2]]]).T
+
     def updateState(self, positions_, inFrame_, cov_):
         self.kalman.measurementNoiseCov = cov_
         self.positions = positions_
