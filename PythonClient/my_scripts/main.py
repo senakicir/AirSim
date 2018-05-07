@@ -28,7 +28,7 @@ def get_client_unreal_values(client, X):
         do_nothing()
     return unreal_positions
 
-def take_photo(client, index, image_folder_loc, saveImage = True):
+def take_photo(client, image_folder_loc, saveImage = True):
     if (USE_AIRSIM == True):
         response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
         response = response[0]
@@ -52,7 +52,7 @@ def take_photo(client, index, image_folder_loc, saveImage = True):
         client.updateSynchronizedData(unreal_positions, bone_pos, drone_pos, drone_orient)
 
         if (saveImage == True):
-            loc = image_folder_loc + '/img_' + str(index) + '.png'
+            loc = image_folder_loc + '/img_' + str(client.linecount) + '.png'
             AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
     else:
         response = client.simGetImages()
@@ -117,9 +117,9 @@ def main(kalman_arguments = None, parameters = None):
     for i in range(0,70):
         f_groundtruth_prefix = f_groundtruth_prefix + "\t"
     f_groundtruth.write(f_groundtruth_prefix + "\n")
-    photo, _ = take_photo(client, 0, foldernames_anim["images"], saveImage=False)
+    photo, _ = take_photo(client, foldernames_anim["images"], saveImage=False)
 
-    initial_positions, _, _, _, _ = determine_all_positions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, linecount = 0)
+    initial_positions, _, _, _, _ = determine_all_positions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV)
 
     current_state = State(initial_positions, kalman_arguments['KALMAN_PROCESS_NOISE_AMOUNT'])
     
@@ -129,7 +129,7 @@ def main(kalman_arguments = None, parameters = None):
     print ('Drone started %.2f m. from the hiker.\n' % current_state.radius)
 
     #define some variables
-    linecount = 0
+    client.linecount = 0
     gt_hp = []
     est_hp = []
 
@@ -146,6 +146,11 @@ def main(kalman_arguments = None, parameters = None):
         cv2.createTrackbar('Z','Drone Control', 3, 20, my_helpers.do_nothing)
         cv2.setTrackbarPos('Z', 'Drone Control', z_pos)
 
+    if (USE_GROUNDTRUTH == 3 and USE_AIRSIM == True):
+        cv2.namedWindow('Calibration for 3d pose')
+        cv2.createTrackbar('Calibration mode','Calibration for 3d pose', 0, 1, my_helpers.do_nothing)
+        cv2.setTrackbarPos('Calibration mode','Calibration for 3d pose', 1)
+
     while (end_test == False):
 
         start = time.time()
@@ -153,15 +158,19 @@ def main(kalman_arguments = None, parameters = None):
         if k == 27:
             break
 
-        photo, f_groundtruth_str = take_photo(client, linecount, foldernames_anim["images"])
+        photo, f_groundtruth_str = take_photo(client, foldernames_anim["images"])
 
+        #set the mode for energy, calibration mode or no?
+        if (USE_GROUNDTRUTH == 3 and USE_AIRSIM == True):
+            client.switch_energy(energy_mode[cv2.getTrackbarPos('Calibration mode', 'Calibration for 3d pose')])
+        
         plot_loc_ = foldernames_anim["superimposed_images"]
         if (USE_AIRSIM==True):
-            photo_loc_ = foldernames_anim["images"] + '/img_' + str(linecount) + '.png'
+            photo_loc_ = foldernames_anim["images"] + '/img_' + str(client.linecount) + '.png'
         else:
-            photo_loc_ = 'temp_main/'+test_set_name+'/images/img_' + str(linecount) + '.png'
+            photo_loc_ = 'temp_main/'+test_set_name+'/images/img_' + str(client.linecount) + '.png'
 
-        positions, unreal_positions, cov, inFrame, f_output_str = determine_all_positions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, plot_loc = plot_loc_, photo_loc = photo_loc_, linecount = linecount)
+        positions, unreal_positions, cov, inFrame, f_output_str = determine_all_positions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, plot_loc = plot_loc_, photo_loc = photo_loc_)
         inFrame = True #TO DO
         
         current_state.updateState(positions, inFrame, cov) #updates human pos, human orientation, human vel, drone pos
@@ -169,8 +178,7 @@ def main(kalman_arguments = None, parameters = None):
         gt_hp.append(unreal_positions[HUMAN_POS_IND, :])
         est_hp.append(current_state.human_pos)
         errors_pos.append(np.linalg.norm(unreal_positions[HUMAN_POS_IND, :]-current_state.human_pos))
-        
-        if (linecount > 0):
+        if (client.linecount > 0):
             gt_hv.append((gt_hp[-1]-gt_hp[-2])/DELTA_T)
             est_hv.append(current_state.human_vel)
             errors_vel.append(np.linalg.norm( (gt_hp[-1]-gt_hp[-2])/DELTA_T - current_state.human_vel))
@@ -212,18 +220,18 @@ def main(kalman_arguments = None, parameters = None):
             elapsed_time = end - start
 
         #SAVE ALL VALUES OF THIS SIMULATION       
-        f_output_str = str(linecount)+f_output_str + '\n'
+        f_output_str = str(client.linecount)+f_output_str + '\n'
         f_output.write(f_output_str)
-        f_groundtruth_str =  str(linecount) + '\t' +f_groundtruth_str + '\n'
+        f_groundtruth_str =  str(client.linecount) + '\t' +f_groundtruth_str + '\n'
         f_groundtruth.write(f_groundtruth_str)
 
-        linecount = linecount + 1
-        print('linecount', linecount)
+        client.linecount += 1
+        print('linecount', client.linecount)
 
         if (USE_AIRSIM == False):
             end_test = client.end
         else:
-            if (linecount == LENGTH_OF_SIMULATION):
+            if (client.linecount == LENGTH_OF_SIMULATION):
                 end_test = True
 
     #calculate errors

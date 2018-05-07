@@ -10,14 +10,14 @@ from torch.autograd import Variable
 import time
 
 
-def determine_all_positions(mode, client, measurement_cov_ = 0,  plot_loc = 0, photo_loc = 0, linecount = 0):
+def determine_all_positions(mode, client, measurement_cov_ = 0,  plot_loc = 0, photo_loc = 0):
     inFrame = True
     if (mode == 0):
         positions, unreal_positions, cov, f_output_str = determine_3d_positions_all_GT(client)
     elif (mode == 1):
-        positions, unreal_positions, cov, inFrame, f_output_str = determine_3d_positions_backprojection(measurement_cov_, client, plot_loc, photo_loc, linecount)
+        positions, unreal_positions, cov, inFrame, f_output_str = determine_3d_positions_backprojection(measurement_cov_, client, plot_loc, photo_loc)
     elif (mode == 3):            
-        positions, unreal_positions, cov, f_output_str = determine_3d_positions_energy(measurement_cov_, client, plot_loc, photo_loc, linecount)
+        positions, unreal_positions, cov, f_output_str = determine_3d_positions_energy(measurement_cov_, client, plot_loc, photo_loc)
 
     return positions, unreal_positions, cov, inFrame, f_output_str
 
@@ -46,14 +46,9 @@ def find_2d_pose_gt(unreal_positions, bone_pos_3d_GT):
     bone_2d, z_val, _ = take_bone_projection(bone_pos_3d_GT, R_drone_unreal, C_drone_unreal)
     return bone_2d, z_val
 
-def determine_3d_positions_energy(measurement_cov_, client, plot_loc = 0, photo_loc = 0, linecount = 0):
-
+def determine_3d_positions_energy(measurement_cov_, client, plot_loc = 0, photo_loc = 0):
     unreal_positions, bone_pos_3d_GT, drone_pos_vec, angle = client.getSynchronizedData()
     bone_2d, _ = determine_2d_positions(3, unreal_positions, bone_pos_3d_GT)
-    bone_pos_GT = Variable(torch.from_numpy(bone_pos_3d_GT).float(), requires_grad = True)
-    additive_noise = torch.normal(torch.ones([1,21])*5, 0.5)
-    #bone_pos_GT_noisy = Variable(torch.from_numpy(bone_pos_3d_GT).float()+additive_noise.float(), requires_grad = True)
-    #bone_2d_noisy, _ = take_bone_projection_pytorch(bone_pos_GT_noisy, R_drone_unreal, C_drone_unreal)
 
     #DONT FORGET THESE CHANGES
     #R_drone = Variable(euler_to_rotation_matrix(angle[1], angle[0], angle[2], returnTensor=True), requires_grad = False) #pitch roll yaw
@@ -61,59 +56,97 @@ def determine_3d_positions_energy(measurement_cov_, client, plot_loc = 0, photo_
     R_drone = Variable(euler_to_rotation_matrix(unreal_positions[DRONE_ORIENTATION_IND, 0], unreal_positions[DRONE_ORIENTATION_IND, 1], unreal_positions[DRONE_ORIENTATION_IND, 2], returnTensor=True), requires_grad = False)
     C_drone = Variable(torch.FloatTensor([[unreal_positions[DRONE_POS_IND, 0]],[unreal_positions[DRONE_POS_IND, 1]],[unreal_positions[DRONE_POS_IND, 2]]]), requires_grad = False)
 
-    objective = pose3d_objective()
-    optimizer = torch.optim.SGD(objective.parameters(), lr = 0.01, momentum=0.9)
-
     pose3d_ = take_bone_backprojection_pytorch(bone_2d, R_drone, C_drone, 0)
-    objective.init_pose3d(pose3d_)
-    client.addNewFrame(bone_2d, R_drone, C_drone)
+    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_)
+    final_loss = np.zeros([1,1])
 
-    if (linecount > 1):# and linecount <= 15):
-        num_iterations = 100
-        
-        pltpts = np.zeros([num_iterations])
-        final_loss = np.zeros([1,1])
-        final_loss = np.zeros([1,1])
-        for i in range(num_iterations):
-            def closure():
-                #outputs = Variable(torch.FloatTensor([1,len(required_estimation_data)]))
-                outputs = []
-                optimizer.zero_grad()
-                objective.zero_grad()
-                for bone_2d_, R_drone_, C_drone_ in client.required_estimation_data:
-                    loss = objective.forward(bone_2d_, R_drone_, C_drone_)
-                    outputs.append(loss)
 
-                output = sum(outputs)/len(outputs)
-                pltpts[i]= output.data.numpy()
-                if (i == num_iterations - 1):
-                    final_loss[0] = np.copy(output.data.numpy())
-                #print("iter ", i, ":", output)
-                output.backward(retain_graph = True)
-                return output
-            optimizer.step(closure)
+    if (client.linecount >1):
 
-        #plt.figure()
-        #plt.plot(np.linspace(1,num_iterations,num_iterations), pltpts)
-        #plt.xlabel("")
-        #plt.show()
-        #plt.close()
-        client.error_2d.append(final_loss[0])
-        P_world = objective.pose3d
-        check, _ = take_bone_projection_pytorch(P_world, R_drone, C_drone)
+        if (client.isCalibratingEnergy): 
+            objective = pose3d_calibration()
+            optimizer = torch.optim.SGD(objective.parameters(), lr = 0.01, momentum=0.9)
+
+            num_iterations = 500
+            pltpts = np.zeros([num_iterations])
+            objective.init_pose3d(pose3d_)
+
+            for i in range(num_iterations):
+                def closure():
+                    #outputs = Variable(torch.FloatTensor([1,len(client.requiredEstimationData)]))
+                    outputs = []
+                    optimizer.zero_grad()
+                    objective.zero_grad()
+                    for bone_2d_, R_drone_, C_drone_ in client.requiredEstimationData:
+                        loss = objective.forward(bone_2d_, R_drone_, C_drone_)
+                        outputs.append(loss)
+
+                    output = sum(outputs)/len(outputs)
+                    pltpts[i]= output.data.numpy()
+                    if (i == num_iterations - 1):
+                        final_loss[0] = np.copy(output.data.numpy())
+                    output.backward(retain_graph = True)
+                    return output
+                optimizer.step(closure)
+
+            P_world = objective.pose3d
+            for i, bone in enumerate(my_helpers.bones_h36m):
+                client.boneLengths[i] = torch.sum(torch.pow(P_world[:, bone[0]] - P_world[:, bone[1]],2)).data 
+
+        else:
+            objective = pose3d_flight(client.boneLengths)
+            optimizer = torch.optim.SGD(objective.parameters(), lr = 0.1, momentum=0.9)
+            num_iterations = 1500
+            pltpts = np.zeros([num_iterations])
+
+            #init all 3d pose 
+            for queue_index, pose3d_ in enumerate(client.naiveBackprojectionList):
+                objective.init_pose3d(pose3d_, queue_index)
+
+            for i in range(num_iterations):
+                def closure():
+                    #outputs = Variable(torch.FloatTensor([1,len(client.requiredEstimationData)]))
+                    outputs = []
+                    optimizer.zero_grad()
+                    objective.zero_grad()
+                    queue_index = 0
+                    for bone_2d_, R_drone_, C_drone_ in client.requiredEstimationData:
+                        loss = objective.forward(bone_2d_, R_drone_, C_drone_, queue_index)
+                        outputs.append(loss)
+                        queue_index += 1
+
+                    output = sum(outputs)/len(outputs)
+                    pltpts[i]= output.data.numpy()
+                    if (i == num_iterations - 1):
+                        final_loss[0] = np.copy(output.data.numpy())
+                    output.backward(retain_graph = True)
+                    return output
+                optimizer.step(closure)
+            P_world = objective.pose3d[0, :, :]
+           
     else:
         P_world = pose3d_
         check, _ = take_bone_projection_pytorch(P_world, R_drone, C_drone)
+    
+    if (client.linecount > 1000):#5):
+        plt.figure()
+        plt.plot(np.linspace(1,num_iterations,num_iterations), pltpts)
+        plt.xlabel("iter")
+        plt.show()
+        plt.close()
+    client.error_2d.append(final_loss[0])
+    check,  _ = take_bone_projection_pytorch(P_world, R_drone, C_drone)
 
     P_world = P_world.data.numpy()
+
     error_3d = np.linalg.norm(bone_pos_3d_GT - P_world)
     client.error_3d.append(error_3d)
 
     if (plot_loc != 0):
-        superimposed_plot_loc = plot_loc + '/superimposed_' + str(linecount) + '.png'
-        #superimpose_on_image(check.data.numpy(), superimposed_plot_loc, photo_loc)
-        plot_3d_pos_loc = plot_loc + '/plot3d_' + str(linecount) + '.png'
-        #plot_drone_and_human(bone_pos_3d_GT, P_world, plot_3d_pos_loc, error_3d)
+        superimposed_plot_loc = plot_loc + '/superimposed_' + str(client.linecount) + '.png'
+        superimpose_on_image(check.data.numpy(), superimposed_plot_loc, photo_loc)
+        plot_3d_pos_loc = plot_loc + '/plot3d_' + str(client.linecount) + '.png'
+        plot_drone_and_human(bone_pos_3d_GT, P_world, plot_3d_pos_loc, error_3d)
 
     positions = form_positions_dict(angle, drone_pos_vec, P_world[:,0])
     cov = transform_cov_matrix(R_drone.data.numpy(), measurement_cov_)
@@ -121,7 +154,7 @@ def determine_3d_positions_energy(measurement_cov_, client, plot_loc = 0, photo_
 
     return positions, unreal_positions, cov, f_output_str
 
-def determine_3d_positions_backprojection(measurement_cov_, client, plot_loc = 0, photo_loc = 0, linecount = 0):
+def determine_3d_positions_backprojection(measurement_cov_, client, plot_loc = 0, photo_loc = 0):
     inFrame = False #To do
 
     unreal_positions, bone_pos_3d_GT, drone_pos_vec, angle = client.getSynchronizedData()
@@ -140,9 +173,9 @@ def determine_3d_positions_backprojection(measurement_cov_, client, plot_loc = 0
 
     if (plot_loc != 0):
         check, _, _ = take_bone_projection(P_world, R_drone, C_drone)
-        superimposed_plot_loc = plot_loc + '/superimposed_' + str(linecount) + '.png'
+        superimposed_plot_loc = plot_loc + '/superimposed_' + str(client.linecount) + '.png'
         superimpose_on_image(check, superimposed_plot_loc, photo_loc)
-        plot_3d_pos_loc = plot_loc + '/plot3d_' + str(linecount) + '.png'
+        plot_3d_pos_loc = plot_loc + '/plot3d_' + str(client.linecount) + '.png'
         plot_drone_and_human(bone_pos_3d_GT, P_world, plot_3d_pos_loc, error_3d)
 
     cov = transform_cov_matrix(R_drone, measurement_cov_)
@@ -173,3 +206,6 @@ def form_positions_dict(angle, drone_pos_vec, human_pos):
     positions[HUMAN_POS_IND,:] = human_pos
     positions[HUMAN_POS_IND,2] = positions[HUMAN_POS_IND,2]
     return positions
+
+def switch_energy(value):
+    pass

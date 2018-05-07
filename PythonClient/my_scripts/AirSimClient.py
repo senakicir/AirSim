@@ -9,6 +9,7 @@ import os
 import inspect
 import types
 import re
+import torch
 
 
 class MsgpackMixin:
@@ -185,7 +186,11 @@ class AirSimClientBase:
         self.drone_orient = np.array([0, 0, 0])
         self.error_2d = []
         self.error_3d = []
-        self.required_estimation_data = []
+        self.requiredEstimationData = []
+        self.naiveBackprojectionList = []
+        self.isCalibratingEnergy = False
+        self.linecount = 0
+        self.boneLengths = torch.zeros([20,1])
         
     def ping(self):
         return self.client.call('ping')
@@ -194,6 +199,7 @@ class AirSimClientBase:
         self.DRONE_INITIAL_POS = np.array([0, 0, 0])
         self.program_started = False #sena was here
         self.client.call('reset')
+        self.linecount = 0
 
     def confirmConnection(self):
         print('Waiting for connection: ', end='')
@@ -329,10 +335,18 @@ class AirSimClientBase:
         return self.unreal_positions, self.bone_positions, self.drone_pos, self.drone_orient
     
     #sena was here
-    def addNewFrame(self, pose_2d, R_drone, C_drone):
-        self.required_estimation_data.insert(0, [pose_2d, R_drone, C_drone])
-        if (len(self.required_estimation_data) > 6):
-            self.required_estimation_data.pop()
+    def addNewFrame(self, pose_2d, R_drone, C_drone, pose3d_):
+        self.requiredEstimationData.insert(0, [pose_2d, R_drone, C_drone])
+        if (len(self.requiredEstimationData) > 6):
+            self.requiredEstimationData.pop()
+
+        self.naiveBackprojectionList.insert(0, pose3d_)
+        if (len(self.naiveBackprojectionList) > 6):
+            self.naiveBackprojectionList.pop()
+
+    #sena was here
+    def switch_energy(self, val):
+        self.isCalibratingEnergy = val
 
     @staticmethod
     def toQuaternion(pitch, roll, yaw):

@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
+energy_mode = {1:True, 0:False}
 
 def range_angle(angle, limit=360, is_radians = True):
     if is_radians == True:
