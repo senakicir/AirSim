@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 energy_mode = {1:True, 0:False}
+LOSSES = ["proj", "smooth", "bone"]
+
 
 def range_angle(angle, limit=360, is_radians = True):
     if is_radians == True:
@@ -103,7 +105,9 @@ joint_names_h36m = ['hip','right_up_leg','right_leg','right_foot','left_up_leg',
 
 
 colormap='gist_rainbow'
-def superimpose_on_image(numbers, location, photo_location):
+def superimpose_on_image(numbers, plot_loc, ind, photo_location):
+    superimposed_plot_loc = plot_loc + '/superimposed_' + str(ind) + '.png'
+
     im = plt.imread(photo_location)
     
     fig = plt.figure()
@@ -116,10 +120,10 @@ def superimpose_on_image(numbers, location, photo_location):
         color_ = cmap(colorindex[i]/len(bones_h36m))
         ax.plot( numbers[0, bone], numbers[1,bone], color = 'b', linewidth=1)
 
-    plt.savefig(location, bbox_inches='tight', pad_inches=0)
+    plt.savefig(plot_loc, bbox_inches='tight', pad_inches=0)
     plt.close()
 
-def plot_drone_and_human(bones_GT, backprojected_bones, location, error = -5):
+def plot_drone_and_human(bones_GT, backprojected_bones, location, ind,  error = -5):
     fig = plt.figure()
     gs1 = gridspec.GridSpec(1, 1)
     ax = fig.add_subplot(gs1[0], projection='3d')
@@ -151,5 +155,27 @@ def plot_drone_and_human(bones_GT, backprojected_bones, location, error = -5):
     if (error != -5):
         plt.title(error)
 
-    plt.savefig(location)
+    plot_3d_pos_loc = location + '/plot3d_' + str(ind) + '.png'
+    plt.savefig(plot_3d_pos_loc)
     plt.close()
+
+def plot_optimization_losses(pltpts, location, ind, calibration_mode=False):
+    if (calibration_mode):
+        plt.figure()
+        x_axis = np.linspace(1,pltpts.shape[0],pltpts.shape[0])
+        plt.plot(x_axis, pltpts)
+        plt.xlabel("iter")
+        plot_3d_pos_loc = location + '/loss_calib_' + str(ind) + '.png'
+        plt.savefig(plot_3d_pos_loc)
+        plt.close()
+    else:
+        plt.figure()
+        for loss_ind, loss_key in enumerate(LOSSES):
+            x_axis = np.linspace(1,pltpts[loss_key].shape[0],pltpts[loss_key].shape[0])
+            plt.subplot(1,len(LOSSES),loss_ind+1)
+            plt.plot(x_axis, pltpts[loss_key])
+            plt.xlabel("iter")
+            plt.title(loss_key)
+        plot_3d_pos_loc = location + '/loss_flight_' + str(ind) + '.png'
+        plt.savefig(plot_3d_pos_loc, bbox_inches='tight', pad_inches=0)
+        plt.close()
