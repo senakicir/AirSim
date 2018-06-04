@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 energy_mode = {1:True, 0:False}
-LOSSES = ["proj", "smooth", "bone"]
+LOSSES = ["proj", "smooth"]#, "bone"]
+TEST_SETS = {0: "test_set_1", 1: "test_set_2", 2: "test_set_3", 3: "test_set_4"}
 
 
 def range_angle(angle, limit=360, is_radians = True):
@@ -33,17 +34,20 @@ def save_bone_positions_2(index, bones, f_output):
 def do_nothing(x):
     pass
 
-def reset_all_folders(animation_list):
-    date_time_name = time.strftime("%Y-%m-%d-%H-%M")
+def reset_all_folders(animation_list, param = ""):
+    if param == "":
+        date_time_name = time.strftime("%Y-%m-%d-%H-%M")
+        folder_names = ['temp_main', 'temp_main/' + date_time_name]
+        main_folder_name = 'temp_main/' + date_time_name
 
-    folder_names = ['temp_main', 'temp_main/' + date_time_name]
+    else:
+        folder_names = ['temp_main', 'temp_main/' + param]
+        main_folder_name = 'temp_main/' + param
+
     for a_folder_name in folder_names:
         if not os.path.exists(a_folder_name):
             os.makedirs(a_folder_name)
     
-    main_folder_name = 'temp_main/' + date_time_name
-    f_notes = open(main_folder_name + "/notes.txt", 'w')
-    f_notes.write("")
     file_names = {}
     folder_names = {}
     for animation in animation_list:
@@ -53,22 +57,34 @@ def reset_all_folders(animation_list):
             if not os.path.exists(a_folder_name):
                 os.makedirs(a_folder_name)
         file_names[animation] = {"f_output": sub_folder_name +  '/a_flight.txt', "f_groundtruth": sub_folder_name +  '/groundtruth.txt'}
-    return file_names, folder_names
+
+    f_notes_name = main_folder_name + "/notes.txt"
+    return file_names, folder_names, f_notes_name
+
+def fillNotes(f_notes_name, parameters):
+    f_notes = open(f_notes_name, 'w')
+    notes_str = ""
+    for key, value in parameters.items():
+        if (key !=  "FILE_NAMES" and key != "FOLDER_NAMES"):
+            notes_str += str(key) + " : " + str(value)
+            notes_str += '\n'
+    f_notes.write(notes_str)
+
 
 def plot_error(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, folder_name):
     #PLOT STUFF HERE AT THE END OF SIMULATION
     fig1 = plt.figure()
     ax = fig1.add_subplot(111, projection='3d')
-    ax.plot(gt_hp_arr[:, 0], gt_hp_arr[:, 1], gt_hp_arr[:, 2], c='b', marker='^')
     ax.plot(est_hp_arr[:, 0], est_hp_arr[:, 1], est_hp_arr[:, 2], c='r', marker='^')
+    ax.plot(gt_hp_arr[:, 0], gt_hp_arr[:, 1], gt_hp_arr[:, 2], c='b', marker='^')
     plt.title(str(errors["error_ave_pos"]))
     plt.savefig(folder_name + '/est_pos_final' + '.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 
     fig2 = plt.figure()
     ax = fig2.add_subplot(111, projection='3d')
-    ax.plot(gt_hv_arr[:, 0], gt_hv_arr[:, 1], gt_hv_arr[:, 2], c='b', marker='^')
     ax.plot(est_hv_arr[:, 0], est_hv_arr[:, 1], est_hv_arr[:, 2], c='r', marker='^')
+    ax.plot(gt_hv_arr[:, 0], gt_hv_arr[:, 1], gt_hv_arr[:, 2], c='b', marker='^')
     plt.title(str(errors["error_ave_vel"]))
     plt.savefig(folder_name + '/est_vel_final' + '.png', bbox_inches='tight', pad_inches=0)
     plt.close()
@@ -132,7 +148,7 @@ def plot_drone_and_human(bones_GT, backprojected_bones, location, ind,  error = 
     X = bones_GT[0,:]
     Y = bones_GT[1,:]
     Z = bones_GT[2,:]
-    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() * 2
+    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() * 0.8
     mid_x = (X.max()+X.min()) * 0.5
     mid_y = (Y.max()+Y.min()) * 0.5
     mid_z = (Z.max()+Z.min()) * 0.5
@@ -158,6 +174,7 @@ def plot_drone_and_human(bones_GT, backprojected_bones, location, ind,  error = 
     plot_3d_pos_loc = location + '/plot3d_' + str(ind) + '.png'
     plt.savefig(plot_3d_pos_loc)
     plt.close()
+
 
 def plot_optimization_losses(pltpts, location, ind, calibration_mode=False):
     if (calibration_mode):

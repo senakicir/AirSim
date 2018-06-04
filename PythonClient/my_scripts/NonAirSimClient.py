@@ -8,6 +8,7 @@ class NonAirSimClient(object):
     def __init__(self, filename_bones, filename_others):
         groundtruth_matrix = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')                
         self.DRONE_INITIAL_POS = groundtruth_matrix[0,0:3]
+        self.WINDOW_SIZE = 6
         self.groundtruth = groundtruth_matrix[1:,:-1]
         a_flight_matrix = pd.read_csv(filename_others, sep='\t', header=None).ix
         self.a_flight = a_flight_matrix[:,1:].as_matrix().astype('float')
@@ -16,14 +17,17 @@ class NonAirSimClient(object):
         self.current_unreal_pos = 0
         self.current_drone_pos = Vector3r()
         self.current_drone_orient = 0
-        self.num_of_data = 10#self.a_flight.shape[0]
+        self.num_of_data = self.a_flight.shape[0]
         self.error_2d = []
         self.error_3d = []
         self.requiredEstimationData = []
-        self.naiveBackprojectionList = []
+        self.poseList_3d = []
         self.end = False
         self.isCalibratingEnergy = True
         self.boneLengths = torch.zeros([20,1])
+        self.lr = 0
+        self.mu = 0
+        self.iter_3d = 0
 
 
     def moveToPosition(self, arg1, arg2, arg3, arg4, arg5, arg6, arg7, yaw_or_rate=0 ,lookahead=0, adaptive_lookahead=0):
@@ -77,12 +81,19 @@ class NonAirSimClient(object):
 
     def addNewFrame(self, pose_2d, R_drone, C_drone, pose3d_):
         self.requiredEstimationData.insert(0, [pose_2d, R_drone, C_drone])
-        if (len(self.requiredEstimationData) > 6):
+        if (len(self.requiredEstimationData) > self.WINDOW_SIZE):
             self.requiredEstimationData.pop()
 
-        self.naiveBackprojectionList.insert(0, pose3d_)
-        if (len(self.naiveBackprojectionList) > 6):
-            self.naiveBackprojectionList.pop()
+        self.poseList_3d.insert(0, pose3d_)
+        if (len(self.poseList_3d) > self.WINDOW_SIZE):
+            self.poseList_3d.pop()
+
+    def update3dPos(self, pose3d_, all = False):
+        if (all):
+            for ind in range(0,len(self.poseList_3d)):
+                self.poseList_3d[ind] = pose3d_
+        else:
+            self.poseList_3d[0] = pose3d_
 
 class DummyPhotoResponse(object):
     bone_pos = np.array([])

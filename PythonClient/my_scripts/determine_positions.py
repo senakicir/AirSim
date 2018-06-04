@@ -92,22 +92,23 @@ def determine_3d_positions_energy(measurement_cov_, client, plot_loc = 0, photo_
                 optimizer.step(closure)
 
             P_world = objective.pose3d
+            client.update3dPos(P_world, all = True)
             for i, bone in enumerate(my_helpers.bones_h36m):
-                client.boneLengths[i] = (torch.sum(torch.pow(P_world[:, bone[0]] - P_world[:, bone[1]],2))).data 
-
+                client.boneLengths[i] = torch.sqrt(torch.sum(torch.pow(P_world[:, bone[0]] - P_world[:, bone[1]],2))).data 
+                
         else:
-            
-            objective = pose3d_flight(client.boneLengths)
-            optimizer = torch.optim.SGD(objective.parameters(), lr =0.5, momentum=0.9)
-            num_iterations = 1000
+
+            objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE)
+            optimizer = torch.optim.SGD(objective.parameters(), lr =client.lr, momentum=client.mu)
+            num_iterations = client.iter
             pltpts = {}
-            weights = {"proj":0.5,"smooth":1, "bone":0.5}
+            weights = {"proj":1,"smooth":10, "bone":0.5}
 
             for loss_key in my_helpers.LOSSES:
                 pltpts[loss_key] = np.zeros([num_iterations])
 
             #init all 3d pose 
-            for queue_index, pose3d_ in enumerate(client.naiveBackprojectionList):
+            for queue_index, pose3d_ in enumerate(client.poseList_3d):
                 objective.init_pose3d(pose3d_, queue_index)
 
             for i in range(num_iterations):
@@ -140,6 +141,7 @@ def determine_3d_positions_energy(measurement_cov_, client, plot_loc = 0, photo_
                     return overall_output
                 optimizer.step(closure)
             P_world = objective.pose3d[0, :, :]
+            client.update3dPos(P_world)
            
     else:
         P_world = pose3d_

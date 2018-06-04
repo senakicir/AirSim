@@ -88,7 +88,7 @@ def take_bone_projection_pytorch(P_world, R_drone, C_drone):
 
 def take_bone_backprojection(bone_pred, R_drone, C_drone, z_val, use_z = False):
     img_torso_size = np.linalg.norm(bone_pred[:, 0] - bone_pred[:, 8])
-    calculated_z_val = (FOCAL_LENGTH * TORSO_SIZE) / img_torso_size
+    z_val = (FOCAL_LENGTH * TORSO_SIZE) / img_torso_size
 
     if (use_z == False):
         z_val = calculated_z_val
@@ -107,7 +107,6 @@ def take_bone_backprojection(bone_pred, R_drone, C_drone, z_val, use_z = False):
     P_world_ = np.hstack([R_drone, C_drone]).dot(np.vstack([P_drone, np.ones([1, bone_pred.shape[1]])]))
 
     P_world = np.copy(P_world_)
-
     return P_world
 
 def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone, z_val, use_z = False):
