@@ -47,6 +47,7 @@ public:
     //sena was here
     Vector3r_arr getBonePositions();
     bool changeAnimation(int new_anim);
+    bool changeCalibrationMode(bool calib_mode);
     
     Vector3r getVelocity();
     Quaternionr getOrientation();

@@ -148,6 +148,12 @@ bool MultirotorRpcLibClient::changeAnimation(int new_anim)
 {
     return static_cast<rpc::client*>(getClient())->call("changeAnimation", new_anim).as<bool>();
 }
+
+//sena was here
+bool MultirotorRpcLibClient::changeCalibrationMode(bool calib_mode)
+{
+    return static_cast<rpc::client*>(getClient())->call("changeCalibrationMode", calib_mode).as<bool>();
+}
     
 Vector3r MultirotorRpcLibClient::getVelocity()
 {

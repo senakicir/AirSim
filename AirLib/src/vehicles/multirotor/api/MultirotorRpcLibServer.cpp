@@ -122,6 +122,12 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(MultirotorApi* drone, string serv
     bind("changeAnimation", [&](int new_anim) ->
          bool { return getDroneApi()->changeAnimation(new_anim); });
     
+    //sena was here
+    (static_cast<rpc::server*>(getServer()))->
+    bind("changeCalibrationMode", [&](bool calib_mode) ->
+         bool { return getDroneApi()->changeCalibrationMode(calib_mode); });
+    
+    
     (static_cast<rpc::server*>(getServer()))->
         bind("getLandedState", [&]() -> int { 
         return static_cast<int>(getDroneApi()->getLandedState()); 

@@ -350,6 +350,15 @@ void VehiclePawnWrapper::changeAnimation(int anim_num){
 }
 
 //sena was here
+void VehiclePawnWrapper::changeCalibrationMode(bool calib_mode){
+    UAirBlueprintLib::LogMessageString("Change calibration mode now!", "", LogDebugLevel::Failure);
+    ICharacterInterface* TheInterface = Cast<ICharacterInterface>(human_);
+    if (TheInterface){
+        TheInterface->Execute_changeCalibrationMode(human_, calib_mode);
+    }
+}
+
+//sena was here
 void VehiclePawnWrapper::setBonePos(Vector3r_arr bonePos_)
 {
     bones = bonePos_;

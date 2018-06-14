@@ -82,6 +82,7 @@ public: //interface
     Vector3r_arr getBonePositions();
     void setBonePos(Vector3r_arr bonePos_);
     void changeAnimation(int anim_num);
+    void changeCalibrationMode(bool calib_mode);
     
     void setLogLine(std::string line);
     std::string getLogLine();

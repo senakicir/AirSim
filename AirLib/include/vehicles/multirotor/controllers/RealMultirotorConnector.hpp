@@ -61,6 +61,12 @@ public:
     {
         
     }
+    
+    //sena was here
+    virtual bool changeCalibrationMode(bool calib_mode) override
+    {
+        
+    }
 
     virtual Pose getPose() override
     {

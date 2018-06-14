@@ -201,6 +201,12 @@ public:
     {
         return vehicle_->changeAnimation(new_anim);
     }
+    
+    //sena was here
+    bool changeCalibrationMode(bool calib_mode)
+    {
+        return vehicle_->changeCalibrationMode(calib_mode);
+    }
 
     DroneControllerBase::LandedState getLandedState()
     {

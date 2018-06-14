@@ -28,6 +28,7 @@ public:
     virtual ImageCaptureBase* getImageCapture() = 0;
     virtual void setPose(const Pose& pose, bool ignore_collision) = 0;
     virtual bool changeAnimation(int new_anim) = 0; //sena was here
+    virtual bool changeCalibrationMode(bool calib_mode) = 0; //sena was here
     virtual Pose getPose() = 0;
     virtual bool setSegmentationObjectID(const std::string& mesh_name, int object_id,
         bool is_name_regex = false) = 0;

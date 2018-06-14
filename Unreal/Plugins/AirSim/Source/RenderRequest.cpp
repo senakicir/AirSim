@@ -18,6 +18,46 @@ RenderRequest::~RenderRequest()
 // read pixels from render target using render thread, then compress the result into PNG
 // argument on the thread that calls this method.
 
+//sena was here
+/*
+void RenderRequest::SimpleGetScreenshot(UTextureRenderTarget2D* RenderTarget, std::vector<std::shared_ptr<RenderResult>>&  results)
+{
+    results[0]->bonePos_data = Vector3r_arr();
+    results[0]->time_stamp = 0;
+    results_ = results.data();
+
+    
+    int X = RenderTarget->GetSurfaceHeight();
+    int Y = RenderTarget->GetSurfaceWidth();
+    Texture2D = RenderTarget->ConstructTexture2D(this, FString("Tex2D"), EObjectFlags::RF_NoFlags);
+    
+    int xx = Texture2D->GetSizeX();
+    int yy = Texture2D->GetSizeY();
+    
+    FTexturePlatformData *Data = Texture2D->PlatformData;
+    EPixelFormat Format = Data->PixelFormat;
+    
+    int size = Data->Mips[0].BulkData.GetElementSize();
+    int N = Data->Mips[0].BulkData.GetElementCount();
+    
+    const void *Table = Data->Mips[0].BulkData.LockReadOnly();
+    Data->Mips[0].BulkData.Unlock();
+    results_[0]->bonePos_data = *bonesPosPtr; //sena was here
+    results_[0]->time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
+    
+    
+    const uint16 *Tab2 = StaticCast<const uint16*>(Table);
+    for(int i=0;i<xx;i++)
+        for (int j = 0; j < yy; j++) {
+            int k = 4*(i*yy + j);
+            int R = Tab2[k];
+            int G = Tab2[k + 1];
+            int B = Tab2[k + 2];
+            int A = Tab2[k + 3];
+        }
+}
+*/
+
 void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::vector<std::shared_ptr<RenderResult>>& results, unsigned int req_size)
 {
     //TODO: is below really needed?
@@ -54,7 +94,6 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
     }
     else {
         //wait for render thread to pick up our task
-        
         params_ = params;
         results_ = results.data();
         req_size_ = req_size;
@@ -101,7 +140,6 @@ FReadSurfaceDataFlags RenderRequest::setupRenderResource(const FTextureRenderTar
     result->height = size.Y;
     FReadSurfaceDataFlags flags(RCM_UNorm, CubeFace_MAX);
     flags.SetLinearToGamma(false);
-    
     return flags;
 }
 
@@ -123,7 +161,6 @@ void RenderRequest::ExecuteTask()
                 if (! params_[i]->pixels_as_float) {
                     //below is undocumented method that avoids flushing, but it seems to segfault every 2000 or so calls
                     RHICmdList.ReadSurfaceData(rhi_texture, FIntRect(0, 0, size.X, size.Y),results_[i]->bmp,flags);
-                    
                 }
                 else {
                     RHICmdList.ReadSurfaceFloatData(rhi_texture, FIntRect(0, 0, size.X, size.Y),results_[i]->bmp_float, CubeFace_PosX, 0, 0);
