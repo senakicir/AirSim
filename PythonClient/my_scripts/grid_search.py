@@ -5,6 +5,7 @@ def grid_search():
     animations = [0]
     file_names, folder_names = my_helpers.reset_all_folders(animations)
     parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": False, "ANIMATION_NUM": 0, "TEST_SET_NAME":"test_set_1", "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names,  "LR_MU": [lr, mu]}
+    energy_parameters = {"LR_MU": [0.2, 0.8], "ITER": 3000, "WEIGHTS": {"proj":1,"smooth":0.5, "bone":3}}
 
     process_noise_list = np.logspace(-15, -7, 15)
     xy_measurement_noise_list = np.logspace(-15, -5, 15)
@@ -40,7 +41,8 @@ def learning_rate_search():
         for mu_ind, mu in enumerate(mu_list):
             foldername_param = "lr" + str(lr) + "_mu" + str(mu)
             file_names, folder_names = my_helpers.reset_all_folders(animations, foldername_param)
-            parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 3, "USE_AIRSIM": False, "ANIMATION_NUM": 0, "TEST_SET_NAME":"test_set_1", "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names, "LR_MU": [lr, mu]}
+            parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 3, "USE_AIRSIM": False, "ANIMATION_NUM": 0, "TEST_SET_NAME":"test_set_1", "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
+            energy_parameters = {"LR_MU": [lr, mu], "ITER": 3000, "WEIGHTS": {"proj":1,"smooth":0.5, "bone":3}}
             errors = main(kalman_arguments, parameters)
             ave_errors_pos[lr_ind, mu_ind], ave_errors_vel[lr_ind, mu_ind]= errors["error_ave_pos"], errors["error_ave_vel"]
             print(errors)

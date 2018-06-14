@@ -8,7 +8,7 @@ class NonAirSimClient(object):
     def __init__(self, filename_bones, filename_others):
         groundtruth_matrix = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')                
         self.DRONE_INITIAL_POS = groundtruth_matrix[0,0:3]
-        self.WINDOW_SIZE = 6
+        self.WINDOW_SIZE = 10
         self.groundtruth = groundtruth_matrix[1:,:-1]
         a_flight_matrix = pd.read_csv(filename_others, sep='\t', header=None).ix
         self.a_flight = a_flight_matrix[:,1:].as_matrix().astype('float')
@@ -17,24 +17,23 @@ class NonAirSimClient(object):
         self.current_unreal_pos = 0
         self.current_drone_pos = Vector3r()
         self.current_drone_orient = 0
-        self.num_of_data = self.a_flight.shape[0]
+        self.num_of_data = 100#self.a_flight.shape[0]
         self.error_2d = []
         self.error_3d = []
         self.requiredEstimationData = []
         self.poseList_3d = []
+        self.sillyPoseList = []
         self.end = False
         self.isCalibratingEnergy = True
         self.boneLengths = torch.zeros([20,1])
         self.lr = 0
         self.mu = 0
         self.iter_3d = 0
-
+        self.weights = {}
 
     def moveToPosition(self, arg1, arg2, arg3, arg4, arg5, arg6, arg7, yaw_or_rate=0 ,lookahead=0, adaptive_lookahead=0):
         if (self.linecount == self.num_of_data-1):
             self.end = True
-        if (self.linecount == 5):
-            self.isCalibratingEnergy = False
 
     def getPosition(self):
         position = Vector3r()
@@ -55,19 +54,13 @@ class NonAirSimClient(object):
     def getSynchronizedData(self):
         return self.current_unreal_pos, self.current_bone_pos, self.current_drone_pos, self.current_drone_orient
 
-    def simGetImages(self):
-        response = DummyPhotoResponse()
-        X = np.copy(self.groundtruth[self.linecount, :])
-        line = np.reshape(X, (-1, 3))
-        response.bone_pos = line[3:,:].T
-        keys = {DRONE_POS_IND: 0, DRONE_ORIENTATION_IND: 1, HUMAN_POS_IND: 2}
-        for key, value in keys.items():
-            response.unreal_positions[key, :] = line[value, :] #dronepos
-            if (key != DRONE_ORIENTATION_IND):
-                response.unreal_positions[key, 2] = -response.unreal_positions[key, 2] #dronepos
-                response.unreal_positions[key, :] = (response.unreal_positions[key, :] - self.DRONE_INITIAL_POS)/100
-        response.bone_pos[2, :] = -response.bone_pos[2, :] 
-        response.bone_pos = (response.bone_pos - self.DRONE_INITIAL_POS[:, np.newaxis])/100
+    def simGetImages(self, which_frame = None):
+        if which_frame == None:
+            frame_num = self.linecount
+        else:
+            frame_num = which_frame
+
+        response = prepareDataForResponse(self.groundtruth, self.DRONE_INITIAL_POS, frame_num)
 
         return response
 
@@ -79,7 +72,10 @@ class NonAirSimClient(object):
     def changeAnimation(self, newAnim):
         return 0
 
-    def addNewFrame(self, pose_2d, R_drone, C_drone, pose3d_):
+    def changeCalibrationMode(self, calibMode):
+        self.isCalibratingEnergy = calibMode
+
+    def addNewFrame(self, pose_2d, R_drone, C_drone, pose3d_, pose3d_silly = None):
         self.requiredEstimationData.insert(0, [pose_2d, R_drone, C_drone])
         if (len(self.requiredEstimationData) > self.WINDOW_SIZE):
             self.requiredEstimationData.pop()
@@ -88,6 +84,10 @@ class NonAirSimClient(object):
         if (len(self.poseList_3d) > self.WINDOW_SIZE):
             self.poseList_3d.pop()
 
+        self.sillyPoseList.insert(0, pose3d_silly)
+        if (len(self.sillyPoseList) > self.WINDOW_SIZE):
+            self.sillyPoseList.pop()
+
     def update3dPos(self, pose3d_, all = False):
         if (all):
             for ind in range(0,len(self.poseList_3d)):
@@ -95,7 +95,33 @@ class NonAirSimClient(object):
         else:
             self.poseList_3d[0] = pose3d_
 
+    def choose10Frames(self, start_frame):
+        unreal_positions_list = []
+        bone_pos_3d_GT_list = []
+        for frame_ind in range(start_frame, start_frame+self.WINDOW_SIZE):
+            response = self.simGetImages(frame_ind)
+            unreal_positions_list.append(response.unreal_positions)
+            bone_pos_3d_GT_list.append(response.bone_pos)
+
+        return unreal_positions_list, bone_pos_3d_GT_list
+
 class DummyPhotoResponse(object):
     bone_pos = np.array([])
     unreal_positions = np.zeros([5,3])
     image_data_uint8 = np.uint8(0)
+
+def prepareDataForResponse(data, initial_pos, linecount):
+    response = DummyPhotoResponse()
+    X = np.copy(data[linecount, :])
+    line = np.reshape(X, (-1, 3))
+    response.bone_pos = line[3:,:].T
+    keys = {DRONE_POS_IND: 0, DRONE_ORIENTATION_IND: 1, HUMAN_POS_IND: 2}
+    for key, value in keys.items():
+        response.unreal_positions[key, :] = line[value, :] #dronepos
+        if (key != DRONE_ORIENTATION_IND):
+            response.unreal_positions[key, 2] = -response.unreal_positions[key, 2] #dronepos
+            response.unreal_positions[key, :] = (response.unreal_positions[key, :] - initial_pos)/100
+    response.bone_pos[2, :] = -response.bone_pos[2, :] 
+    response.bone_pos = (response.bone_pos - initial_pos[:, np.newaxis])/100
+
+    return response

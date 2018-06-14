@@ -1,5 +1,4 @@
 import helpers as my_helpers
-from human_2dpos import *
 from State import *
 from NonAirSimClient import *
 from pose3d_optimizer import *
@@ -30,9 +29,12 @@ def get_client_unreal_values(client, X):
 
 def take_photo(client, image_folder_loc, saveImage = True):
     if (USE_AIRSIM == True):
+        ##timedebug
+        s1 = time.time()
         response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
         response = response[0]
         X = response.bones  
+        print("Get image from airsim takes" , time.time() - s1)
 
         unreal_positions = get_client_unreal_values(client, X)
     
@@ -66,7 +68,7 @@ def take_photo(client, image_folder_loc, saveImage = True):
 
     return response.image_data_uint8, gt_str
 
-def main(kalman_arguments = None, parameters = None):
+def main(kalman_arguments = None, parameters = None, energy_parameters = None):
 
     errors_pos = []
     errors_vel = []
@@ -79,7 +81,9 @@ def main(kalman_arguments = None, parameters = None):
     MEASUREMENT_NOISE_COV = np.array([[kalman_arguments["KALMAN_PROCESS_NOISE_AMOUNT"], 0, 0], [0, kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"], 0], [0, 0, kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"]]])
 
     if (parameters == None):
-        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": True, "ANIMATION_NUM": 1, "TEST_SET_NAME": "test_set_1", "FILE_NAMES": "", "FOLDER_NAMES": "", "LR_MU": [0.2, 0.9], "ITER": 2000}
+        parameters = {"USE_TRACKBAR": False, "USE_GROUNDTRUTH": 1, "USE_AIRSIM": True, "ANIMATION_NUM": 1, "TEST_SET_NAME": "test_set_1", "FILE_NAMES": "", "FOLDER_NAMES": ""}
+    if (energy_parameters == None):
+        energy_parameters = {"LR_MU": [0.2, 0.8], "ITER": 3000, "WEIGHTS": {"proj":1,"smooth":0.5, "bone":10}}
     
     USE_TRACKBAR = parameters["USE_TRACKBAR"]
     USE_GROUNDTRUTH = parameters["USE_GROUNDTRUTH"] #0 is groundtruth, 1 is mild-GT, 2 is real system
@@ -89,9 +93,6 @@ def main(kalman_arguments = None, parameters = None):
     test_set_name = parameters["TEST_SET_NAME"]
     file_names = parameters["FILE_NAMES"]
     folder_names = parameters["FOLDER_NAMES"]
-    lr = parameters["LR_MU"][0]
-    mu = parameters["LR_MU"][1]
-    iter_3d = parameters["ITER"]
 
     #connect to the AirSim simulator
     if (USE_AIRSIM == True):
@@ -101,13 +102,14 @@ def main(kalman_arguments = None, parameters = None):
         client.armDisarm(True)
         print('Taking off')
         client.initInitialDronePos()
-        client.changeAnimation(0)
+        client.changeAnimation(ANIMATION_NUM)
+        client.changeCalibrationMode(True)
         client.takeoff()
         client.moveToZ(-z_pos, 2, max_wait_seconds = 5, yaw_mode = YawMode(), lookahead = -1, adaptive_lookahead = 1)
         time.sleep(5)
     else:
-        filename_bones = 'temp_main/'+test_set_name+'/groundtruth.txt'
-        filename_output = 'temp_main/'+test_set_name+'/a_flight.txt'
+        filename_bones = 'test_sets/'+test_set_name+'/groundtruth.txt'
+        filename_output = 'test_sets/'+test_set_name+'/a_flight.txt'
         client = NonAirSimClient(filename_bones, filename_output)
 
     filenames_anim = file_names[ANIMATION_NUM]
@@ -133,9 +135,10 @@ def main(kalman_arguments = None, parameters = None):
 
     #define some variables
     client.linecount = 0
-    client.lr = lr
-    client.mu = mu
-    client.iter = iter_3d
+    client.lr = energy_parameters["LR_MU"][0]
+    client.mu = energy_parameters["LR_MU"][1]
+    client.iter = energy_parameters["ITER"]
+    client.weights = energy_parameters["WEIGHTS"]
     gt_hp = []
     est_hp = []
 
@@ -160,24 +163,25 @@ def main(kalman_arguments = None, parameters = None):
     while (end_test == False):
 
         start = time.time()
-        k = cv2.waitKey(1) & 0xFF
-        if k == 27:
-            break
+        if USE_AIRSIM == True:
+            k = cv2.waitKey(1) & 0xFF
+            if k == 27:
+                break
 
         ##timedebug
         photo, f_groundtruth_str = take_photo(client, foldernames_anim["images"])
 
         #set the mode for energy, calibration mode or no?
         #if (USE_AIRSIM == True):
-        if (client.linecount == 5):
+        if (client.linecount == 10):
             #client.switch_energy(energy_mode[cv2.getTrackbarPos('Calibration mode', 'Calibration for 3d pose')])
-            client.changeAnimation(ANIMATION_NUM)
+            client.changeCalibrationMode(False)
         
         plot_loc_ = foldernames_anim["superimposed_images"]
         if (USE_AIRSIM==True):
             photo_loc_ = foldernames_anim["images"] + '/img_' + str(client.linecount) + '.png'
         else:
-            photo_loc_ = 'temp_main/'+test_set_name+'/images/img_' + str(client.linecount) + '.png'
+            photo_loc_ = 'test_sets/'+test_set_name+'/images/img_' + str(client.linecount) + '.png'
 
         positions, unreal_positions, cov, inFrame, f_output_str = determine_all_positions(USE_GROUNDTRUTH, client, MEASUREMENT_NOISE_COV, plot_loc = plot_loc_, photo_loc = photo_loc_)
         inFrame = True #TO DO
@@ -216,7 +220,6 @@ def main(kalman_arguments = None, parameters = None):
 
         #move drone!
         damping_speed = 1
-        print(new_pos, drone_speed,)
         client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.MaxDegreeOfFreedom, YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
 
         end = time.time()
@@ -274,8 +277,8 @@ def main(kalman_arguments = None, parameters = None):
 if __name__ == "__main__":
     kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 5.17947467923e-10, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 1.38949549437e-08}
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
-    use_airsim = True
-    use_groundtruth = 0
+    use_airsim = False
+    use_groundtruth = 3
     use_trackbar = False
 
     #animations = [0,1,2,3]
@@ -286,18 +289,27 @@ if __name__ == "__main__":
 
     file_names, folder_names, f_notes_name = my_helpers.reset_all_folders(animations)
 
-    parameters = {"USE_TRACKBAR": use_trackbar, "USE_GROUNDTRUTH": use_groundtruth, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names, "LR_MU": [0.2, 0.8], "ITER": 3000}
-    my_helpers.fillNotes(f_notes_name, parameters)   
+    parameters = {"USE_TRACKBAR": use_trackbar, "USE_GROUNDTRUTH": use_groundtruth, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
+    
+    weights_ = {'proj': 0.09900990099009901, 'smooth': 0.49504950495049505, 'bone': 0.39603960396039606, 'smoothpose': 0.009900990099009901}
+    weights = {}
+    weights_sum = sum(weights_.values())
+    for loss_key in my_helpers.LOSSES:
+        weights[loss_key] = weights_[loss_key]/weights_sum
+
+    energy_parameters = {"LR_MU": [4, 0.8], "ITER": 6000, "WEIGHTS": weights}
+
+    my_helpers.fill_notes(f_notes_name, parameters, energy_parameters)   
 
     if (use_airsim):
         for animation_num in animations:
             parameters["ANIMATION_NUM"]= animation_num
             parameters["TEST_SET_NAME"]= ""
-            errors = main(kalman_arguments, parameters)
+            errors = main(kalman_arguments, parameters, energy_parameters)
             print(errors)
     else:
         for animation_num, test_set in test_set.items():
             parameters["ANIMATION_NUM"]= animation_num
             parameters["TEST_SET_NAME"]= test_set
-            errors = main(kalman_arguments, parameters)
+            errors = main(kalman_arguments, parameters, energy_parameters)
             print(errors)

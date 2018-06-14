@@ -195,6 +195,7 @@ class AirSimClientBase:
         self.lr = 0
         self.mu = 0
         self.iter_3d = 0
+        self.weights = {}
         
     def ping(self):
         return self.client.call('ping')
@@ -358,6 +359,7 @@ class AirSimClientBase:
     #sena was here
     def switch_energy(self, val):
         self.isCalibratingEnergy = val
+        self.client.changeCalibrationMode(val)
 
     @staticmethod
     def toQuaternion(pitch, roll, yaw):
@@ -556,6 +558,9 @@ class MultirotorClient(AirSimClientBase, object):
     #sena was here
     def changeAnimation(self, newAnimNum):
         return self.client.call('changeAnimation', newAnimNum)
+
+    def changeCalibrationMode(self, calibMode):
+        return self.client.call('changeCalibrationMode', calibMode)
 
     #def getRCData(self):
     #    return self.client.call('getRCData')

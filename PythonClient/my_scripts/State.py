@@ -11,11 +11,11 @@ R_SHOULDER_IND = 2
 L_SHOULDER_IND = 3
 DRONE_ORIENTATION_IND = 4
 
-INCREMENT_DEGREE_AMOUNT = radians(-10)
+INCREMENT_DEGREE_AMOUNT = radians(-20)
 
-z_pos = 8
-DELTA_T = 0.5
-N = 2
+z_pos = 10
+DELTA_T = 0.2
+N = 5
 TIME_HORIZON = N*DELTA_T
 
 class State(object):

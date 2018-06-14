@@ -14,10 +14,10 @@ CAMERA_OFFSET_Z = 0
 CAMERA_ROLL_OFFSET = 0
 CAMERA_PITCH_OFFSET = -pi/4
 CAMERA_YAW_OFFSET = 0
-TORSO_SIZE = 0.424 #in meters
 num_of_bones = 21
 ones_tensor = Variable(torch.ones([1, num_of_bones]), requires_grad=False)*1.0
 neat_tensor = Variable(torch.FloatTensor([[0, 0, 0, 1]]), requires_grad=False)
+DEFAULT_TORSO_SIZE = 0.436*0.70710678118
 
 def euler_to_rotation_matrix(roll, pitch, yaw, returnTensor=False):
     if (returnTensor == True):
@@ -41,6 +41,11 @@ K = np.array([[FOCAL_LENGTH,0,px],[0,FOCAL_LENGTH,py],[0,0,1]])
 K_torch = Variable(torch.FloatTensor([[FOCAL_LENGTH,0,px],[0,FOCAL_LENGTH,py],[0,0,1]]), requires_grad = False)
 K_inv = np.linalg.inv(K)
 K_inv_torch = torch.inverse(K_torch)
+
+def update_torso_size(new_size):
+    #global DEFAULT_TORSO_SIZE
+    #DEFAULT_TORSO_SIZE = new_size.numpy()[0]
+    do_nothing
 
 def take_bone_projection(P_world, R_drone, C_drone):
 
@@ -85,15 +90,11 @@ def take_bone_projection_pytorch(P_world, R_drone, C_drone):
     
     return result, z
 
+def take_bone_backprojection(bone_pred, R_drone, C_drone):
+    TORSO_SIZE_ = DEFAULT_TORSO_SIZE
 
-def take_bone_backprojection(bone_pred, R_drone, C_drone, z_val, use_z = False):
     img_torso_size = np.linalg.norm(bone_pred[:, 0] - bone_pred[:, 8])
-    z_val = (FOCAL_LENGTH * TORSO_SIZE) / img_torso_size
-
-    if (use_z == False):
-        z_val = calculated_z_val
-    else:
-        z_val = np.mean(z_val)
+    z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
 
     bone_pos_3d = np.zeros([3, bone_pred.shape[1]])
     bone_pos_3d[0,:] = bone_pred[0,:]*z_val
@@ -109,14 +110,11 @@ def take_bone_backprojection(bone_pred, R_drone, C_drone, z_val, use_z = False):
     P_world = np.copy(P_world_)
     return P_world
 
-def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone, z_val, use_z = False):
-    img_torso_size = torch.norm(bone_pred[:, 0] - bone_pred[:, 8])
-    calculated_z_val = (FOCAL_LENGTH * TORSO_SIZE) / img_torso_size
+def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone):
+    TORSO_SIZE_ = DEFAULT_TORSO_SIZE
 
-    if (use_z == False):
-        z_val = calculated_z_val
-    else:
-        z_val = torch.mean(z_val)
+    img_torso_size = torch.norm(bone_pred[:, 0] - bone_pred[:, 8])
+    z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
 
     bone_pos_3d = Variable(torch.zeros([3, 21]))
     bone_pos_3d[0,:] = bone_pred[0,:]*z_val
@@ -136,3 +134,4 @@ def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone, z_val, use_z =
 def transform_cov_matrix(R_drone, cov_):
     transformed_cov = (R_drone@R_cam)@cov_@(R_drone@R_cam).T
     return transformed_cov
+
