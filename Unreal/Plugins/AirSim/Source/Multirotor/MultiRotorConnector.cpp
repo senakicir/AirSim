@@ -290,6 +290,12 @@ bool MultiRotorConnector::changeAnimation(int new_anim){
     return true;
 }
 
+//sena was here
+bool MultiRotorConnector::changeCalibrationMode(bool calib_mode){
+    vehicle_pawn_wrapper_->changeCalibrationMode(calib_mode);
+    return true;
+}
+
 Pose MultiRotorConnector::getPose()
 {
     return vehicle_.getPose();
