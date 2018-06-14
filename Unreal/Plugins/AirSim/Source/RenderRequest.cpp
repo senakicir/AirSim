@@ -4,9 +4,11 @@
 #include "TaskGraphInterfaces.h"
 #include "ImageUtils.h"
 
-RenderRequest::RenderRequest(bool use_safe_method, Vector3r_arr* bonesPosPtr_)
-: use_safe_method_(use_safe_method), bonesPosPtr(bonesPosPtr_), params_(nullptr), results_(nullptr), req_size_(0),
-wait_signal_(new msr::airlib::WorkerThreadSignal)
+#include "AirBlueprintLib.h"
+
+RenderRequest::RenderRequest(bool use_safe_method, Vector3r_arr* bonesPosPtr_) //sena was here
+    : use_safe_method_(use_safe_method), bonesPosPtr(bonesPosPtr_), params_(nullptr), results_(nullptr), req_size_(0),
+    wait_signal_(new msr::airlib::WorkerThreadSignal)
 {
 }
 
@@ -63,8 +65,8 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
     //TODO: is below really needed?
     for (unsigned int i = 0; i < req_size; ++i) {
         results.push_back(std::make_shared<RenderResult>());
-        
-        if (! params[i]->pixels_as_float)
+
+        if (!params[i]->pixels_as_float)
             results[i]->bmp.Reset();
         else
             results[i]->bmp_float.Reset();
@@ -79,7 +81,7 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
         for (unsigned int i = 0; i < req_size; ++i) {
             //TODO: below doesn't work right now because it must be running in game thread
             FIntPoint img_size;
-            if (! params[i]->pixels_as_float) {
+            if (!params[i]->pixels_as_float) {
                 //below is documented method but more expensive because it forces flush
                 FTextureRenderTargetResource* rt_resource = params[i]->render_target->GameThread_GetRenderTargetResource();
                 auto flags = setupRenderResource(rt_resource, params[i].get(), results[i].get(), img_size);
@@ -102,16 +104,16 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
         TGraphTask<RenderRequest>::CreateTask().ConstructAndDispatchWhenReady(*this);
         
         // wait for this task to complete
-        if (! wait_signal_->waitFor(5)) {
+        if (!wait_signal_->waitFor(5)) {
             throw std::runtime_error("timeout waiting for screenshot");
         }
     }
     for (unsigned int i = 0; i < req_size; ++i) {
-        if (! params[i]->pixels_as_float) {
+        if (!params[i]->pixels_as_float) {
             if (results[i]->width != 0 && results[i]->height != 0) {
                 results[i]->image_data_uint8.SetNumUninitialized(results[i]->width * results[i]->height * 4, false);
                 if (params[i]->compress)
-                    FImageUtils::CompressImageArray(results[i]->width, results[i]->height, results[i]->bmp, results[i]->image_data_uint8);
+                    UAirBlueprintLib::CompressImageArray(results[i]->width, results[i]->height, results[i]->bmp, results[i]->image_data_uint8);
                 else {
                     uint8* ptr = results[i]->image_data_uint8.GetData();
                     for (const auto& item : results[i]->bmp) {
@@ -158,7 +160,7 @@ void RenderRequest::ExecuteTask()
                 //should we be using ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER which was in original commit by @saihv
                 //https://github.com/Microsoft/AirSim/pull/162/commits/63e80c43812300a8570b04ed42714a3f6949e63f#diff-56b790f9394f7ca1949ddbb320d8456fR64
                 results_[i]->bonePos_data = *bonesPosPtr; //sena was here
-                if (! params_[i]->pixels_as_float) {
+                if (!params_[i]->pixels_as_float) {
                     //below is undocumented method that avoids flushing, but it seems to segfault every 2000 or so calls
                     RHICmdList.ReadSurfaceData(rhi_texture, FIntRect(0, 0, size.X, size.Y),results_[i]->bmp,flags);
                 }

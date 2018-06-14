@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
+#include "FlyingPawn.h"
 #include "common/Common.hpp"
 #include "MultiRotorConnector.h"
 #include "vehicles/multirotor/MultiRotorParams.hpp"
@@ -20,8 +22,10 @@ public:
 
     virtual void Tick( float DeltaSeconds ) override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-    VehiclePawnWrapper* getFpvVehiclePawnWrapper() override;
-    std::string getLogString();
+    VehiclePawnWrapper* getFpvVehiclePawnWrapper() const override;
+    std::string getLogString() const;
+    virtual std::unique_ptr<msr::airlib::ApiServerBase> createApiServer() const override;
+
 
 protected:
     typedef AFlyingPawn TMultiRotorPawn;
@@ -35,6 +39,7 @@ private:
     void setupVehiclesAndCamera(std::vector<VehiclePtr>& vehicles);
 
 private:    
+    typedef msr::airlib::ClockFactory ClockFactory;
 
     TArray<uint8> image_;
     std::vector <std::unique_ptr<msr::airlib::MultiRotorParams> > vehicle_params_;

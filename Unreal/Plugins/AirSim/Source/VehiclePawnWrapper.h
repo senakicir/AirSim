@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Pawn.h"
+
 #include <vector>
 #include <memory>
 #include "UnrealImageCapture.h"
@@ -9,10 +11,14 @@
 #include "PIPCamera.h"
 #include "physics/Kinematics.hpp"
 #include "NedTransform.h"
+//sena was here
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Character.h"
 #include "CharacterInterface.h"
 #include "DroneInterface.h"
+
+#include "api/VehicleApiBase.hpp"
+
 
 class VehiclePawnWrapper
 {
@@ -108,6 +114,9 @@ public: //interface
 
     void possess();
 
+    msr::airlib::VehicleApiBase* getApi() const;
+    void setApi(std::unique_ptr<msr::airlib::VehicleApiBase> api);
+
 protected:
     UPROPERTY(VisibleAnywhere)
     UParticleSystem* collision_display_template;
@@ -135,7 +144,8 @@ private: //vars
     std::string log_line_;
     WrapperConfig config_;
     NedTransform ned_transform_;
-    
+    std::unique_ptr<msr::airlib::VehicleApiBase> api_;
+
     struct State {
         FVector start_location;
         FRotator start_rotation;

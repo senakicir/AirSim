@@ -13,7 +13,7 @@
 #include "controllers/VehicleConnectorBase.hpp"
 #include "ManualPoseController.h"
 #include <chrono>
-#include "api/ControlServerBase.hpp"
+#include "api/ApiServerBase.hpp"
 #include "SimJoyStick/SimJoyStick.h"
 #include <future>
 
@@ -36,14 +36,10 @@ public:
     //VehicleConnectorBase interface
     //implements game interface to update pawn
     MultiRotorConnector(VehiclePawnWrapper* vehicle_paw_wrapper, msr::airlib::MultiRotorParams* vehicle_params,
-                        bool enable_rpc, std::string api_server_address, uint16_t api_server_port,
-                        UManualPoseController* manual_pose_controller);
+        UManualPoseController* manual_pose_controller);
     virtual void updateRenderedState(float dt) override;
     virtual void updateRendering(float dt) override;
-    
-    virtual void startApiServer() override;
-    virtual void stopApiServer() override;
-    virtual bool isApiServerStarted() override;
+
     virtual msr::airlib::VehicleControllerBase* getController() override;
     
     //PhysicsBody interface
@@ -74,17 +70,17 @@ private:
     void detectUsbRc();
     const msr::airlib::RCData& getRCData();
     void resetPrivate();
-    
+    msr::airlib::MultirotorApi* getApi() const;
+
 private:
     MultiRotor vehicle_;
     VehiclePawnWrapper* vehicle_pawn_wrapper_;
     std::vector<std::string> controller_messages_;
     std::unique_ptr<msr::airlib::Environment> environment_;
-    
+    VehiclePawnWrapper* wrapper_;
+
     msr::airlib::MultiRotorParams* vehicle_params_;
-    std::unique_ptr<msr::airlib::MultirotorApi> controller_cancelable_;
-    std::unique_ptr<msr::airlib::ControlServerBase> rpclib_server_;
-    
+
     struct RotorInfo {
         real_T rotor_speed = 0;
         int rotor_direction = 0;
@@ -95,10 +91,6 @@ private:
     std::vector<RotorInfo> rotor_info_;
     
     CollisionResponseInfo collision_response_info;
-    
-    bool enable_rpc_;
-    std::string api_server_address_;
-    uint16_t api_server_port_;
     msr::airlib::DroneControllerBase* controller_;
     UManualPoseController* manual_pose_controller_;
     

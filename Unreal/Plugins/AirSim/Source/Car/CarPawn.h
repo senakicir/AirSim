@@ -2,23 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "WheeledVehicle.h"
-#include "vehicles/car/api/CarRpcLibServer.hpp"
-#include "physics/Kinematics.hpp"
 #include "CarPawnApi.h"
 #include "SimJoyStick/SimJoyStick.h"
-#include "UObject/ConstructorHelpers.h"
-#include "Components/SkeletalMeshComponent.h"
-#include "PhysicalMaterials/PhysicalMaterial.h"
-#include "common/AirSimSettings.hpp"
-#include "AirBlueprintLib.h"
 #include "CarPawn.generated.h"
 
-class UPhysicalMaterial;
-class UCameraComponent;
-class USpringArmComponent;
-class UTextRenderComponent;
-class UInputComponent;
-class UAudioComponent;
 
 UCLASS(config = Game)
 class ACarPawn : public AWheeledVehicle
@@ -39,27 +26,27 @@ class ACarPawn : public AWheeledVehicle
 
     /** Camera component for the In-Car view */
     UPROPERTY(Category = Camera, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    APIPCamera* InternalCamera1;
+    class APIPCamera* InternalCamera1;
     UPROPERTY(Category = Camera, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    APIPCamera* InternalCamera2;
+    class APIPCamera* InternalCamera2;
     UPROPERTY(Category = Camera, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    APIPCamera* InternalCamera3;
+    class APIPCamera* InternalCamera3;
     UPROPERTY(Category = Camera, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    APIPCamera* InternalCamera4;
+    class APIPCamera* InternalCamera4;
     UPROPERTY(Category = Camera, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    APIPCamera* InternalCamera5;
+    class APIPCamera* InternalCamera5;
 
     /** Text component for the In-Car speed */
     UPROPERTY(Category = Display, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    UTextRenderComponent* InCarSpeed;
+    class UTextRenderComponent* InCarSpeed;
 
     /** Text component for the In-Car gear */
     UPROPERTY(Category = Display, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    UTextRenderComponent* InCarGear;
+    class UTextRenderComponent* InCarGear;
 
     /** Audio component for the engine sound */
     UPROPERTY(Category = Display, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    UAudioComponent* EngineSoundComponent;
+    class UAudioComponent* EngineSoundComponent;
 
 public:
     ACarPawn();
@@ -82,14 +69,12 @@ public:
 
     void setupInputBindings();
 
-    void reset(bool disable_api_control = true);
-
     // Begin Actor interface
     virtual void Tick(float Delta) override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-    VehiclePawnWrapper* getVehiclePawnWrapper();
-    void initializeForBeginPlay(bool enable_rpc, const std::string& api_server_address, bool engine_sound);
+    class VehiclePawnWrapper* getVehiclePawnWrapper();
+    void initializeForBeginPlay(bool engine_sound);
 
     virtual void NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation,
         FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
@@ -124,23 +109,19 @@ public:
 private:
     /** update the gear and speed strings */
     void updateHUDStrings();
-    void startApiServer(bool enable_rpc, const std::string& api_server_address);
-    void stopApiServer();
-    bool isApiServerStarted();
     void updateKinematics(float delta);
     void updateCarControls();
+    void updateForceFeedback();
 
     std::string getLogString();
     void setupVehicleMovementComponent();
-
+    msr::airlib::CarApiBase* getApi() const;
 
 private:
     typedef msr::airlib::AirSimSettings AirSimSettings;
 
     UClass* pip_camera_class_;
 
-    std::unique_ptr<msr::airlib::CarRpcLibServer> rpclib_server_;
-    std::unique_ptr<msr::airlib::CarApiBase> api_;
     std::unique_ptr<VehiclePawnWrapper> wrapper_;
     msr::airlib::Kinematics::State kinematics_;
 
@@ -155,7 +136,7 @@ private:
     /* Are we on a 'slippery' surface */
     bool is_low_friction_;
     /** Slippery Material instance */
-    UPhysicalMaterial* slippery_mat_;
+    class UPhysicalMaterial* slippery_mat_;
     /** Non Slippery Material instance */
-    UPhysicalMaterial* non_slippery_mat_;
+    class UPhysicalMaterial* non_slippery_mat_;
 };

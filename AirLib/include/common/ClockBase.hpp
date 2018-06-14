@@ -72,10 +72,10 @@ public:
 
     double getTrueScaleWrtWallClock()
     {
-        TTimeDelta wall_clock_now = Utils::getTimeSinceEpochNanos();
+        TTimePoint wall_clock_now = Utils::getTimeSinceEpochNanos();
         TTimeDelta wall_clock_elapsed = elapsedBetween(wall_clock_now, wall_clock_start_);
 
-        TTimeDelta clock_now = nowNanos();
+        TTimePoint clock_now = nowNanos();
         TTimeDelta clock_elapsed = elapsedBetween(clock_now, getStart());
 
         return static_cast<double>(clock_elapsed) / wall_clock_elapsed;
