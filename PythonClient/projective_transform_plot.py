@@ -15,16 +15,15 @@ bones_h36m = [[0, 1], [1, 2], [2, 3], [3, 19],
 joint_indices_h36m=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 joint_names_h36m = ['hip','right_up_leg','right_leg','right_foot','left_up_leg','left_leg', 'left_foot','spine1','neck','head', 'head_top', 'left_arm','left_forearm','left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip', 'right_foot_tip', 'left_foot_tip']
 
-
 colormap='gist_rainbow'
 
 def PlotDroneAndHuman(numbers, linecount, location, photo_location):
-    index = numbers[0]
-    drone = numbers[1:4]
+    index = linecount
+    drone = numbers[0:3]
     drone = np.asarray(drone, dtype=np.float32)
-    human = numbers[7:10]
+    human = numbers[9:12]
     human = np.asarray(human, dtype=np.float32)
-    joints = numbers[10:]
+    joints = numbers[9:]
     joints = np.reshape(joints, (-1, 3)).T
     
     fig = plt.figure()
@@ -66,7 +65,6 @@ def PlotDroneAndHuman(numbers, linecount, location, photo_location):
     gs2 = gridspec.GridSpec(1, 1)
     ax2 = fig.add_subplot(gs2[0])
     ax2.imshow(im)
-
 
     gs1.tight_layout(fig, rect=[0, 0, 0.6, 0.6])
     gs2.tight_layout(fig, rect=[0.4, 0.4, 1, 1])

@@ -12,10 +12,10 @@ def EulerToRotationMatrix(roll, pitch, yaw):
 
 
 def main():
-    filepath = 'my_scripts/temp_main/2018-03-14-14-01/groundtruth.txt'
-    filepath2 = 'my_scripts/temp_main/2018-03-14-14-01/groundtruth_projected.txt'
-    filepath3 = 'my_scripts/temp_main/2018-03-14-14-01/images/test_gt'
-    filepath4 = 'my_scripts/temp_main/2018-03-14-14-01/images'
+    filepath = 'my_scripts/temp_main/test_set_2/groundtruth.txt'
+    filepath2 = 'my_scripts/temp_main/test_set_2/groundtruth_projected.txt'
+    filepath3 = 'my_scripts/temp_main/test_set_2/images/test_gt'
+    filepath4 = 'my_scripts/temp_main/test_set_2/images'
 
     if not os.path.exists(filepath3):
         os.makedirs(filepath3)
@@ -49,8 +49,8 @@ def main():
         numbers = list(map(float, numbers))
         
         #take the drone position and orientation
-        [roll, pitch, yaw] = numbers[3:6]
-        [Cx, Cy, Cz] = numbers[0:3]
+        [Cx, Cy, Cz] = numbers[1:4]
+        [roll, pitch, yaw] = numbers[4:7]
 
         ##take orientation info and find R, rotation matrix
         ##take translation info and find C
@@ -62,7 +62,7 @@ def main():
         #PlotDroneAndHuman(numbers, linecount, filepath3, photo_loc)
 
         ##Take projective transform
-        X = numbers[9:]
+        X = numbers[10:]
         P_world = np.reshape(X, (-1, 3)).T
         P_world[2,:] = -P_world[2,:]
 

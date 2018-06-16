@@ -9,7 +9,6 @@ class UnrealImageCapture : public msr::airlib::ImageCaptureBase
 {
 public:
     typedef msr::airlib::ImageCaptureBase::ImageType ImageType;
-    typedef msr::airlib::Vector3r_arr Vector3r_arr; //sena was here
 
     UnrealImageCapture(const std::vector<APIPCamera*>& cameras);
     virtual ~UnrealImageCapture();

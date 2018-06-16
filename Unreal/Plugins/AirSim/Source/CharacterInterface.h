@@ -28,5 +28,8 @@ public:
     //classes using this interface must implement this
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
     void changeAnimation(int new_anim_num);
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
+    void changeCalibrationMode(bool calibMode);
 };
 

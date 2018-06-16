@@ -13,6 +13,8 @@ namespace msr { namespace airlib {
 class ImageCaptureBase
 {
 public: //types
+    typedef msr::airlib::Vector3r_arr Vector3r_arr; //sena was here
+
     enum class ImageType : uint { //this indexes to array
         Scene = 0, 
         DepthPlanner, 
@@ -50,7 +52,7 @@ public: //types
         Vector3r camera_position = Vector3r::Zero();
         Quaternionr camera_orientation = Quaternionr::Identity();
         //sena was here
-        Vector3r_arr bones =  Vector3r_arr::Vector3r_arr();
+        Vector3r_arr bones =  Vector3r_arr();
         TTimePoint time_stamp = 0;
         std::string message;
         bool pixels_as_float = false;
