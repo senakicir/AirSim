@@ -1,26 +1,34 @@
 #include "MultiRotorConnector.h"
-#include "FlyingPawn.h" 
+#include "FlyingPawn.h"
 #include "AirBlueprintLib.h"
 #include <exception>
 
 using namespace msr::airlib;
 
+MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* wrapper,
+                                         msr::airlib::MultiRotorParams* vehicle_params,
+                                         UManualPoseController* manual_pose_controller)
+{
+    wrapper_ = wrapper;
+    manual_pose_controller_ = manual_pose_controller;
+    
     
     //reset roll & pitch of vehicle as multirotors required to be on plain surface at start
     Pose pose = wrapper_->getPose();
+    float pitch, roll, yaw;
     VectorMath::toEulerianAngle(pose.orientation, pitch, roll, yaw);
     pose.orientation = VectorMath::toQuaternion(0, 0, yaw);
     wrapper_->setPose(pose, false);
-
+    
     vehicle_params_ = vehicle_params;
-
-    vehicle_.initialize(vehicle_params_, wrapper_->getPose(), 
-        wrapper_->getHomePoint(), environment_);
-
+    
+    vehicle_.initialize(vehicle_params_, wrapper_->getPose(),
+                        wrapper_->getHomePoint(), environment_);
+    
     controller_ = static_cast<msr::airlib::DroneControllerBase*>(vehicle_.getController());
     
     if (controller_->getRemoteControlID() >= 0)
-    detectUsbRc();
+        detectUsbRc();
     
     rotor_count_ = vehicle_.wrenchVertexCount();
     rotor_info_.assign(rotor_count_, RotorInfo());
@@ -30,10 +38,10 @@ using namespace msr::airlib;
     
     reset_pending_ = false;
     did_reset_ = false;
-
+    
     wrapper_->setApi(std::unique_ptr<msr::airlib::VehicleApiBase>(
-        new MultirotorApi(this)));
-
+                                                                  new MultirotorApi(this)));
+    
     std::string message;
     if (!vehicle_.getController()->isAvailable(message)) {
         UAirBlueprintLib::LogMessage(FString("Vehicle was not initialized: "), FString(message.c_str()), LogDebugLevel::Failure);
@@ -41,7 +49,7 @@ using namespace msr::airlib;
     }
     
     //sena was here
-    Vector3r_arr* bone_positions = &(vehicle_pawn_wrapper_->bones);
+    Vector3r_arr* bone_positions = &(wrapper_->bones);
     vehicle_.setBonePositions(bone_positions);
 }
 
@@ -71,10 +79,10 @@ void MultiRotorConnector::detectUsbRc()
     rc_data_.is_initialized = joystick_state_.is_initialized;
     
     if (rc_data_.is_initialized)
-    UAirBlueprintLib::LogMessageString("RC Controller on USB: ", joystick_state_.pid_vid, LogDebugLevel::Informational);
+        UAirBlueprintLib::LogMessageString("RC Controller on USB: ", joystick_state_.pid_vid, LogDebugLevel::Informational);
     else
-    UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ",
-                                       std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
+        UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ",
+                                           std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
 }
 
 const msr::airlib::RCData& MultiRotorConnector::getRCData()
@@ -146,7 +154,7 @@ void MultiRotorConnector::updateRenderedState(float dt)
         manual_pose_controller_->resetDelta();
         Vector3r delta_position_ned = wrapper_->getNedTransform().toNedMeters(delta_position, false);
         Quaternionr delta_rotation_ned = wrapper_->getNedTransform().toQuaternionr(delta_rotation.Quaternion(), true);
-
+        
         auto pose = vehicle_.getPose();
         pose.position += delta_position_ned;
         pose.orientation = pose.orientation * delta_rotation_ned;
@@ -156,7 +164,7 @@ void MultiRotorConnector::updateRenderedState(float dt)
     }
     
     if (pending_pose_status_ == PendingPoseStatus::RenderStatePending)
-    vehicle_.setPose(pending_pose_);
+        vehicle_.setPose(pending_pose_);
     
     last_pose_ = vehicle_.getPose();
     
@@ -176,7 +184,7 @@ void MultiRotorConnector::updateRenderedState(float dt)
     controller_->getStatusMessages(controller_messages_);
     
     if (controller_->getRemoteControlID() >= 0)
-    controller_->setRCData(getRCData());
+        controller_->setRCData(getRCData());
 }
 
 void MultiRotorConnector::updateRendering(float dt)
@@ -208,7 +216,7 @@ void MultiRotorConnector::updateRendering(float dt)
         }
         else
             wrapper_->setPose(last_pose_, false);
-
+        
         wrapper_->setDebugPose(last_debug_pose_);
     }
     
@@ -216,13 +224,13 @@ void MultiRotorConnector::updateRendering(float dt)
     for (unsigned int i = 0; i < rotor_count_; ++i) {
         RotorInfo* info = &rotor_info_[i];
         static_cast<AFlyingPawn*>(wrapper_->getPawn())->
-            setRotorSpeed(i, info->rotor_speed * info->rotor_direction);
+        setRotorSpeed(i, info->rotor_speed * info->rotor_direction);
     }
     
     for (auto i = 0; i < controller_messages_.size(); ++i) {
         UAirBlueprintLib::LogMessage(FString(controller_messages_[i].c_str()), TEXT(""), LogDebugLevel::Success, 30);
     }
-
+    
     if (manual_pose_controller_ != nullptr && manual_pose_controller_->getActor() == wrapper_->getPawn()) {
         UAirBlueprintLib::LogMessage(TEXT("Collision Count:"), FString::FromInt(wrapper_->getCollisionInfo().collision_count), LogDebugLevel::Failure);
     }
@@ -230,25 +238,25 @@ void MultiRotorConnector::updateRendering(float dt)
         //UAirBlueprintLib::LogMessage(TEXT("Collision (raw) Count:"), FString::FromInt(collision_response_info.collision_count_raw), LogDebugLevel::Unimportant);
         UAirBlueprintLib::LogMessage(TEXT("Collision Count:"), FString::FromInt(collision_response_info.collision_count_non_resting), LogDebugLevel::Failure);
     }
-
+    
     /************************************************           for debugging        *****************************************************/
     //Kinematics::State kinematics_estimated = controller_->getKinematicsEstimated();
     //Kinematics::State kinematics_true = vehicle_.getKinematics();
     //UAirBlueprintLib::LogMessageString("Position (true): ", VectorMath::toString(kinematics_true.pose.position), LogDebugLevel::Informational);
     //UAirBlueprintLib::LogMessageString("Position (est): ", VectorMath::toString(kinematics_estimated.pose.position), LogDebugLevel::Informational);
-
+    
     //UAirBlueprintLib::LogMessageString("Lin Velocity (true): ", VectorMath::toString(kinematics_true.twist.linear), LogDebugLevel::Informational);
     //UAirBlueprintLib::LogMessageString("Lin Velocity (est): ", VectorMath::toString(kinematics_estimated.twist.linear), LogDebugLevel::Informational);
-
+    
     //UAirBlueprintLib::LogMessageString("Ang Velocity (true): ", VectorMath::toString(kinematics_true.twist.angular), LogDebugLevel::Informational);
     //UAirBlueprintLib::LogMessageString("Ang Velocity (est): ", VectorMath::toString(kinematics_estimated.twist.angular), LogDebugLevel::Informational);
-
+    
     //UAirBlueprintLib::LogMessageString("Lin Accel (true): ", VectorMath::toString(kinematics_true.accelerations.linear), LogDebugLevel::Informational);
     //UAirBlueprintLib::LogMessageString("Lin Accel (est): ", VectorMath::toString(kinematics_estimated.accelerations.linear), LogDebugLevel::Informational);
-
+    
     //UAirBlueprintLib::LogMessageString("Ang Accel (true): ", VectorMath::toString(kinematics_true.accelerations.angular), LogDebugLevel::Informational);
     //UAirBlueprintLib::LogMessageString("Ang Accel (est): ", VectorMath::toString(kinematics_estimated.accelerations.angular), LogDebugLevel::Informational);
-
+    
     //UAirBlueprintLib::LogMessageString("Orien (true): ", VectorMath::toString(kinematics_true.pose.orientation), LogDebugLevel::Informational);
     //UAirBlueprintLib::LogMessageString("Orien (est): ", VectorMath::toString(kinematics_estimated.pose.orientation), LogDebugLevel::Informational);
 }
@@ -262,13 +270,13 @@ void MultiRotorConnector::setPose(const Pose& pose, bool ignore_collision)
 
 //sena was here
 bool MultiRotorConnector::changeAnimation(int new_anim){
-    vehicle_pawn_wrapper_->changeAnimation(new_anim);
+    wrapper_->changeAnimation(new_anim);
     return true;
 }
 
 //sena was here
 bool MultiRotorConnector::changeCalibrationMode(bool calib_mode){
-    vehicle_pawn_wrapper_->changeCalibrationMode(calib_mode);
+    wrapper_->changeCalibrationMode(calib_mode);
     return true;
 }
 
@@ -313,7 +321,7 @@ CameraInfo MultiRotorConnector::getCameraInfo(int camera_id) const
     return wrapper_->getCameraInfo(camera_id);
 }
 
-void MultiRotorConnector::setCameraOrientation(int camera_id, const Quaternionr& orientation) 
+void MultiRotorConnector::setCameraOrientation(int camera_id, const Quaternionr& orientation)
 {
     UAirBlueprintLib::RunCommandOnGameThread([&camera_id, &orientation, this]() {
         wrapper_->setCameraOrientation(camera_id, orientation);
@@ -335,7 +343,7 @@ void MultiRotorConnector::reset()
 void MultiRotorConnector::resetPrivate()
 {
     VehicleConnectorBase::reset();
-
+    
     //TODO: should this be done in MultiRotor.hpp?
     //controller_->reset();
     
@@ -367,3 +375,4 @@ MultiRotorConnector::UpdatableObject* MultiRotorConnector::getPhysicsBody()
     return vehicle_.getPhysicsBody();
 }
 //*** End: UpdatableState implementation ***//
+

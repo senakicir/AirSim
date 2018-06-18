@@ -74,7 +74,6 @@ private:
 
 private:
     MultiRotor vehicle_;
-    VehiclePawnWrapper* vehicle_pawn_wrapper_;
     std::vector<std::string> controller_messages_;
     std::unique_ptr<msr::airlib::Environment> environment_;
     VehiclePawnWrapper* wrapper_;
