@@ -59,6 +59,7 @@ RpcLibServerBase::RpcLibServerBase(ApiProvider* api_provider, const std::string&
     pimpl_->server.bind("getMinRequiredClientVersion", []() -> int {
         return 1;
     });
+    
        
     pimpl_->server.bind("simPause", [&](bool is_paused) -> void { 
         getWorldSimApi()->pause(is_paused); 
@@ -143,7 +144,24 @@ RpcLibServerBase::RpcLibServerBase(ApiProvider* api_provider, const std::string&
         const auto& collision_info = getVehicleSimApi(vehicle_name)->getCollisionInfo(); 
         return RpcLibAdapatorsBase::CollisionInfo(collision_info);
     });
+    
+    //sena was here
+    pimpl_->server.bind("getBonePositions", [&](const std::string& vehicle_name) -> RpcLibAdapatorsBase::Vector3r_arr {
+        const auto& bone_pos = *(getVehicleSimApi(vehicle_name)->getBonePositions());
+        return RpcLibAdapatorsBase::Vector3r_arr(bone_pos);
+    });
 
+    //sena was here
+    pimpl_->server.bind("changeAnimation", [&](const std::string& vehicle_name, int new_anim) -> void {
+        getVehicleSimApi(vehicle_name)->changeAnimation(new_anim);
+    });
+
+    //sena was here
+    pimpl_->server.bind("changeCalibrationMode", [&](const std::string& vehicle_name, bool calib_mode) -> void {
+        getVehicleSimApi(vehicle_name)->changeCalibrationMode(calib_mode);
+    });
+
+    
     pimpl_->server.bind("simGetObjectPose", [&](const std::string& object_name) -> RpcLibAdapatorsBase::Pose {
         const auto& pose = getWorldSimApi()->getObjectPose(object_name); 
         return RpcLibAdapatorsBase::Pose(pose);
