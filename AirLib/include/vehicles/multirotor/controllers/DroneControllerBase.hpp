@@ -356,7 +356,7 @@ private:// vars
 
     CollisionInfo collision_info_;
     //sena was here
-    Vector3r_arr* bonePositions_;
+    Vector3r_arr* bonePositions_;// = nullptr;
     
     // we make this recursive so that DroneControllerBase subclass can grab StatusLock then call a 
     // base class method on DroneControllerBase that also grabs the StatusLock.

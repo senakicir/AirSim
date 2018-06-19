@@ -725,9 +725,13 @@ Vector3r_arr* DroneControllerBase::getBonePositions()
 {
     return bonePositions_;
 }
+    
+//sena was here
 void DroneControllerBase::setBonePositions(Vector3r_arr* bone_positions)
 {
-    bonePositions_ = bone_positions;
+    //bonePositions_ = bone_positions;
+    Vector3r_arr lol;
+    bonePositions_ = &lol;
 }
     
 }} //namespace

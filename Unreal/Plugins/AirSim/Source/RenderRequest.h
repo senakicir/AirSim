@@ -14,8 +14,7 @@ public:
     typedef msr::airlib::Vector3r_arr Vector3r_arr;
     
 public:
-    UTexture2D *Texture2D; //sena was here
-
+    
     struct RenderParams {
         UTextureRenderTarget2D* render_target;
         bool pixels_as_float;
@@ -68,7 +67,6 @@ public:
     // argument on the thread that calls this method.
     
     void getScreenshot(std::shared_ptr<RenderParams> params[], std::vector<std::shared_ptr<RenderResult>>& results, unsigned int req_size);
-    void SimpleGetScreenshot(UTextureRenderTarget2D* textureTarget, std::vector<std::shared_ptr<RenderResult>>&  results); //sena was here
     
     void ExecuteTask();
 };

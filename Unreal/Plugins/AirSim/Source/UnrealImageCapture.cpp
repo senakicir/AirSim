@@ -7,8 +7,8 @@
 
 
 
-UnrealImageCapture::UnrealImageCapture(const std::vector<APIPCamera*>& cameras) 
-    : cameras_(cameras)
+UnrealImageCapture::UnrealImageCapture(const std::vector<APIPCamera*>& cameras)
+: cameras_(cameras)
 {
     //TODO: explore screenshot option
     //addScreenCaptureHandler(camera->GetWorld());
@@ -41,10 +41,10 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         APIPCamera* camera = cameras_[requests.at(i).camera_id];
         responses.push_back(ImageResponse());
         ImageResponse& response = responses.at(i);
-
+        
         updateCameraVisibility(camera, requests[i]);
         
-        UTextureRenderTarget2D* RenderTarget = nullptr;
+        UTextureRenderTarget2D* textureTarget = nullptr;
         USceneCaptureComponent2D* capture = camera->getCaptureComponent(requests[i].image_type, false);
         if (capture == nullptr) {
             response.message = "Can't take screenshot because none camera type is not active";
@@ -53,17 +53,11 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
             response.message = "Can't take screenshot because texture target is null";
         }
         else
-            RenderTarget = capture->TextureTarget;
+            textureTarget = capture->TextureTarget;
         
-        //sena was here
-        render_params.push_back(std::make_shared<RenderRequest::RenderParams>(RenderTarget, requests[i].pixels_as_float, requests[i].compress));
-        //RenderRequest render_request(use_safe_method, bonePosPtr); //sena was here
-        //RenderRequest.SimpleGetScreenshot(RenderTarget, render_results) //sena was here
-        
+        render_params.push_back(std::make_shared<RenderRequest::RenderParams>(textureTarget, requests[i].pixels_as_float, requests[i].compress));
     }
-
-    //RenderRequest render_request(use_safe_method, bonePosPtr); //sena was here
-    //render_request.getScreenshot(render_params.data(), render_results, render_params.size());//sena was here
+    
     RenderRequest render_request(use_safe_method, bonePosPtr); //sena was here
     render_request.getScreenshot(render_params.data(), render_results, render_params.size());
     
@@ -77,7 +71,7 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         response.time_stamp = render_results[i]->time_stamp;
         response.image_data_uint8 = std::vector<uint8_t>(render_results[i]->image_data_uint8.GetData(), render_results[i]->image_data_uint8.GetData() + render_results[i]->image_data_uint8.Num());
         response.image_data_float = std::vector<float>(render_results[i]->image_data_float.GetData(), render_results[i]->image_data_float.GetData() + render_results[i]->image_data_float.Num());
-
+        
         msr::airlib::Pose pose = camera->getPose();
         response.camera_position = pose.position;
         response.camera_orientation = pose.orientation;
@@ -99,14 +93,14 @@ void UnrealImageCapture::updateCameraVisibility(APIPCamera* camera, const msr::a
         visibilityChanged = true;
     }
     
-   // if (visibilityChanged) {
-        // Wait for render so that view is ready for capture
-       // std::this_thread::sleep_for(std::chrono::duration<double>(0.2));
-        //sena was here, i commented the line above out
-        // not sure why this doesn't work.
-        //DECLARE_CYCLE_STAT(TEXT("FNullGraphTask.CheckRenderStatus"), STAT_FNullGraphTask_CheckRenderStatus, STATGROUP_TaskGraphTasks);
-        //auto renderStatus = TGraphTask<FNullGraphTask>::CreateTask(NULL).ConstructAndDispatchWhenReady(GET_STATID(STAT_FNullGraphTask_CheckRenderStatus), ENamedThreads::RenderThread);
-        //FTaskGraphInterface::Get().WaitUntilTaskCompletes(renderStatus);
+    // if (visibilityChanged) {
+    // Wait for render so that view is ready for capture
+    // std::this_thread::sleep_for(std::chrono::duration<double>(0.2));
+    //sena was here, i commented the line above out
+    // not sure why this doesn't work.
+    //DECLARE_CYCLE_STAT(TEXT("FNullGraphTask.CheckRenderStatus"), STAT_FNullGraphTask_CheckRenderStatus, STATGROUP_TaskGraphTasks);
+    //auto renderStatus = TGraphTask<FNullGraphTask>::CreateTask(NULL).ConstructAndDispatchWhenReady(GET_STATID(STAT_FNullGraphTask_CheckRenderStatus), ENamedThreads::RenderThread);
+    //FTaskGraphInterface::Get().WaitUntilTaskCompletes(renderStatus);
     //}
 }
 
@@ -124,17 +118,17 @@ void UnrealImageCapture::addScreenCaptureHandler(UWorld *world)
         UGameViewportClient* ViewportClient = world->GetGameViewport();
         ViewportClient->OnScreenshotCaptured().Clear();
         ViewportClient->OnScreenshotCaptured().AddLambda(
-         [this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
-         {
-             // Make sure that all alpha values are opaque.
-             TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
-             for(auto& Color : RefBitmap)
-                 Color.A = 255;
-             
-             TArray<uint8_t> last_compressed_png;
-             FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
-             last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
-         });
+                                                         [this](int32 SizeX, int32 SizeY, const TArray<FColor>& Bitmap)
+                                                         {
+                                                             // Make sure that all alpha values are opaque.
+                                                             TArray<FColor>& RefBitmap = const_cast<TArray<FColor>&>(Bitmap);
+                                                             for(auto& Color : RefBitmap)
+                                                                 Color.A = 255;
+                                                             
+                                                             TArray<uint8_t> last_compressed_png;
+                                                             FImageUtils::CompressImageArray(SizeX, SizeY, RefBitmap, last_compressed_png);
+                                                             last_compressed_png_ = std::vector<uint8_t>(last_compressed_png.GetData(), last_compressed_png.GetData() + last_compressed_png.Num());
+                                                         });
         
         is_installed = true;
     }

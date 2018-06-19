@@ -162,12 +162,12 @@ namespace msr { namespace airlib {
             PhysicsBody::setCollisionInfo(collision_info);
             getController()->setCollisionInfo(collision_info);
         }
-        
+        /*
         //sena was here
         virtual void setBonePositions(Vector3r_arr* bonePositions)
         {
             getController()->setBonePositions(bonePositions);
-        }
+        }*/
         
         virtual ~MultiRotor() = default;
         

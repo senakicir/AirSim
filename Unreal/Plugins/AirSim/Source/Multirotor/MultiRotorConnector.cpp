@@ -50,7 +50,7 @@ MultiRotorConnector::MultiRotorConnector(VehiclePawnWrapper* wrapper,
     
     //sena was here
     Vector3r_arr* bone_positions = &(wrapper_->bones);
-    vehicle_.setBonePositions(bone_positions);
+    controller_->setBonePositions(bone_positions);
 }
 
 msr::airlib::ImageCaptureBase* MultiRotorConnector::getImageCapture()
