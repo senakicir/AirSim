@@ -63,8 +63,8 @@ public: //types
     };
 
 public: //methods
-    virtual void getImages(const std::vector<ImageRequest>& requests, std::vector<ImageResponse>& responses, Vector3r_arr* bonePos) const = 0;
-};
+    //sena was here
+    virtual void getImages(const std::vector<ImageRequest>& requests, std::vector<ImageResponse>& responses, Vector3r_arr* bonePos) const = 0;};
 }} //namespace
 #endif
 

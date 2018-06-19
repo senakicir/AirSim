@@ -140,6 +140,7 @@ void MultirotorPawnSimApi::setPose(const Pose& pose, bool ignore_collision)
     pending_pose_status_ = PendingPoseStatus::RenderStatePending;
 }
 
+
 //*** Start: UpdatableState implementation ***//
 void MultirotorPawnSimApi::reset()
 {

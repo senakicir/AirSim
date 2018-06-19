@@ -71,7 +71,7 @@ public: //optional overrides
 
     virtual void reset() override;
 
-
+    
 public: //these APIs uses above low level APIs
     virtual ~MultirotorApiBase() = default;
 
@@ -115,6 +115,7 @@ public: //these APIs uses above low level APIs
 
         return state;
     }
+
 
     /******************* Task management Apis ********************/
     virtual void cancelLastTask() override
@@ -308,6 +309,7 @@ private: //methods
 private: //variables
     CancelToken token_;
     std::recursive_mutex status_mutex_;
+    
     RCData rc_data_trims_;
     shared_ptr<SafetyEval> safety_eval_ptr_;
     float obs_avoidance_vel_ = 0.5f;

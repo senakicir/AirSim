@@ -17,8 +17,7 @@ UnrealImageCapture::~UnrealImageCapture()
 {}
 
 //sena was here
-void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, 
-    std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses,  Vector3r_arr* bonePosPtr) const
+void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, Vector3r_arr* bonePosPtr) const
 {
     if (cameras_->valsSize() == 0) {
         for (unsigned int i = 0; i < requests.size(); ++i) {

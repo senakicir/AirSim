@@ -159,7 +159,24 @@ CollisionInfo RpcLibClientBase::simGetCollisionInfo(const std::string& vehicle_n
 {
     return pimpl_->client.call("getCollisionInfo", vehicle_name).as<RpcLibAdapatorsBase::CollisionInfo>().to();
 }
+    
+//sena was here
+Vector3r_arr RpcLibClientBase::getBonePositions(const std::string& vehicle_name) const
+{
+    return pimpl_->client.call("getBonePositions", vehicle_name).as<RpcLibAdapatorsBase::Vector3r_arr>().to();
+}
+    
+//sena was here
+void RpcLibClientBase::changeAnimation(int new_anim, const std::string& vehicle_name) const
+{
+    pimpl_->client.call("changeAnimation", vehicle_name, new_anim);
+}
 
+//sena was here
+void RpcLibClientBase::changeCalibrationMode(bool calib_mode, const std::string& vehicle_name) const
+{
+    pimpl_->client.call("changeCalibrationMode", vehicle_name, calib_mode);
+}
 
 //sim only
 Pose RpcLibClientBase::simGetVehiclePose(const std::string& vehicle_name) const

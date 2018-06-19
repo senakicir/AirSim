@@ -87,7 +87,7 @@ uint32 FRecordingThread::Run()
                 // frames per second?
                 
                 std::vector<msr::airlib::ImageCaptureBase::ImageResponse> responses;
-                image_capture_->getImages(settings_.requests, responses);
+                image_capture_->getImages(settings_.requests, responses, nullptr); //sena was here
                 recording_file_->appendRecord(responses, vehicle_sim_api_);
             }
         }

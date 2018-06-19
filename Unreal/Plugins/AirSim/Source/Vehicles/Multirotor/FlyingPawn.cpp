@@ -35,6 +35,9 @@ void AFlyingPawn::initializeForBeginPlay()
 
 void AFlyingPawn::Tick(float DeltaSeconds)
 {
+    //sena was here
+    droneLocationUpdated = this->GetActorLocation();
+    droneOrientationUpdated= this->GetActorRotation();
     Super::Tick(DeltaSeconds);
     pawn_events_.getPawnTickSignal().emit(DeltaSeconds);
 }
@@ -92,3 +95,12 @@ void AFlyingPawn::setRotorSpeed(const std::vector<MultirotorPawnEvents::RotorInf
     }
 }
 
+//sena was here
+FVector AFlyingPawn::getDronePositionUpdated_Implementation(){
+    return droneLocationUpdated;
+}
+
+//sena was here
+FRotator AFlyingPawn::getDroneOrientationUpdated_Implementation(){
+    return droneOrientationUpdated;
+}

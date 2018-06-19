@@ -60,6 +60,11 @@ public:
 
     CollisionInfo simGetCollisionInfo(const std::string& vehicle_name = "") const;
 
+    //sena was here
+    Vector3r_arr getBonePositions(const std::string& vehicle_name = "") const;
+    void changeAnimation(int new_anim, const std::string& vehicle_name = "") const;
+    void changeCalibrationMode(bool calib_mode, const std::string& vehicle_name = "") const;
+
     CameraInfo simGetCameraInfo(const std::string& camera_name, const std::string& vehicle_name = "") const;
     void simSetCameraOrientation(const std::string& camera_name, const Quaternionr& orientation, const std::string& vehicle_name = "");
 

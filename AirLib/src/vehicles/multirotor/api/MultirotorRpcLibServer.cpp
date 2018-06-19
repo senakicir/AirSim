@@ -91,21 +91,6 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(ApiProvider* api_provider, string
         bind("rotateToYaw", [&](float yaw, float timeout_sec, float margin, const std::string& vehicle_name) -> bool {
         return getVehicleApi(vehicle_name)->rotateToYaw(yaw, timeout_sec, margin); 
     });
-
-    //sena was here
-    (static_cast<rpc::server*>(getServer()))->
-    bind("getBonePositions", [&]() -> MultirotorRpcLibAdapators::Vector3r_arr { return *(getDroneApi()->getBonePositions()); });
-
-    //sena was here
-    (static_cast<rpc::server*>(getServer()))->
-    bind("changeAnimation", [&](int new_anim) ->
-         bool { return getDroneApi()->changeAnimation(new_anim); });
-    
-    //sena was here
-    (static_cast<rpc::server*>(getServer()))->
-    bind("changeCalibrationMode", [&](bool calib_mode) ->
-         bool { return getDroneApi()->changeCalibrationMode(calib_mode); });
-    
     
     (static_cast<rpc::server*>(getServer()))->
         bind("rotateByYawRate", [&](float yaw_rate, float duration, const std::string& vehicle_name) -> bool {

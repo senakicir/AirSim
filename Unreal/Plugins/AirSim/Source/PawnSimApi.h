@@ -18,6 +18,11 @@
 #include "common/common_utils/UniqueValueMap.hpp"
 #include "PawnEvents.h"
 
+//sena was here
+#include "GameFramework/Character.h"
+#include "CharacterInterface.h"
+#include "DroneInterface.h"
+
 class PawnSimApi : public msr::airlib::VehicleSimApiBase {
 public: //types
     typedef msr::airlib::GeoPoint GeoPoint;
@@ -30,6 +35,7 @@ public: //types
     typedef msr::airlib::Utils Utils;
     typedef msr::airlib::AirSimSettings::VehicleSetting VehicleSetting;
     typedef msr::airlib::ImageCaptureBase ImageCaptureBase;
+    typedef msr::airlib::Vector3r_arr Vector3r_arr; //sena was here
 
 public: //implementation of VehicleSimApiBase
     virtual void reset() override;
@@ -43,6 +49,12 @@ public: //implementation of VehicleSimApiBase
     virtual msr::airlib::CameraInfo getCameraInfo(const std::string& camera_name) const override;
     virtual void setCameraOrientation(const std::string& camera_name, const Quaternionr& orientation) override;
     virtual CollisionInfo getCollisionInfo() const override;
+    //sena was here
+    virtual Vector3r_arr* getBonePositions() const override;
+    virtual void changeAnimation(int anim_num) const override;
+    virtual void changeCalibrationMode(bool calib_mode) const override;
+
+    
     virtual int getRemoteControlID() const override;
     virtual msr::airlib::RCData getRCData() const override;
     virtual std::string getVehicleName() const override
@@ -89,6 +101,16 @@ public: //Unreal specific methods
 
     void possess();
     void setRCForceFeedback(float rumble_strength, float auto_center);
+
+    Vector3r_arr bones; //sena was here
+    Vector3r_arr* bonesPosPtr;
+    AActor* human_; //sena was here
+
+    //sena was here
+    FVector getDroneWorldPosition() const;
+    FRotator getDroneWorldOrientation() const;
+    void updateBonePositions();
+    void setBonePos(Vector3r_arr bonePos_);
 
 private: //methods
     bool canTeleportWhileMove()  const;

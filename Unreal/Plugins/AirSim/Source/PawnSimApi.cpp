@@ -53,6 +53,18 @@ PawnSimApi::PawnSimApi(APawn* pawn, const NedTransform& global_transform, PawnEv
     //add listener for pawn's collision event
     pawn_events->getCollisionSignal().connect_member(this, &PawnSimApi::onCollision);
     pawn_events->getPawnTickSignal().connect_member(this, &PawnSimApi::pawnTick);
+
+    //sena was here
+    TArray<AActor*> foundActors;
+    UGameplayStatics::GetAllActorsOfClass(pawn_, ACharacter::StaticClass(), foundActors);
+    for (AActor* actor : foundActors) {
+        FString str = actor->GetName();        
+        human_ = actor;
+        std::string str2 = std::string(TCHAR_TO_UTF8(*str));
+        UAirBlueprintLib::LogMessageString("Actor name is:", str2, LogDebugLevel::Success);
+    }
+
+    bonesPosPtr = &bones; //sena was here
 }
 
 void PawnSimApi::pawnTick(float dt)
@@ -61,6 +73,7 @@ void PawnSimApi::pawnTick(float dt)
     update();
     updateRenderedState(dt);
     updateRendering(dt);
+    updateBonePositions(); //sena was here
 }
 
 void PawnSimApi::detectUsbRc()
@@ -177,7 +190,7 @@ std::vector<PawnSimApi::ImageCaptureBase::ImageResponse> PawnSimApi::getImages(
     std::vector<ImageCaptureBase::ImageResponse> responses;
 
     const ImageCaptureBase* camera = getImageCapture();
-    camera->getImages(requests, responses);
+    camera->getImages(requests, responses, bonesPosPtr); //sena was here
 
     return responses;
 }
@@ -391,6 +404,121 @@ void PawnSimApi::setCameraOrientation(const std::string& camera_name, const msr:
 PawnSimApi::Pose PawnSimApi::getPose() const
 {
     return toPose(getUUPosition(), getUUOrientation().Quaternion());
+}
+
+//sena was here
+FRotator PawnSimApi::getDroneWorldOrientation() const
+{
+    IDroneInterface* TheDroneInterface = Cast<IDroneInterface>(pawn_);
+    return TheDroneInterface -> Execute_getDroneOrientationUpdated(pawn_);
+}
+
+//sena was here
+void PawnSimApi::updateBonePositions()
+{
+    
+    FRotator droneOrient_f = this -> getDroneWorldOrientation();
+    float pi = 3.14159265358979323846;
+    Vector3r droneOrient(droneOrient_f.Roll*pi/180, droneOrient_f.Pitch*pi/180, droneOrient_f.Yaw*pi/180);
+    FVector dronePos_f = this -> getDroneWorldPosition();
+    Vector3r dronePos(dronePos_f.X, dronePos_f.Y, dronePos_f.Z);
+    
+    
+    Vector3r_arr bonePositions;
+    ICharacterInterface* TheInterface = Cast<ICharacterInterface>(human_);
+    
+    if (TheInterface){
+        FVector humanloc = TheInterface->Execute_getHumanPositionUpdated(human_);
+        Vector3r humanloc_3r(humanloc.X, humanloc.Y, humanloc.Z);
+        bonePositions.humanPos = humanloc_3r; //save human's position
+        
+        TArray<FVector> bones =TheInterface->Execute_getBonePositionsUpdated(human_);
+        for (int j=0; j<21; j++){
+            Vector3r boneloc_3r(bones[j].X, bones[j].Y, bones[j].Z);
+            if (j==0)
+                bonePositions.hip = boneloc_3r;
+            if (j==1)
+                bonePositions.right_up_leg = boneloc_3r;
+            if (j==2)
+                bonePositions.right_leg = boneloc_3r;
+            if (j==3)
+                bonePositions.right_foot = boneloc_3r;
+            if (j==4)
+                bonePositions.left_up_leg = boneloc_3r;
+            if (j==5)
+                bonePositions.left_leg = boneloc_3r;
+            if (j==6)
+                bonePositions.left_foot = boneloc_3r;
+            if (j==7)
+                bonePositions.spine1 = boneloc_3r;
+            if (j==8)
+                bonePositions.neck = boneloc_3r;
+            if (j==9)
+                bonePositions.head = boneloc_3r;
+            if (j==10)
+                bonePositions.head_top = boneloc_3r;
+            if (j==11)
+                bonePositions.left_arm = boneloc_3r;
+            if (j==12)
+                bonePositions.left_forearm = boneloc_3r;
+            if (j==13)
+                bonePositions.left_hand = boneloc_3r;
+            if (j==14)
+                bonePositions.right_arm = boneloc_3r;
+            if (j==15)
+                bonePositions.right_forearm = boneloc_3r;
+            if (j==16)
+                bonePositions.right_hand = boneloc_3r;
+            if (j==17)
+                bonePositions.right_hand_tip = boneloc_3r;
+            if (j==18)
+                bonePositions.left_hand_tip = boneloc_3r;
+            if (j==19)
+                bonePositions.right_foot_tip = boneloc_3r;
+            if (j==20)
+                bonePositions.left_foot_tip = boneloc_3r;
+        }
+        
+        bonePositions.dronePos = dronePos;
+        bonePositions.droneOrient = droneOrient;
+        setBonePos(bonePositions);
+    }
+}
+
+//sena was here
+Vector3r_arr* PawnSimApi::getBonePositions() const{
+    return bonesPosPtr;
+}
+
+//sena was here
+void PawnSimApi::changeAnimation(int anim_num) const{
+    UAirBlueprintLib::LogMessageString("Change animation now!", "", LogDebugLevel::Failure);
+    ICharacterInterface* TheInterface = Cast<ICharacterInterface>(human_);
+    if (TheInterface){
+        TheInterface->Execute_changeAnimation(human_, anim_num);
+    }
+}
+
+//sena was here
+void PawnSimApi::changeCalibrationMode(bool calib_mode) const{
+    UAirBlueprintLib::LogMessageString("Change calibration mode now!", "", LogDebugLevel::Failure);
+    ICharacterInterface* TheInterface = Cast<ICharacterInterface>(human_);
+    if (TheInterface){
+        TheInterface->Execute_changeCalibrationMode(human_, calib_mode);
+    }
+}
+
+//sena was here
+void PawnSimApi::setBonePos(Vector3r_arr bonePos_)
+{
+    bones = bonePos_;
+}
+
+//sena was here
+FVector PawnSimApi::getDroneWorldPosition() const
+{
+    IDroneInterface* TheDroneInterface = Cast<IDroneInterface>(pawn_);
+    return TheDroneInterface -> Execute_getDronePositionUpdated(pawn_);
 }
 
 PawnSimApi::Pose PawnSimApi::toPose(const FVector& u_position, const FQuat& u_quat) const
