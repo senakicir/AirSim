@@ -6,9 +6,8 @@
 #include "common/ClockFactory.hpp"
 
 
-
-UnrealImageCapture::UnrealImageCapture(const std::vector<APIPCamera*>& cameras)
-: cameras_(cameras)
+UnrealImageCapture::UnrealImageCapture(const common_utils::UniqueValueMap<std::string, APIPCamera*>* cameras)
+    : cameras_(cameras)
 {
     //TODO: explore screenshot option
     //addScreenCaptureHandler(camera->GetWorld());
@@ -18,10 +17,10 @@ UnrealImageCapture::~UnrealImageCapture()
 {}
 
 //sena was here
-void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests,
-                                   std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, Vector3r_arr* bonePosPtr)
+void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, 
+    std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses,  Vector3r_arr* bonePosPtr) const
 {
-    if (cameras_.size() == 0) {
+    if (cameras_->valsSize() == 0) {
         for (unsigned int i = 0; i < requests.size(); ++i) {
             responses.push_back(ImageResponse());
             responses[responses.size() - 1].message = "camera is not set";
@@ -32,18 +31,21 @@ void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBa
 }
 
 //sena was here
-void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method, Vector3r_arr* bonePosPtr)
+void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, 
+    std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method,  Vector3r_arr* bonePosPtr) const
 {
     std::vector<std::shared_ptr<RenderRequest::RenderParams>> render_params;
     std::vector<std::shared_ptr<RenderRequest::RenderResult>> render_results;
     
     for (unsigned int i = 0; i < requests.size(); ++i) {
-        APIPCamera* camera = cameras_[requests.at(i).camera_id];
+        APIPCamera* camera = cameras_->at(requests.at(i).camera_name);
         responses.push_back(ImageResponse());
         ImageResponse& response = responses.at(i);
-        
-        updateCameraVisibility(camera, requests[i]);
-        
+
+        //TODO: may be we should have these methods non-const?
+        const_cast<UnrealImageCapture*>(this)->
+            updateCameraVisibility(camera, requests[i]);
+
         UTextureRenderTarget2D* textureTarget = nullptr;
         USceneCaptureComponent2D* capture = camera->getCaptureComponent(requests[i].image_type, false);
         if (capture == nullptr) {
@@ -64,10 +66,11 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
     for (unsigned int i = 0; i < requests.size(); ++i) {
         const ImageRequest& request = requests.at(i);
         ImageResponse& response = responses.at(i);
-        APIPCamera* camera = cameras_[request.camera_id];
+        APIPCamera* camera = cameras_->at(request.camera_name);
+
         //sena was here
         response.bones = render_results[i]->bonePos_data;
-        response.camera_id = request.camera_id;
+        response.camera_name = request.camera_name;
         response.time_stamp = render_results[i]->time_stamp;
         response.image_data_uint8 = std::vector<uint8_t>(render_results[i]->image_data_uint8.GetData(), render_results[i]->image_data_uint8.GetData() + render_results[i]->image_data_uint8.Num());
         response.image_data_float = std::vector<float>(render_results[i]->image_data_float.GetData(), render_results[i]->image_data_float.GetData() + render_results[i]->image_data_float.Num());

@@ -2,10 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "Engine/TextureRenderTarget2D.h"
-
+#include "common/WorkerThread.hpp"
 #include <memory>
-#include "common/common_utils/WorkerThread.hpp"
-#include "common/CommonStructs.hpp"
+#include "common/Common.hpp"
 
 
 class RenderRequest : public FRenderCommand
@@ -42,8 +41,8 @@ private:
     static FReadSurfaceDataFlags setupRenderResource(const FTextureRenderTargetResource* rt_resource, const RenderParams* params, RenderResult* result, FIntPoint& size);
     bool use_safe_method_;
     Vector3r_arr* bonesPosPtr; //sena was here
-    std::shared_ptr<RenderParams> *params_;
-    std::shared_ptr<RenderResult> *results_;
+    std::shared_ptr<RenderParams>* params_;
+    std::shared_ptr<RenderResult>* results_;
     unsigned int req_size_;
     
     std::shared_ptr<msr::airlib::WorkerThreadSignal> wait_signal_;

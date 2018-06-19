@@ -14,7 +14,6 @@ wait_signal_(new msr::airlib::WorkerThreadSignal)
 
 RenderRequest::~RenderRequest()
 {
-    
 }
 
 void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::vector<std::shared_ptr<RenderResult>>& results, unsigned int req_size)
