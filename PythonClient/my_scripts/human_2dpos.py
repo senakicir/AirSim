@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import torch
 import torchvision
-import os
 from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
@@ -11,12 +10,9 @@ import torchvision.transforms as transforms
 from skimage import io, transform
 import torchvision.models as models
 import pandas as pd
-import numpy as np
 from resnet_VNECT_heat import resnet50 
 import IPython
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import scipy
+
 
 bones_h36m = [[0, 1], [1, 2], [2, 3],
              [0, 4], [4, 5], [5, 6],

@@ -1,10 +1,7 @@
 from SillyNet import *
-import helpers as my_helpers
+from helpers import *
 import torch
 import torch.optim as optim
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import pandas as pd
 from torch.nn import MSELoss
 from NonAirSimClient import prepareDataForResponse, DummyPhotoResponse
@@ -12,7 +9,7 @@ from State import DRONE_POS_IND, DRONE_ORIENTATION_IND
 from determine_positions import determine_2d_positions
 
 def load_data(batch_size=32, all_data = True):
-    for key, test_set_name in my_helpers.TEST_SETS.items():
+    for key, test_set_name in TEST_SETS.items():
         filename_bones = 'test_sets/'+test_set_name+'/groundtruth.txt'
         groundtruth_matrix = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')                
         DRONE_INITIAL_POS = groundtruth_matrix[0,0:3]
@@ -111,7 +108,7 @@ def tester():
 
         
         fig = plt.figure()
-        for i, bone in enumerate(my_helpers.bones_h36m):
+        for i, bone in enumerate(bones_h36m):
             plt.plot(bone_2d[0,bone], bone_2d[1,bone], c='b', marker='^')               
         plt.savefig('/cvlabdata2/home/kicirogl/PythonClient/my_scripts/temp_main/test2d_' + str(i) + '.png', bbox_inches='tight', pad_inches=0)
         plt.close()
@@ -132,9 +129,9 @@ def tester():
         ax.set_ylim(mid_y - max_range, mid_y + max_range)
         ax.set_zlim(mid_z - max_range, mid_z + max_range)
 
-        for i, bone in enumerate(my_helpers.bones_h36m):
+        for i, bone in enumerate(bones_h36m):
             ax.plot(bone_3d[0,bone], bone_3d[1,bone], -bone_3d[2,bone], c='r', marker='^')
-        for i, bone in enumerate(my_helpers.bones_h36m):
+        for i, bone in enumerate(bones_h36m):
             ax.plot(bone_3d_gt[0,bone], bone_3d_gt[1,bone], -bone_3d_gt[2,bone], c='b', marker='^')
         plt.savefig('/cvlabdata2/home/kicirogl/PythonClient/my_scripts/temp_main/test3d_' + str(i) + '.png', bbox_inches='tight', pad_inches=0)
         plt.close()

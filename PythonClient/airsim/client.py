@@ -15,9 +15,33 @@ class VehicleClient:
         if (ip == ""):
             ip = "127.0.0.1"
         self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
-        
+
+        #sena was here
+        self.program_started = False #sena was here
+        self.DRONE_INITIAL_POS = np.array([0, 0, 0])
+        self.WINDOW_SIZE = 6
+        self.unreal_positions = np.zeros([4,3])
+        self.bone_positions = np.zeros([17,3])
+        self.drone_pos = Vector3r()
+        self.drone_orient = np.array([0, 0, 0])
+        self.error_2d = []
+        self.error_3d = []
+        self.requiredEstimationData = []
+        self.poseList_3d = []
+        self.isCalibratingEnergy = False
+        self.linecount = 0
+        self.boneLengths = torch.zeros([20,1])
+        self.lr = 0
+        self.mu = 0
+        self.iter_3d = 0
+        self.weights = {}
     # -----------------------------------  Common vehicle APIs ---------------------------------------------
     def reset(self):
+         #sena was here
+        self.DRONE_INITIAL_POS = np.array([0, 0, 0])
+        self.program_started = False
+        self.linecount = 0
+        
         self.client.call('reset')
 
     def ping(self):
@@ -131,6 +155,59 @@ class VehicleClient:
     def waitOnLastTask(timeout_sec = float('nan')):
         return self.client.call('waitOnLastTask', timeout_sec)
 
+    #sena was here
+    def getBonePositions(self):
+        return Vector3r_arr.from_msgpack(self.client.call('getBonePositions'))
+    #sena was here
+    def initInitialDronePos(self):
+        return self.initInitialDronePos2(self.getBonePositions())
+    #sena was here
+    def changeAnimation(self, newAnimNum):
+        return self.client.call('changeAnimation', newAnimNum)
+
+    def changeCalibrationMode(self, calibMode):
+        return self.client.call('changeCalibrationMode', calibMode)
+    #sena was here
+    def initInitialDronePos2(self, bonePos):
+        if (self.program_started == False):
+            self.program_started = True
+            self.DRONE_INITIAL_POS = np.array([bonePos.dronePos[b'x_val'], bonePos.dronePos[b'y_val'], -bonePos.dronePos[b'z_val']])
+        return 0
+
+    #sena was here
+    def updateSynchronizedData(self, unreal_positions_, bone_positions_, drone_pos_, drone_orient_):
+        self.unreal_positions = np.copy(unreal_positions_)
+        self.bone_positions = np.copy(bone_positions_)
+        self.drone_pos = drone_pos_
+        self.drone_orient = np.copy(drone_orient_)
+    
+    #sena was here
+    def getSynchronizedData(self):
+        return self.unreal_positions, self.bone_positions, self.drone_pos, self.drone_orient
+    
+    #sena was here
+    def addNewFrame(self, pose_2d, R_drone, C_drone, pose3d_):
+        self.requiredEstimationData.insert(0, [pose_2d, R_drone, C_drone])
+        if (len(self.requiredEstimationData) > self.WINDOW_SIZE):
+            self.requiredEstimationData.pop()
+
+        self.poseList_3d.insert(0, pose3d_)
+        if (len(self.poseList_3d) > self.WINDOW_SIZE):
+            self.poseList_3d.pop()
+
+    def update3dPos(self, pose3d_, all = False):
+        if (all):
+            for ind in range(0,len(self.poseList_3d)):
+                self.poseList_3d[ind] = pose3d_
+        else:
+            self.poseList_3d[0] = pose3d_
+
+    #sena was here
+    def switch_energy(self, val):
+        self.isCalibratingEnergy = val
+        self.client.changeCalibrationMode(val)
+
+
     # legacy handling
     # TODO: remove below legacy wrappers in future major releases
     upgrade_api_help = "\nPlease see https://github.com/Microsoft/AirSim/blob/master/docs/upgrade_apis.md for more info."
@@ -193,6 +270,8 @@ class VehicleClient:
         raise Exception("rotateByYawRate API is deprecated. Please use rotateByYawRateAsync() API." + self.upgrade_api_help)
     def setRCData(self, rcdata = RCData()):
         raise Exception("setRCData API is deprecated. Please use moveByRC() API." + self.upgrade_api_help)
+
+    
 
 # -----------------------------------  Multirotor APIs ---------------------------------------------
 class MultirotorClient(VehicleClient, object):

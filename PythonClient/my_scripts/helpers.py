@@ -1,14 +1,16 @@
-from PythonClient import *
-from AirSimClient import *
-from math import cos, sin, pi, radians, degrees
-import os, shutil, skimage.io
-import time
+import setup_path 
+import airsim
+
+import shutil, skimage.io
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import time, os
+from math import degrees, radians
 
 energy_mode = {1:True, 0:False}
 LOSSES = ["proj", "smooth", "bone", "smoothpose", "silly"]
+attributes = ['dronePos', 'droneOrient', 'humanPos', 'hip', 'right_up_leg', 'right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1', 'neck', 'head', 'head_top','left_arm', 'left_forearm', 'left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip' ,'right_foot_tip' ,'left_foot_tip']
 TEST_SETS = {0: "test_set_1", 1: "test_set_2", 2: "test_set_3", 3: "test_set_4"}
 
 def range_angle(angle, limit=360, is_radians = True):
@@ -210,3 +212,9 @@ def plot_optimization_losses(pltpts, location, ind, calibration_mode=False):
         plot_3d_pos_loc = location + '/loss_flight_' + str(ind) + '.png'
         plt.savefig(plot_3d_pos_loc, bbox_inches='tight', pad_inches=0)
         plt.close()
+
+def vector3r_arr_to_dict(input):
+    output = dict()
+    for attribute in attributes:
+        output[attribute] = getattr(input, attribute)
+    return output

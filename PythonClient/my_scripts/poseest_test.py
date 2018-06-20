@@ -1,4 +1,4 @@
-import helpers as my_helpers
+from helpers import *
 from State import *
 from NonAirSimClient import *
 from pose3d_optimizer import *
@@ -72,12 +72,12 @@ def pose_test(parameters, energy_parameters):
     #plot "before" pictures
     for frame_ind in range(0, client.WINDOW_SIZE):
         error_3d = np.mean(np.linalg.norm(bone_pos_3d_GT_list[frame_ind] - client.poseList_3d[client.WINDOW_SIZE-frame_ind-1].data.numpy(), axis=0))
-        my_helpers.plot_drone_and_human(bone_pos_3d_GT_list[frame_ind],  client.poseList_3d[client.WINDOW_SIZE-frame_ind-1].data.numpy(), plot_loc, frame_ind, error_3d, "before_")
-        my_helpers.plot_drone_and_human(client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(),  client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(), plot_loc, frame_ind, error_3d, "silly_res_")
+        plot_drone_and_human(bone_pos_3d_GT_list[frame_ind],  client.poseList_3d[client.WINDOW_SIZE-frame_ind-1].data.numpy(), plot_loc, frame_ind, error_3d, "before_")
+        plot_drone_and_human(client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(),  client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(), plot_loc, frame_ind, error_3d, "silly_res_")
 
 
     pltpts = {}
-    for loss_key in my_helpers.LOSSES:
+    for loss_key in LOSSES:
         pltpts[loss_key] = np.zeros([client.iter])
 
     #init all 3d poses
@@ -91,7 +91,7 @@ def pose_test(parameters, energy_parameters):
         def closure():
             outputs = {}
             output = {}
-            for loss_key in my_helpers.LOSSES:
+            for loss_key in LOSSES:
                 outputs[loss_key] = []
                 output[loss_key] = 0
                 
@@ -103,15 +103,15 @@ def pose_test(parameters, energy_parameters):
             for bone_2d_, R_drone_, C_drone_ in client.requiredEstimationData:
                 pose3d_silly = client.sillyPoseList[queue_index]
                 loss = objective.forward(bone_2d_, R_drone_, C_drone_, pose3d_silly, queue_index)
-                for loss_key in my_helpers.LOSSES:
+                for loss_key in LOSSES:
                     outputs[loss_key].append(loss[loss_key])
                 queue_index += 1
 
             #weighted average of all energy functions is taken here    
             overall_output = Variable(torch.FloatTensor([0]))
-            for loss_key in my_helpers.LOSSES:
+            for loss_key in LOSSES:
                 output[loss_key] = (sum(outputs[loss_key])/len(outputs[loss_key]))
-                overall_output += client.weights[loss_key]*output[loss_key]/len(my_helpers.LOSSES)
+                overall_output += client.weights[loss_key]*output[loss_key]/len(LOSSES)
                 pltpts[loss_key][i] = output[loss_key].data.numpy() 
                
             overall_output.backward(retain_graph = True)
@@ -120,12 +120,12 @@ def pose_test(parameters, energy_parameters):
 
     P_world = objective.pose3d.data.numpy()
 
-    my_helpers.plot_optimization_losses(pltpts, plot_loc, 0, False)
+    plot_optimization_losses(pltpts, plot_loc, 0, False)
 
     #plot "after" pictures
     for frame_ind in range(0, client.WINDOW_SIZE):
         error_3d = np.mean(np.linalg.norm(bone_pos_3d_GT_list[frame_ind] - P_world[frame_ind,:,:], axis=0))
-        my_helpers.plot_drone_and_human(bone_pos_3d_GT_list[frame_ind],  P_world[frame_ind,:,:], plot_loc, frame_ind, error_3d, "after_")
+        plot_drone_and_human(bone_pos_3d_GT_list[frame_ind],  P_world[frame_ind,:,:], plot_loc, frame_ind, error_3d, "after_")
 
 if __name__ == "__main__":
     #animations = [0,1,2,3]
@@ -133,18 +133,18 @@ if __name__ == "__main__":
 
     test_set = {}
     for animation_num in animations:
-        test_set[animation_num] = my_helpers.TEST_SETS[animation_num]
+        test_set[animation_num] = TEST_SETS[animation_num]
 
-    file_names, folder_names, f_notes_name = my_helpers.reset_all_folders(animations)
+    file_names, folder_names, f_notes_name = reset_all_folders(animations)
     parameters = {"FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
     weights_ = {'proj': 0.08, 'smooth': 0.5, 'bone': 0.3, 'smoothpose': 0.01, 'silly': 0.1}
     weights = {}
     weights_sum = sum(weights_.values())
-    for loss_key in my_helpers.LOSSES:
+    for loss_key in LOSSES:
         weights[loss_key] = weights_[loss_key]/weights_sum
 
     energy_parameters = {"LR_MU": [4, 0.8], "ITER": 5000, "WEIGHTS": weights}
-    my_helpers.fill_notes(f_notes_name, parameters, energy_parameters)    #create this function
+    fill_notes(f_notes_name, parameters, energy_parameters)    #create this function
 
     for animation_num, test_set in test_set.items():
         start = time.time()

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import helpers as my_helpers
+from helpers import * 
 from project_bones import take_bone_projection_pytorch
 from torch.autograd import Variable
 
@@ -33,7 +33,7 @@ class pose3d_flight(torch.nn.Module):
     def forward(self, pose_2d, R_drone, C_drone, pose3d_silly, queue_index):
         #projection loss
         outputs = {}
-        for loss in my_helpers.LOSSES:
+        for loss in LOSSES:
             outputs[loss] = 0
         projected_2d, _ = take_bone_projection_pytorch(self.pose3d[queue_index, :, :], R_drone, C_drone)
         outputs["proj"] = mse_loss(projected_2d, pose_2d)
@@ -50,7 +50,7 @@ class pose3d_flight(torch.nn.Module):
 
         #bone length consistency 
         bonelosses = Variable(torch.zeros([NUM_OF_JOINTS-1,1]), requires_grad = False)
-        for i, bone in enumerate(my_helpers.bones_h36m):
+        for i, bone in enumerate(bones_h36m):
             length_of_bone = (torch.sum(torch.pow(self.pose3d[queue_index, :, bone[0]] - self.pose3d[queue_index, :, bone[1]], 2)))
             bonelosses[i] = torch.pow((self.bone_lengths[i] - length_of_bone),2)
         outputs["bone"] = torch.sum(bonelosses)/bonelosses.data.nelement()

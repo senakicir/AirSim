@@ -1,7 +1,7 @@
-from AirSimClient import Vector3r_arr, Vector3r
-import numpy as np 
+from helpers import *
 import pandas as pd
 import torch
+import numpy as np
 from State import HUMAN_POS_IND, DRONE_POS_IND, DRONE_ORIENTATION_IND, L_SHOULDER_IND, R_SHOULDER_IND
 
 class NonAirSimClient(object):
@@ -15,7 +15,7 @@ class NonAirSimClient(object):
         self.linecount = 0
         self.current_bone_pos = 0
         self.current_unreal_pos = 0
-        self.current_drone_pos = Vector3r()
+        self.current_drone_pos = airsim.Vector3r()
         self.current_drone_orient = 0
         self.num_of_data = 100#self.a_flight.shape[0]
         self.error_2d = []
@@ -36,7 +36,7 @@ class NonAirSimClient(object):
             self.end = True
 
     def getPosition(self):
-        position = Vector3r()
+        position = airsim.Vector3r()
         (position.x_val, position.y_val, position.z_val) = self.a_flight[self.linecount, 6:9]
         return position
 

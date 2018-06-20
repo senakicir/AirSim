@@ -1,9 +1,5 @@
 from projective_transform_plot import *
-from math import *
-import numpy as np
 import os
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 def EulerToRotationMatrix(roll, pitch, yaw):
     return np.array([[cos(yaw)*cos(pitch), cos(yaw)*sin(pitch)*sin(roll)-sin(yaw)*cos(roll), cos(yaw)*sin(pitch)*cos(roll)+sin(yaw)*sin(roll)],

@@ -1,4 +1,4 @@
-import helpers as my_helpers
+from helpers import * 
 from State import *
 from NonAirSimClient import *
 from pose3d_optimizer import *
@@ -14,14 +14,14 @@ def get_client_unreal_values(client, X):
     unreal_positions = np.zeros([5,3])
     if (USE_AIRSIM == True):
         DRONE_INITIAL_POS = client.DRONE_INITIAL_POS
-        keys = {b'humanPos': HUMAN_POS_IND, b'dronePos' : DRONE_POS_IND, b'droneOrient': DRONE_ORIENTATION_IND, b'left_arm': L_SHOULDER_IND, b'right_arm': R_SHOULDER_IND}
+        keys = {'humanPos': HUMAN_POS_IND, 'dronePos' : DRONE_POS_IND, 'droneOrient': DRONE_ORIENTATION_IND, 'left_arm': L_SHOULDER_IND, 'right_arm': R_SHOULDER_IND}
         for key, value in keys.items():
             element = X[key]
-            if (key != b'droneOrient'):
-                unreal_positions[value, :] = np.array([element[b'x_val'], element[b'y_val'], -element[b'z_val']])
+            if (key != 'droneOrient'):
+                unreal_positions[value, :] = np.array([element.x_val, element.y_val, -element.z_val])
                 unreal_positions[value, :]  = (unreal_positions[value, :] - DRONE_INITIAL_POS)/100
             else:
-                unreal_positions[value, :] = np.array([element[b'x_val'], element[b'y_val'], element[b'z_val']])
+                unreal_positions[value, :] = np.array([element.x_val, element.y_val, element.z_val])
 
     else:
         do_nothing()
@@ -31,31 +31,33 @@ def take_photo(client, image_folder_loc, saveImage = True):
     if (USE_AIRSIM == True):
         ##timedebug
         s1 = time.time()
-        response = client.simGetImages([ImageRequest(0, AirSimImageType.Scene)])
+        response = client.simGetImages([airsim.ImageRequest(0, airsim.ImageType.Scene)])
         response = response[0]
         X = response.bones  
+
         print("Get image from airsim takes" , time.time() - s1)
 
-        unreal_positions = get_client_unreal_values(client, X)
-    
-        gt_numbers = [ v for v in X.values() ]
+        gt_numbers = vector3r_arr_to_dict(X)
+        unreal_positions = get_client_unreal_values(client, gt_numbers)
         gt_str = ""
         bone_pos = np.zeros([3, len(gt_numbers)-3])
         DRONE_INITIAL_POS = client.DRONE_INITIAL_POS
-        for bone_i in range(0, len(gt_numbers)):
-            gt_str = gt_str + str(gt_numbers[bone_i][b'x_val']) + '\t' + str(gt_numbers[bone_i][b'y_val']) + '\t' +  str(gt_numbers[bone_i][b'z_val']) + '\t'
-            if (bone_i >= 3):
-                bone_pos[:, bone_i-3] = np.array([gt_numbers[bone_i][b'x_val'], gt_numbers[bone_i][b'y_val'], -gt_numbers[bone_i][b'z_val']]) - DRONE_INITIAL_POS
+        for bone_ind, bone_i in enumerate(attributes):
+            gt_str = gt_str + str(gt_numbers[bone_i].x_val) + '\t' + str(gt_numbers[bone_i].y_val) + '\t' +  str(gt_numbers[bone_i].z_val) + '\t'
+            if (bone_ind >= 3):
+                bone_pos[:, bone_ind-3] = np.array([gt_numbers[bone_i].x_val, gt_numbers[bone_i].y_val, -gt_numbers[bone_i].z_val]) - DRONE_INITIAL_POS
         bone_pos = bone_pos / 100
 
-        drone_orient = client.getPitchRollYaw()    
-        drone_pos = client.getPosition()
+        multirotor_state = client.getMultirotorState()
+        estimated_state =  multirotor_state.kinematics_estimated
+        drone_pos = estimated_state.position
+        drone_orient = airsim.to_eularian_angles(estimated_state.orientation)
 
         client.updateSynchronizedData(unreal_positions, bone_pos, drone_pos, drone_orient)
         
         if (saveImage == True):
             loc = image_folder_loc + '/img_' + str(client.linecount) + '.png'
-            AirSimClient.write_file(os.path.normpath(loc), response.image_data_uint8)
+            airsim.write_file(os.path.normpath(loc), response.image_data_uint8)
 
     else:
         response = client.simGetImages()
@@ -96,7 +98,7 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
 
     #connect to the AirSim simulator
     if (USE_AIRSIM == True):
-        client = MultirotorClient()
+        client = airsim.MultirotorClient()
         client.confirmConnection()
         client.enableApiControl(True)
         client.armDisarm(True)
@@ -104,8 +106,8 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
         client.initInitialDronePos()
         client.changeAnimation(ANIMATION_NUM)
         client.changeCalibrationMode(True)
-        client.takeoff()
-        client.moveToZ(-z_pos, 2, max_wait_seconds = 5, yaw_mode = YawMode(), lookahead = -1, adaptive_lookahead = 1)
+        client.takeoffAsync()
+        client.moveToZAsync(-z_pos, 2, timeout_sec = 5, yaw_mode = airsim.YawMode(), lookahead = -1, adaptive_lookahead = 1)
         time.sleep(5)
     else:
         filename_bones = 'test_sets/'+test_set_name+'/groundtruth.txt'
@@ -145,19 +147,19 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
     if (USE_TRACKBAR == True):
         # create trackbars for angle change
         cv2.namedWindow('Drone Control')
-        cv2.createTrackbar('Angle','Drone Control', 0, 360, my_helpers.do_nothing)
+        cv2.createTrackbar('Angle','Drone Control', 0, 360, do_nothing)
         #cv2.setTrackbarPos('Angle', 'Angle Control', int(degrees(some_angle-INITIAL_HUMAN_ORIENTATION)))
         cv2.setTrackbarPos('Angle', 'Drone Control', int(degrees(current_state.some_angle)))
 
-        cv2.createTrackbar('Radius','Drone Control', 3, 10, my_helpers.do_nothing)
+        cv2.createTrackbar('Radius','Drone Control', 3, 10, do_nothing)
         cv2.setTrackbarPos('Radius', 'Drone Control', int(current_state.radius))
 
-        cv2.createTrackbar('Z','Drone Control', 3, 20, my_helpers.do_nothing)
+        cv2.createTrackbar('Z','Drone Control', 3, 20, do_nothing)
         cv2.setTrackbarPos('Z', 'Drone Control', z_pos)
 
     if (USE_GROUNDTRUTH == 3 and USE_AIRSIM == True):
         cv2.namedWindow('Calibration for 3d pose')
-        cv2.createTrackbar('Calibration mode','Calibration for 3d pose', 0, 1, my_helpers.do_nothing)
+        cv2.createTrackbar('Calibration mode','Calibration for 3d pose', 0, 1, do_nothing)
         cv2.setTrackbarPos('Calibration mode','Calibration for 3d pose', 1)
 
     while (end_test == False):
@@ -220,7 +222,7 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
 
         #move drone!
         damping_speed = 1
-        client.moveToPosition(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, DrivetrainType.MaxDegreeOfFreedom, YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
+        client.moveToPositionAsync(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, airsim.DrivetrainType.MaxDegreeOfFreedom, airsim.YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
 
         end = time.time()
         elapsed_time = end - start
@@ -260,10 +262,10 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
     gt_hv_arr = np.asarray(gt_hv)
     est_hv_arr = np.asarray(est_hv)
     estimate_folder_name = foldernames_anim["estimates"]
-    my_helpers.plot_error(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, estimate_folder_name)
+    plot_error(gt_hp_arr, est_hp_arr, gt_hv_arr, est_hv_arr, errors, estimate_folder_name)
     if (USE_GROUNDTRUTH == 3):
-        my_helpers.plot_loss_2d(client, estimate_folder_name)
-    my_helpers.plot_loss_3d(client, estimate_folder_name)
+        plot_loss_2d(client, estimate_folder_name)
+    plot_loss_3d(client, estimate_folder_name)
 
     print('End it!')
     f_groundtruth.close()
@@ -277,29 +279,29 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
 if __name__ == "__main__":
     kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 5.17947467923e-10, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 1.38949549437e-08}
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
-    use_airsim = False
-    use_groundtruth = 3
+    use_airsim = True
+    use_groundtruth = 0
     use_trackbar = False
 
     #animations = [0,1,2,3]
     animations = [1]
     test_set = {}
     for animation_num in animations:
-        test_set[animation_num] = my_helpers.TEST_SETS[animation_num]
+        test_set[animation_num] = TEST_SETS[animation_num]
 
-    file_names, folder_names, f_notes_name = my_helpers.reset_all_folders(animations)
+    file_names, folder_names, f_notes_name = reset_all_folders(animations)
 
     parameters = {"USE_TRACKBAR": use_trackbar, "USE_GROUNDTRUTH": use_groundtruth, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
     
-    weights_ = {'proj': 0.09900990099009901, 'smooth': 0.49504950495049505, 'bone': 0.39603960396039606, 'smoothpose': 0.009900990099009901}
+    weights_ = {'proj': 0.09900990099009901, 'smooth': 0.49504950495049505, 'bone': 0.39603960396039606, 'smoothpose': 0.009900990099009901, 'silly': 0.1}
     weights = {}
     weights_sum = sum(weights_.values())
-    for loss_key in my_helpers.LOSSES:
+    for loss_key in LOSSES:
         weights[loss_key] = weights_[loss_key]/weights_sum
 
     energy_parameters = {"LR_MU": [4, 0.8], "ITER": 6000, "WEIGHTS": weights}
 
-    my_helpers.fill_notes(f_notes_name, parameters, energy_parameters)   
+    fill_notes(f_notes_name, parameters, energy_parameters)   
 
     if (use_airsim):
         for animation_num in animations:

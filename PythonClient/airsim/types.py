@@ -47,6 +47,32 @@ class Vector3r(MsgpackMixin):
         self.y_val = y_val
         self.z_val = z_val
 
+#sena was here
+class Vector3r_arr(MsgpackMixin):
+    dronePos = Vector3r()
+    droneOrient = Vector3r()
+    humanPos = Vector3r()
+    hip = Vector3r()
+    right_up_leg = Vector3r()
+    right_leg = Vector3r()
+    right_foot = Vector3r()
+    left_up_leg = Vector3r()
+    left_leg = Vector3r()
+    left_foot = Vector3r()
+    spine1 = Vector3r()
+    neck = Vector3r()
+    head = Vector3r()
+    head_top = Vector3r()
+    left_arm = Vector3r()
+    left_forearm = Vector3r()
+    left_hand = Vector3r()
+    right_arm = Vector3r()
+    right_forearm = Vector3r()
+    right_hand = Vector3r()
+    right_hand_tip = Vector3r()
+    left_hand_tip = Vector3r()
+    right_foot_tip = Vector3r()
+    left_foot_tip = Vector3r()
 
 class Quaternionr(MsgpackMixin):
     w_val = np.float32(0)
@@ -135,6 +161,7 @@ class ImageResponse(MsgpackMixin):
     image_data_float = np.float32(0)
     camera_position = Vector3r()
     camera_orientation = Quaternionr()
+    bones = Vector3r_arr() #sena was here
     time_stamp = np.uint64(0)
     message = ''
     pixels_as_float = np.float32(0)
