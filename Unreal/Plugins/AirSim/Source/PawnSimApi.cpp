@@ -415,6 +415,15 @@ FRotator PawnSimApi::getDroneWorldOrientation() const
 }
 
 //sena was here
+void PawnSimApi::pauseHuman(bool is_paused) const
+{
+    ICharacterInterface* TheInterface = Cast<ICharacterInterface>(human_);
+    if (TheInterface){
+        TheInterface->Execute_pauseAnimation(human_, is_paused);
+    }
+}
+
+//sena was here
 void PawnSimApi::updateBonePositions()
 {
     

@@ -61,7 +61,8 @@ RpcLibServerBase::RpcLibServerBase(ApiProvider* api_provider, const std::string&
     });
     
        
-    pimpl_->server.bind("simPause", [&](bool is_paused) -> void { 
+    pimpl_->server.bind("simPause", [&](bool is_paused) -> void {
+        getVehicleSimApi("")->pauseHuman(is_paused); //sena was here
         getWorldSimApi()->pause(is_paused); 
     });
     pimpl_->server.bind("simIsPaused", [&]() -> bool { 

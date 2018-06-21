@@ -65,6 +65,7 @@ public:
     virtual Vector3r_arr* getBonePositions() const = 0;
     virtual void changeAnimation(int new_anim) const = 0;
     virtual void changeCalibrationMode(bool calib_mode) const = 0;
+    virtual void pauseHuman(bool is_paused) const = 0;
     
     virtual int getRemoteControlID() const = 0; //which RC to use, 0 is first one, -1 means disable RC (use keyborad)
     virtual RCData getRCData() const = 0; //get reading from RC from simulator's host OS

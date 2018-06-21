@@ -31,7 +31,9 @@ def take_photo(client, image_folder_loc, saveImage = True):
     if (USE_AIRSIM == True):
         ##timedebug
         s1 = time.time()
+        client.simPause(True)
         response = client.simGetImages([airsim.ImageRequest(0, airsim.ImageType.Scene)])
+        client.simPause(False)
         response = response[0]
         X = response.bones  
 
@@ -51,7 +53,9 @@ def take_photo(client, image_folder_loc, saveImage = True):
         multirotor_state = client.getMultirotorState()
         estimated_state =  multirotor_state.kinematics_estimated
         drone_pos = estimated_state.position
-        drone_orient = airsim.to_eularian_angles(estimated_state.orientation)
+        #drone_orient = airsim.to_eularian_angles(estimated_state.orientation)
+        #CHANGE THIS
+        drone_orient = unreal_positions[DRONE_ORIENTATION_IND]
 
         client.updateSynchronizedData(unreal_positions, bone_pos, drone_pos, drone_orient)
         
@@ -106,7 +110,7 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
         client.initInitialDronePos()
         client.changeAnimation(ANIMATION_NUM)
         client.changeCalibrationMode(True)
-        client.takeoffAsync()
+        client.takeoffAsync(timeout_sec = 20)
         client.moveToZAsync(-z_pos, 2, timeout_sec = 5, yaw_mode = airsim.YawMode(), lookahead = -1, adaptive_lookahead = 1)
         time.sleep(5)
     else:
@@ -222,16 +226,11 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
 
         #move drone!
         damping_speed = 1
-        client.moveToPositionAsync(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, 0, airsim.DrivetrainType.MaxDegreeOfFreedom, airsim.YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
-
+        client.moveToPositionAsync(new_pos[0], new_pos[1], new_pos[2], drone_speed*damping_speed, DELTA_T, airsim.DrivetrainType.MaxDegreeOfFreedom, airsim.YawMode(is_rate=False, yaw_or_rate=desired_yaw_deg), lookahead=-1, adaptive_lookahead=0)
         end = time.time()
         elapsed_time = end - start
         print("elapsed time: ", elapsed_time)
-        if (USE_AIRSIM == True):
-            if DELTA_T - elapsed_time > 0:
-                time.sleep(DELTA_T - elapsed_time)
-            end = time.time()
-            elapsed_time = end - start
+        time.sleep(DELTA_T)
 
         #SAVE ALL VALUES OF THIS SIMULATION       
         f_output_str = str(client.linecount)+f_output_str + '\n'

@@ -53,7 +53,7 @@ public: //implementation of VehicleSimApiBase
     virtual Vector3r_arr* getBonePositions() const override;
     virtual void changeAnimation(int anim_num) const override;
     virtual void changeCalibrationMode(bool calib_mode) const override;
-
+    virtual void pauseHuman(bool is_paused) const override;
     
     virtual int getRemoteControlID() const override;
     virtual msr::airlib::RCData getRCData() const override;

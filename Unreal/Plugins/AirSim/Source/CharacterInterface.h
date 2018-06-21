@@ -31,5 +31,8 @@ public:
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
     void changeCalibrationMode(bool calibMode);
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
+    void pauseAnimation(bool pause);
 };
 
