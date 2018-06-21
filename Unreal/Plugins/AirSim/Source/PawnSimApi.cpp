@@ -73,7 +73,6 @@ void PawnSimApi::pawnTick(float dt)
     update();
     updateRenderedState(dt);
     updateRendering(dt);
-    updateBonePositions(); //sena was here
 }
 
 void PawnSimApi::detectUsbRc()
@@ -302,6 +301,8 @@ void PawnSimApi::update()
     environment_->setPosition(kinematics_.pose.position);
     environment_->update();
     //kinematics_->update();
+
+    updateBonePositions(); //sena was here
 
     VehicleSimApiBase::update();
 }

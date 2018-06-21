@@ -7,6 +7,7 @@
 AFlyingPawn::AFlyingPawn()
 {
     pawn_events_.getActuatorSignal().connect_member(this, &AFlyingPawn::setRotorSpeed);
+    PrimaryActorTick.bCanEverTick = true; //sena was here
 }
 
 void AFlyingPawn::BeginPlay()
