@@ -17,10 +17,11 @@ for i in range(0,45):
     img1 = scipy.ndimage.interpolation.zoom(img1, [3,3,1])
 
     pad_amount = int((img2.shape[0]-img1.shape[0])/2)
-    img1 = np.array(img1[:,:,0:3])
-    img1 = np.vstack([np.zeros([pad_amount, img1.shape[1], 3], dtype=np.uint8),img1])
+    img1_orig = np.array(img1[:,:,0:3])
+    img1 = np.vstack([np.zeros([pad_amount, img1_orig.shape[1], 3], dtype=np.uint8),img1_orig])
     img1 = np.vstack([img1, np.zeros([pad_amount, img1.shape[1], 3], dtype=np.uint8)])
 
     output = np.hstack([img1, img2[:,:,0:3]])
     print(i)
     io.imsave('res2/img' + str(i)+ '.png', output)
+    io.imsave('res2/origimg' + str(i)+ '.png', img1_orig)

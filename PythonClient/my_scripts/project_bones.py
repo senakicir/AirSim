@@ -15,9 +15,8 @@ CAMERA_OFFSET_Z = 0
 CAMERA_ROLL_OFFSET = 0
 CAMERA_PITCH_OFFSET = -pi/4
 CAMERA_YAW_OFFSET = 0
-num_of_bones = 21
-ones_tensor = Variable(torch.ones([1, num_of_bones]), requires_grad=False)*1.0
-neat_tensor = Variable(torch.FloatTensor([[0, 0, 0, 1]]), requires_grad=False)
+
+neat_tensor = Variable(torch.FloatTensor([[0, 0, 0, 1]]), requires_grad=False) #this tensor is neat!
 DEFAULT_TORSO_SIZE = 0.436*0.70710678118
 
 def euler_to_rotation_matrix(roll, pitch, yaw, returnTensor=False):
@@ -49,7 +48,6 @@ def update_torso_size(new_size):
     do_nothing
 
 def take_bone_projection(P_world, R_drone, C_drone):
-
     P_drone = np.linalg.inv(np.vstack([np.hstack([R_drone, C_drone]), np.array([[0,0,0,1]])]))@np.vstack([P_world,  np.ones([1, P_world.shape[1]]) ] )
     P_camera =  np.linalg.inv(np.vstack([np.hstack([R_cam, C_cam]), np.array([[0,0,0,1]])]))@P_drone
     P_camera = P_camera[0:3,:]
@@ -63,19 +61,15 @@ def take_bone_projection(P_world, R_drone, C_drone):
     x[1,:] = x[1,:]/z
     x = x[0:2, :]
 
-    inFrame = True
-    #if np.any(x[0,:] < 0):
-    #    inFrame = False
-    #if np.any(x[0,:] > SIZE_X):
-    #    inFrame = False
-    #if np.any(x[1,:] < 0):
-    #    inFrame = False
-    #if np.any(x[1,:] > SIZE_Y):
-    #    inFrame = False
+    heatmaps = 0
 
-    return x, z, inFrame
+    return x, heatmaps
 
-def take_bone_projection_pytorch(P_world, R_drone, C_drone):    
+def take_bone_projection_pytorch(P_world, R_drone, C_drone):
+    num_of_joints = P_world.data.shape[1]
+
+    ones_tensor = Variable(torch.ones([1, num_of_joints]), requires_grad=False)*1.0
+
     P_drone = torch.mm(torch.inverse(torch.cat((torch.cat((R_drone, C_drone), 1), neat_tensor), 0) ), torch.cat((P_world, ones_tensor), 0) )
     P_camera = torch.mm(torch.inverse(torch.cat((torch.cat((R_cam_torch, C_cam_torch), 1), neat_tensor), 0) ), P_drone)
     P_camera = P_camera[0:3,:]
@@ -85,11 +79,13 @@ def take_bone_projection_pytorch(P_world, R_drone, C_drone):
     
     z = x[2,:]
 
-    result = Variable(torch.zeros([2,num_of_bones]), requires_grad = False)
+    result = Variable(torch.zeros([2, num_of_joints]), requires_grad = False)
     result[0,:] = x[0,:]/z
     result[1,:] = x[1,:]/z
     
-    return result, z
+    heatmaps = 0
+
+    return result, heatmaps
 
 def take_bone_backprojection(bone_pred, R_drone, C_drone):
     TORSO_SIZE_ = DEFAULT_TORSO_SIZE
@@ -112,12 +108,14 @@ def take_bone_backprojection(bone_pred, R_drone, C_drone):
     return P_world
 
 def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone):
+    num_of_joints = bone_pred.data.shape[1]
     TORSO_SIZE_ = DEFAULT_TORSO_SIZE
 
+    ones_tensor = Variable(torch.ones([1, num_of_joints]), requires_grad=False)*1.0
     img_torso_size = torch.norm(bone_pred[:, 0] - bone_pred[:, 8])
     z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
 
-    bone_pos_3d = Variable(torch.zeros([3, 21]))
+    bone_pos_3d = Variable(torch.zeros([3, num_of_joints]))
     bone_pos_3d[0,:] = bone_pred[0,:]*z_val
     bone_pos_3d[1,:] = bone_pred[1,:]*z_val
     bone_pos_3d[2,:] = ones_tensor*z_val

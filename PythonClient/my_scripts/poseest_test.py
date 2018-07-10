@@ -20,15 +20,17 @@ def pose_test(parameters, energy_parameters):
     filename_others = 'test_sets/'+test_set_name+'/a_flight.txt'
 
     client = NonAirSimClient(filename_bones, filename_others)
-    net = SillyNet().cuda()
-    net.train(False)
-    net.load_state_dict(torch.load('SillyNetWeights.pth'))
+    #net = SillyNet().cuda()
+    #net.train(False)
+    #net.load_state_dict(torch.load('SillyNetWeights.pth'))
 
     #init energy parameters
     client.lr = energy_parameters["LR_MU"][0]
     client.mu = energy_parameters["LR_MU"][1]
     client.iter = energy_parameters["ITER"]
     client.weights = energy_parameters["WEIGHTS"]
+    client.model = parameters["MODEL"]
+    #THESE ARE WRONG
     client.boneLengths = torch.FloatTensor([[ 0.0187],[ 0.4912],[ 0.3634],[ 0.0360],[ 0.0175],[ 0.4542],[ 0.3922],[ 0.0338],[ 0.3812],[ 0.0000],[ 0.1317],[ 0.0000],[ 0.1017],[ 0.0620],[ 0.1946],[ 0.0015],[ 0.1054],[ 0.0521],[ 0.1134],[ 0.0014]])
 
     #choose WINDOW_SIZE number of frames starting from 20
@@ -37,20 +39,21 @@ def pose_test(parameters, energy_parameters):
     #save the R_drone, C_drone, projected joints and 3d positions together for each frame
     for ind, unreal_positions in enumerate(unreal_positions_list):
         bone_pos_3d_GT = bone_pos_3d_GT_list[ind]
-        bone_2d, _ = determine_2d_positions(3, unreal_positions, bone_pos_3d_GT)
+        bone_2d, _ = determine_2d_positions(0, True, unreal_positions, bone_pos_3d_GT)
 
         R_drone = Variable(euler_to_rotation_matrix(unreal_positions[DRONE_ORIENTATION_IND, 0], unreal_positions[DRONE_ORIENTATION_IND, 1], unreal_positions[DRONE_ORIENTATION_IND, 2], returnTensor=True), requires_grad = False)
         C_drone = Variable(torch.FloatTensor([[unreal_positions[DRONE_POS_IND, 0]],[unreal_positions[DRONE_POS_IND, 1]],[unreal_positions[DRONE_POS_IND, 2]]]), requires_grad = False)
 
-        bone_2d = (bone_2d - torch.mean(bone_2d, dim=1).unsqueeze(1))/torch.std(bone_2d, dim=1).unsqueeze(1)
-        hip_2d = bone_2d[:, 0].unsqueeze(1)
-        bone_2d = bone_2d - hip_2d
+        #bone_2d = (bone_2d - torch.mean(bone_2d, dim=1).unsqueeze(1))/torch.std(bone_2d, dim=1).unsqueeze(1)
+        #hip_2d = bone_2d[:, 0].unsqueeze(1)
+        #bone_2d = bone_2d - hip_2d
 
-        silly_output_temp = net(bone_2d.view(-1, 2*21).cuda())
-        silly_output_temp = silly_output_temp.view(1, 3,21)
-        silly_output_temp = (silly_output_temp - torch.mean(silly_output_temp, dim=2).unsqueeze(2))/torch.std(silly_output_temp, dim=2).unsqueeze(2)
-        hip_new = silly_output_temp[:, :, 0].unsqueeze(2)
-        pose3d_silly = silly_output_temp - hip_new
+        #silly_output_temp = net(bone_2d.view(-1, 2*21).cuda())
+        #silly_output_temp = silly_output_temp.view(1, 3,21)
+        #silly_output_temp = (silly_output_temp - torch.mean(silly_output_temp, dim=2).unsqueeze(2))/torch.std(silly_output_temp, dim=2).unsqueeze(2)
+        #hip_new = silly_output_temp[:, :, 0].unsqueeze(2)
+        #pose3d_silly = silly_output_temp - hip_new
+        pose3d_silly = 0
 
         #for any frame that is not the last one, save gt 3d position + some noise
         #the last frame is initialized with backprojection
@@ -66,14 +69,14 @@ def pose_test(parameters, energy_parameters):
 
         client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_, pose3d_silly)
 
-    objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE)
+    objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE, client.model)
     optimizer = torch.optim.SGD(objective.parameters(), lr = client.lr, momentum=client.mu)
     
     #plot "before" pictures
     for frame_ind in range(0, client.WINDOW_SIZE):
         error_3d = np.mean(np.linalg.norm(bone_pos_3d_GT_list[frame_ind] - client.poseList_3d[client.WINDOW_SIZE-frame_ind-1].data.numpy(), axis=0))
-        plot_drone_and_human(bone_pos_3d_GT_list[frame_ind],  client.poseList_3d[client.WINDOW_SIZE-frame_ind-1].data.numpy(), plot_loc, frame_ind, error_3d, "before_")
-        plot_drone_and_human(client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(),  client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(), plot_loc, frame_ind, error_3d, "silly_res_")
+        plot_drone_and_human(bone_pos_3d_GT_list[frame_ind],  client.poseList_3d[client.WINDOW_SIZE-frame_ind-1].data.numpy(), plot_loc, frame_ind, error_3d, custom_name="before_")
+        #plot_drone_and_human(client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(),  client.sillyPoseList[frame_ind].data.squeeze().cpu().numpy(), plot_loc, frame_ind, error_3d, custom_name="silly_res_")
 
 
     pltpts = {}
@@ -101,7 +104,8 @@ def pose_test(parameters, energy_parameters):
             #find losses for all energy functions here
             queue_index = 0
             for bone_2d_, R_drone_, C_drone_ in client.requiredEstimationData:
-                pose3d_silly = client.sillyPoseList[queue_index]
+                #pose3d_silly = client.sillyPoseList[queue_index]
+                pose3d_silly = 0
                 loss = objective.forward(bone_2d_, R_drone_, C_drone_, pose3d_silly, queue_index)
                 for loss_key in LOSSES:
                     outputs[loss_key].append(loss[loss_key])
@@ -129,15 +133,15 @@ def pose_test(parameters, energy_parameters):
 
 if __name__ == "__main__":
     #animations = [0,1,2,3]
-    animations = [1]
+    animations = [2]
 
     test_set = {}
     for animation_num in animations:
         test_set[animation_num] = TEST_SETS[animation_num]
 
     file_names, folder_names, f_notes_name = reset_all_folders(animations)
-    parameters = {"FILE_NAMES": file_names, "FOLDER_NAMES": folder_names}
-    weights_ = {'proj': 0.08, 'smooth': 0.5, 'bone': 0.3, 'smoothpose': 0.01, 'silly': 0.1}
+    parameters = {"FILE_NAMES": file_names, "FOLDER_NAMES": folder_names, "MODEL": "mpi"}
+    weights_ = {'proj': 0.08, 'smooth': 0.5, 'bone': 0.3, 'smoothpose': 0.01}#, 'silly': 0.1}
     weights = {}
     weights_sum = sum(weights_.values())
     for loss_key in LOSSES:

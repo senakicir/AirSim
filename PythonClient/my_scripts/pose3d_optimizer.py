@@ -4,15 +4,19 @@ from helpers import *
 from project_bones import take_bone_projection_pytorch
 from torch.autograd import Variable
 
-
-NUM_OF_JOINTS = 21
 def mse_loss(input, target):
     return torch.sum(torch.pow((input - target),2)) / input.data.nelement()
 
 class pose3d_calibration(torch.nn.Module):
-    def __init__(self):
+
+    def __init__(self, model):
         super(pose3d_calibration, self).__init__()
-        self.pose3d = torch.nn.Parameter(torch.zeros([3, NUM_OF_JOINTS]), requires_grad=True)
+        if (model == "mpi"):
+            self.NUM_OF_JOINTS = 15
+        else:
+            self.NUM_OF_JOINTS = 21
+            
+        self.pose3d = torch.nn.Parameter(torch.zeros([3, self.NUM_OF_JOINTS]), requires_grad=True)
 
     def forward(self, pose_2d, R_drone, C_drone):
         projected_2d, _ = take_bone_projection_pytorch(self.pose3d, R_drone, C_drone)
@@ -24,13 +28,21 @@ class pose3d_calibration(torch.nn.Module):
 
 
 class pose3d_flight(torch.nn.Module):
-    def __init__(self, bone_lengths_, window_size_):
+
+    def __init__(self, bone_lengths_, window_size_, model):
         super(pose3d_flight, self).__init__()
+        if (model == "mpi"):
+            self.bone_connections = bones_mpi
+            self.NUM_OF_JOINTS = 15
+        else:
+            self.bone_connections = bones_h36m
+            self.NUM_OF_JOINTS = 21
+
         self.window_size = window_size_
-        self.pose3d = torch.nn.Parameter(torch.zeros([self.window_size, 3, NUM_OF_JOINTS]), requires_grad=True)
+        self.pose3d = torch.nn.Parameter(torch.zeros([self.window_size, 3, self.NUM_OF_JOINTS]), requires_grad=True)
         self.bone_lengths = Variable(bone_lengths_, requires_grad = False)
 
-    def forward(self, pose_2d, R_drone, C_drone, pose3d_silly, queue_index):
+    def forward(self, pose_2d, R_drone, C_drone, pose3d_lift, queue_index):
         #projection loss
         outputs = {}
         for loss in LOSSES:
@@ -49,8 +61,8 @@ class pose3d_flight(torch.nn.Module):
             outputs["smooth"] = mse_loss(self.pose3d[queue_index-1, :, :], self.pose3d[queue_index, :, :])
 
         #bone length consistency 
-        bonelosses = Variable(torch.zeros([NUM_OF_JOINTS-1,1]), requires_grad = False)
-        for i, bone in enumerate(bones_h36m):
+        bonelosses = Variable(torch.zeros([self.NUM_OF_JOINTS-1,1]), requires_grad = False)
+        for i, bone in enumerate(self.bone_connections):
             length_of_bone = (torch.sum(torch.pow(self.pose3d[queue_index, :, bone[0]] - self.pose3d[queue_index, :, bone[1]], 2)))
             bonelosses[i] = torch.pow((self.bone_lengths[i] - length_of_bone),2)
         outputs["bone"] = torch.sum(bonelosses)/bonelosses.data.nelement()
@@ -69,12 +81,12 @@ class pose3d_flight(torch.nn.Module):
             outputs["smoothpose"] = mse_loss(temp_pose3d_t_m_1, temp_pose3d_t)
 
         #normalize pose
-        mean_3d = torch.mean(self.pose3d[queue_index, :, :].unsqueeze(0), dim=2).unsqueeze(2)
-        std_3d = torch.std(self.pose3d[queue_index, :, :].unsqueeze(0), dim=2).unsqueeze(2)
-        outputs_norm = (self.pose3d[queue_index, :, :].unsqueeze(0) - mean_3d)/std_3d
-        bone_3d_temp = torch.sub(outputs_norm, hip.unsqueeze(1))
+        #mean_3d = torch.mean(self.pose3d[queue_index, :, :].unsqueeze(0), dim=2).unsqueeze(2)
+        #std_3d = torch.std(self.pose3d[queue_index, :, :].unsqueeze(0), dim=2).unsqueeze(2)
+        #outputs_norm = (self.pose3d[queue_index, :, :].unsqueeze(0) - mean_3d)/std_3d
+        #bone_3d_temp = torch.sub(outputs_norm, hip.unsqueeze(1))
 
-        outputs["silly"]= mse_loss(pose3d_silly.cpu(), bone_3d_temp)
+        outputs["lift"]= mse_loss(pose3d_lift.cpu(), temp_pose3d_t)
 
         return outputs
     

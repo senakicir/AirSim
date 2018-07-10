@@ -8,7 +8,7 @@ class NonAirSimClient(object):
     def __init__(self, filename_bones, filename_others):
         groundtruth_matrix = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')                
         self.DRONE_INITIAL_POS = groundtruth_matrix[0,0:3]
-        self.WINDOW_SIZE = 10
+        self.WINDOW_SIZE = 12
         self.groundtruth = groundtruth_matrix[1:,:-1]
         a_flight_matrix = pd.read_csv(filename_others, sep='\t', header=None).ix
         self.a_flight = a_flight_matrix[:,1:].as_matrix().astype('float')
@@ -17,7 +17,8 @@ class NonAirSimClient(object):
         self.current_unreal_pos = 0
         self.current_drone_pos = airsim.Vector3r()
         self.current_drone_orient = 0
-        self.num_of_data = 100#self.a_flight.shape[0]
+        self.num_of_data = self.a_flight.shape[0]
+        print("ending line", self.num_of_data)
         self.error_2d = []
         self.error_3d = []
         self.requiredEstimationData = []
@@ -30,8 +31,9 @@ class NonAirSimClient(object):
         self.mu = 0
         self.iter_3d = 0
         self.weights = {}
+        self.model = ""
 
-    def moveToPosition(self, arg1, arg2, arg3, arg4, arg5, arg6, arg7, yaw_or_rate=0 ,lookahead=0, adaptive_lookahead=0):
+    def moveToPositionAsync(self, arg1, arg2, arg3, arg4, arg5, arg6, arg7, yaw_or_rate=0 ,lookahead=0, adaptive_lookahead=0):
         if (self.linecount == self.num_of_data-1):
             self.end = True
 
