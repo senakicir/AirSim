@@ -4,8 +4,8 @@ from torch.autograd import Variable
 from math import pi, cos, sin, degrees
 import numpy as np
 
-SIZE_X = 1280
-SIZE_Y = 720
+SIZE_X = 1024
+SIZE_Y = 576
 FOCAL_LENGTH = SIZE_X/2
 px = SIZE_X/2
 py = SIZE_Y/2
@@ -87,10 +87,10 @@ def take_bone_projection_pytorch(P_world, R_drone, C_drone):
 
     return result, heatmaps
 
-def take_bone_backprojection(bone_pred, R_drone, C_drone):
+def take_bone_backprojection(bone_pred, R_drone, C_drone, joint_names):
     TORSO_SIZE_ = DEFAULT_TORSO_SIZE
 
-    img_torso_size = np.linalg.norm(bone_pred[:, 0] - bone_pred[:, 8])
+    img_torso_size = np.linalg.norm(bone_pred[:, joint_names.index("neck")] - bone_pred[:, joint_names.index("hip")])
     z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
 
     bone_pos_3d = np.zeros([3, bone_pred.shape[1]])
@@ -107,12 +107,13 @@ def take_bone_backprojection(bone_pred, R_drone, C_drone):
     P_world = np.copy(P_world_)
     return P_world
 
-def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone):
+def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone, joint_names):
     num_of_joints = bone_pred.data.shape[1]
     TORSO_SIZE_ = DEFAULT_TORSO_SIZE
 
     ones_tensor = Variable(torch.ones([1, num_of_joints]), requires_grad=False)*1.0
-    img_torso_size = torch.norm(bone_pred[:, 0] - bone_pred[:, 8])
+    img_torso_size = torch.norm(bone_pred[:, joint_names.index("neck")] - bone_pred[:, joint_names.index("hip")])
+
     z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
 
     bone_pos_3d = Variable(torch.zeros([3, num_of_joints]))

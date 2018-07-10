@@ -18,7 +18,6 @@ class NonAirSimClient(object):
         self.current_drone_pos = airsim.Vector3r()
         self.current_drone_orient = 0
         self.num_of_data = self.a_flight.shape[0]
-        print("ending line", self.num_of_data)
         self.error_2d = []
         self.error_3d = []
         self.requiredEstimationData = []

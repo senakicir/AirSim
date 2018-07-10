@@ -69,8 +69,10 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
     if (client.model == "mpi"):
         bone_pos_3d_GT = rearrange_bones_to_mpi(bone_pos_3d_GT)
         bone_connections = bones_mpi
+        joint_names = joint_names_mpi
     else:
         bone_connections = bones_h36m
+        joint_names = joint_indices_h36m
 
     bone_2d, _ = determine_2d_positions(mode_2d, True, unreal_positions, bone_pos_3d_GT)
 
@@ -83,7 +85,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
     #if (client.linecount != 0):
     #    pose3d_ = client.poseList_3d[-1]
     #else:
-    pose3d_ = take_bone_backprojection_pytorch(bone_2d, R_drone, C_drone)
+    pose3d_ = take_bone_backprojection_pytorch(bone_2d, R_drone, C_drone, client.model)
     client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_)
 
     pltpts = np.zeros([1,1])
@@ -92,7 +94,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
         #calibration mode
         if (client.isCalibratingEnergy): 
             objective = pose3d_calibration(client.model)
-            optimizer = torch.optim.SGD(objective.parameters(), lr = 0.0005, momentum=0.9)
+            optimizer = torch.optim.SGD(objective.parameters(), lr = 0.0001, momentum=0.9)
 
             num_iterations = 500
             pltpts = np.zeros([num_iterations])
@@ -122,7 +124,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
             if client.linecount > 3:
                 for i, bone in enumerate(bone_connections):
                     client.boneLengths[i] = torch.sum(torch.pow(P_world[:, bone[0]] - P_world[:, bone[1]],2)).data 
-                update_torso_size(0.707*(torch.sqrt(client.boneLengths[8]) + torch.sqrt(client.boneLengths[9])))
+                update_torso_size(0.707*(torch.sqrt(client.boneLengths[joint_names.index("neck")]) + torch.sqrt(client.boneLengths[joint_names.index("hip")])))
                 print(client.boneLengths)
 
         #flight mode   
@@ -183,7 +185,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
     error_3d = np.mean(np.linalg.norm(bone_pos_3d_GT - P_world, axis=0))
     client.error_3d.append(error_3d)
     if (plot_loc != 0):
-        superimpose_on_image(check.data.numpy(), plot_loc, client.linecount, client.model, photo_loc)
+        superimpose_on_image(bone_2d.data.numpy(), plot_loc, client.linecount, client.model, photo_loc)
         plot_drone_and_human(bone_pos_3d_GT, P_world, plot_loc, client.linecount, client.model, error_3d)
         plot_optimization_losses(pltpts, plot_loc, client.linecount, client.isCalibratingEnergy)
 
@@ -206,7 +208,7 @@ def determine_3d_positions_backprojection(mode_2d, measurement_cov_, client, plo
     #R_drone = euler_to_rotation_matrix(angle[1], angle[0], angle[2])
     #C_drone = np.array([[drone_pos_vec.x_val],[drone_pos_vec.y_val],[drone_pos_vec.z_val]])
 
-    P_world = take_bone_backprojection(bone_2d, R_drone, C_drone)
+    P_world = take_bone_backprojection(bone_2d, R_drone, C_drone, client.model)
     error_3d = np.linalg.norm(bone_pos_3d_GT - P_world, )
     client.error_3d.append(error_3d)
 
@@ -223,13 +225,17 @@ def determine_3d_positions_backprojection(mode_2d, measurement_cov_, client, plo
     return positions, unreal_positions, cov, inFrame, f_output_str
 
 def determine_3d_positions_all_GT(mode_2d, client, plot_loc, photo_loc):
-    unreal_positions, _, drone_pos_vec, angle = client.getSynchronizedData()
+    unreal_positions, bone_pos_3d_GT, drone_pos_vec, angle = client.getSynchronizedData()
     scale_ = -1
 
     if (mode_2d == 1):
         bone_2d, heatmaps = find_2d_pose_openpose(photo_loc, scale = scale_)
-        superimpose_on_image(bone_2d, plot_loc, client.linecount, photo_loc, custom_name="openpose_", scale = scale_)
+        superimpose_on_image(bone_2d, plot_loc, client.linecount, client.model, photo_loc, custom_name="openpose_", scale = scale_)
         save_heatmaps(heatmaps, client.linecount, plot_loc)
+    elif (mode_2d == 0):
+        bone_2d, heatmaps = find_2d_pose_gt(unreal_positions, bone_pos_3d_GT, False )
+        superimpose_on_image(bone_2d, plot_loc, client.linecount, client.model, photo_loc, custom_name="gt_", scale = scale_)
+
 
     positions = form_positions_dict(angle, drone_pos_vec, unreal_positions[HUMAN_POS_IND,:])
     positions[HUMAN_POS_IND,2] = positions[HUMAN_POS_IND,2]

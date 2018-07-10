@@ -8,7 +8,7 @@ from determine_positions import *
 gt_hv = []
 est_hv = []
 USE_AIRSIM = False
-LENGTH_OF_SIMULATION = 50
+LENGTH_OF_SIMULATION = 100
 
 def get_client_unreal_values(client, X):
     unreal_positions = np.zeros([5,3])
