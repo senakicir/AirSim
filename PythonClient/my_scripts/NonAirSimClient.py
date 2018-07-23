@@ -8,7 +8,7 @@ class NonAirSimClient(object):
     def __init__(self, filename_bones, filename_others):
         groundtruth_matrix = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')                
         self.DRONE_INITIAL_POS = groundtruth_matrix[0,0:3]
-        self.WINDOW_SIZE = 12
+        self.WINDOW_SIZE = CALIBRATION_LENGHT
         self.groundtruth = groundtruth_matrix[1:,:-1]
         a_flight_matrix = pd.read_csv(filename_others, sep='\t', header=None).ix
         self.a_flight = a_flight_matrix[:,1:].as_matrix().astype('float')
@@ -25,7 +25,7 @@ class NonAirSimClient(object):
         self.sillyPoseList = []
         self.end = False
         self.isCalibratingEnergy = True
-        self.boneLengths = torch.zeros([20,1])
+        self.boneLengths = CALIBRATION_LENGHT
         self.lr = 0
         self.mu = 0
         self.iter_3d = 0

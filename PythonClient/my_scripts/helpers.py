@@ -27,9 +27,10 @@ bones_h36m = [[0, 1], [1, 2], [2, 3], [3, 19],
 joint_indices_h36m=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 joint_names_h36m = ['hip','right_up_leg','right_leg','right_foot','left_up_leg','left_leg', 'left_foot','spine1','neck', 'head', 'head_top', 'left_arm','left_forearm','left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip', 'right_foot_tip', 'left_foot_tip']
 
-
 bones_mpi = [[0, 1],[1, 2], [2, 3], [3, 4], [1, 5], [5, 6], [6, 7], [14, 8], [8, 9], [9, 10], [14, 11], [11, 12], [12, 13], [14, 1]] 
 joint_names_mpi = ['head','neck','right_arm','right_forearm','right_hand','left_arm', 'left_forearm','left_hand','right_up_leg','right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'hip']
+
+CALIBRATION_LENGHT = 25
 
 def find_bone_map():
     bones_map_to_mpi = []
@@ -48,6 +49,17 @@ def rearrange_bones_to_mpi(bones_unarranged, is_torch = True):
         bones_rearranged = bones_unarranged[:, bones_map_to_mpi]
     return bones_rearranged
 
+def model_settings(model, bone_pos_3d_GT = Variable(torch.zeros(3,21))):
+    if (model == "mpi"):
+        bone_pos_3d_GT = rearrange_bones_to_mpi(bone_pos_3d_GT)
+        bone_connections = bones_mpi
+        joint_names = joint_names_mpi
+        num_of_joints = 15
+    else:
+        bone_connections = bones_h36m
+        joint_names = joint_names_h36m
+        num_of_joints = 21
+    return bone_connections, joint_names, num_of_joints, bone_pos_3d_GT
 
 def range_angle(angle, limit=360, is_radians = True):
     if is_radians == True:
@@ -155,12 +167,7 @@ def plot_loss_3d(client, folder_name):
     plt.close()
 
 colormap='gist_rainbow'
-def superimpose_on_image(numbers, plot_loc, ind, model, photo_location, custom_name=None, scale=-1):
-    if model == "mpi":
-        bone_connections = bones_mpi
-    else:
-        bone_connections = bones_h36m
-
+def superimpose_on_image(list_of_numbers, plot_loc, ind, bone_connections, photo_location, custom_name=None, scale=-1):
     if custom_name == None:
         name = '/superimposed_'
     else: 
@@ -180,10 +187,13 @@ def superimpose_on_image(numbers, plot_loc, ind, model, photo_location, custom_n
     ax.imshow(im)
     #plot part
     cmap = plt.get_cmap(colormap)
-    colorindex = [17, 0, 5, 9, 15, 2, 18, 10, 12, 4, 14, 13, 11, 3, 7, 8, 16, 6, 1, 19]
-    for i, bone in enumerate(bone_connections):
-        color_ = cmap(colorindex[i]/len(bone_connections))
-        ax.plot( numbers[0, bone], numbers[1,bone], color = 'w', linewidth=1)
+    colorindex = range(1, len(bone_connections)+1)
+    colors = ["y", "r"]
+    linewidths = [2,1]
+    for ind, numbers in enumerate(list_of_numbers):
+        for i, bone in enumerate(bone_connections):
+            color_ = cmap(colorindex[i]/len(bone_connections))
+            ax.plot( numbers[0, bone], numbers[1,bone], color = colors[ind], linewidth=linewidths[ind])
 
     plt.savefig(superimposed_plot_loc, bbox_inches='tight', pad_inches=0)
     plt.close()
@@ -194,21 +204,28 @@ def save_heatmaps(heatmaps, ind, plot_loc, custom_name=None):
     else: 
         name = '/'+custom_name
     fig = plt.figure()
-    sum_heatmap = np.sum(heatmaps, axis=2)/17
-    plt.imshow(sum_heatmap)
+    ave_heatmaps = np.mean(heatmaps, axis=2)
+    plt.imshow(ave_heatmaps)
 
     heatmap_loc = plot_loc + name + str(ind) + '.png'
 
     plt.savefig(heatmap_loc, bbox_inches='tight', pad_inches=0)
     plt.close()
 
+def save_image(img, ind, plot_loc, custom_name=None):
+    if custom_name == None:
+        name = '/cropped_image'
+    else: 
+        name = '/'+custom_name
 
-def plot_drone_and_human(bones_GT, backprojected_bones, location, ind,  model = "mpi", error = -5, custom_name = None):
-    if model == "mpi":
-        bone_connections = bones_mpi
-    else:
-        bone_connections = bones_h36m
+    fig = plt.figure()
+    plt.imshow(img)
+    img_loc = plot_loc + name + str(ind) + '.png'
+    plt.savefig(img_loc, bbox_inches='tight', pad_inches=0)
+    plt.close()
 
+
+def plot_drone_and_human(bones_GT, predicted_bones, location, ind,  bone_connections, error = -5, custom_name = None, orientation = "z_up"):
     if custom_name == None:
         name = '/plot3d_'
     else: 
@@ -218,10 +235,16 @@ def plot_drone_and_human(bones_GT, backprojected_bones, location, ind,  model = 
     gs1 = gridspec.GridSpec(1, 1)
     ax = fig.add_subplot(gs1[0], projection='3d')
 
-    # maintain aspect ratio
     X = bones_GT[0,:]
-    Y = bones_GT[1,:]
-    Z = -bones_GT[2,:]
+    if orientation == "z_up":
+        # maintain aspect ratio
+        Y = bones_GT[1,:]
+        Z = -bones_GT[2,:]
+    elif (orientation == "y_up"):
+        # maintain aspect ratio
+        Y = bones_GT[2,:]
+        Z = -bones_GT[1,:]
+        
     max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() * 0.8
     mid_x = (X.max()+X.min()) * 0.5
     mid_y = (Y.max()+Y.min()) * 0.5
@@ -232,15 +255,30 @@ def plot_drone_and_human(bones_GT, backprojected_bones, location, ind,  model = 
 
     #plot drone
     #plot1 = ax.scatter(drone[0], drone[1], drone[2], c='r', marker='o')
-    #plot joints
-    for i, bone in enumerate(bone_connections):
-        plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='b', marker='^', label="GT")
-    for i, bone in enumerate(bone_connections):
-        plot2, = ax.plot(backprojected_bones[0,bone], backprojected_bones[1,bone], -backprojected_bones[2,bone], c='r', marker='^', label="Estimate")
-    ax.legend(handles=[plot1, plot2])
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+
+    if (orientation == "z_up"):
+        #plot joints
+        for i, bone in enumerate(bone_connections):
+            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='b', marker='^', label="GT")
+        for i, bone in enumerate(bone_connections):
+            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='r', marker='^', label="Estimate")
+        ax.legend(handles=[plot1, plot2])
+        
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+    elif (orientation == "y_up"):
+        #plot joints
+        for i, bone in enumerate(bone_connections):
+            plot1, = ax.plot(bones_GT[0,bone], bones_GT[2,bone], -bones_GT[1,bone], c='b', marker='^', label="GT")
+        for i, bone in enumerate(bone_connections):
+            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[2,bone], -predicted_bones[1,bone], c='r', marker='^', label="Estimate")
+        ax.legend(handles=[plot1, plot2])
+
+        ax.set_xlabel('X')
+        ax.set_zlabel('Y')
+        ax.set_ylabel('Z')
 
     if (error != -5):
         plt.title("error: %.4f" %error)

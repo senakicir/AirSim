@@ -16,13 +16,13 @@ def main():
     if not os.path.exists(filepath3):
         os.makedirs(filepath3)
 
-    SIZE_X = 1280
-    SIZE_Y = 720
+    SIZE_X = 1024
+    SIZE_Y = 576
     CAMERA_OFFSET_X = 46
     CAMERA_OFFSET_Y = 0
     CAMERA_OFFSET_Z = 0
     CAMERA_ROLL_OFFSET = 0
-    CAMERA_PITCH_OFFSET = -pi/4
+    CAMERA_PITCH_OFFSET = -pi/6
     CAMERA_YAW_OFFSET = 0
     FLIP_X_Y = np.array([[0,1,0],[-1,0,0],[0,0,1]])
     ##find H matrix

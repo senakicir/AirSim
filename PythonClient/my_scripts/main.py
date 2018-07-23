@@ -9,6 +9,7 @@ gt_hv = []
 est_hv = []
 USE_AIRSIM = False
 LENGTH_OF_SIMULATION = 100
+photo_time = 0
 
 def get_client_unreal_values(client, X):
     unreal_positions = np.zeros([5,3])
@@ -36,8 +37,9 @@ def take_photo(client, image_folder_loc):
         client.simPause(False)
         response = response[0]
         X = response.bones  
-
-        print("Get image from airsim takes" , time.time() - s1)
+        global photo_time
+        photo_time = time.time() - s1
+        print("Get image from airsim takes" , photo_time)
 
         gt_numbers = vector3r_arr_to_dict(X)
         unreal_positions = get_client_unreal_values(client, gt_numbers)
@@ -125,6 +127,12 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
     client.iter = energy_parameters["ITER"]
     client.weights = energy_parameters["WEIGHTS"]
     client.model = parameters["MODEL"]
+
+    if client.model =="mpi":
+        client.boneLengths = torch.zeros([14,1])
+    else:
+        client.boneLengths = torch.zeros([20,1])
+
     gt_hp = []
     est_hp = []
 
@@ -186,7 +194,7 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
 
         #set the mode for energy, calibration mode or no?
         #if (USE_AIRSIM == True):
-        if (client.linecount == 10):
+        if (client.linecount == CALIBRATION_LENGHT):
             #client.switch_energy(energy_mode[cv2.getTrackbarPos('Calibration mode', 'Calibration for 3d pose')])
             client.changeCalibrationMode(False)
         
@@ -286,8 +294,8 @@ if __name__ == "__main__":
     kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 5.17947467923e-10, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 1.38949549437e-08}
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
     use_airsim = False
-    mode_3d = 2 #0 - gt, 1- naiveback, 2- energy
-    mode_2d = 0
+    mode_3d = 0 #0 - gt, 1- naiveback, 2- energy
+    mode_2d = 1 # 0- gt, 1- openpose
     use_trackbar = False
 
     #animations = [0,1,2,3]
@@ -298,7 +306,7 @@ if __name__ == "__main__":
 
     file_names, folder_names, f_notes_name = reset_all_folders(animations)
 
-    parameters = {"USE_TRACKBAR": use_trackbar, "MODE_3D": mode_3d, "MODE_2D": mode_2d, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names, "MODEL": "h36m"}
+    parameters = {"USE_TRACKBAR": use_trackbar, "MODE_3D": mode_3d, "MODE_2D": mode_2d, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names, "MODEL": "mpi"}
     
     weights_ = {'proj': 0.08, 'smooth': 0.55, 'bone': 0.3, 'smoothpose': 0.01}#, 'lift': 0.1}
     weights = {}

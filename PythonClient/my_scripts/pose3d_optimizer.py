@@ -11,11 +11,9 @@ class pose3d_calibration(torch.nn.Module):
 
     def __init__(self, model):
         super(pose3d_calibration, self).__init__()
-        if (model == "mpi"):
-            self.NUM_OF_JOINTS = 15
-        else:
-            self.NUM_OF_JOINTS = 21
-            
+        _, _, self.NUM_OF_JOINTS, _ = model_settings(model)
+
+
         self.pose3d = torch.nn.Parameter(torch.zeros([3, self.NUM_OF_JOINTS]), requires_grad=True)
 
     def forward(self, pose_2d, R_drone, C_drone):
@@ -31,13 +29,7 @@ class pose3d_flight(torch.nn.Module):
 
     def __init__(self, bone_lengths_, window_size_, model):
         super(pose3d_flight, self).__init__()
-        if (model == "mpi"):
-            self.bone_connections = bones_mpi
-            self.NUM_OF_JOINTS = 15
-        else:
-            self.bone_connections = bones_h36m
-            self.NUM_OF_JOINTS = 21
-
+        self.bone_connections, _, self.NUM_OF_JOINTS, _ = model_settings(model)
         self.window_size = window_size_
         self.pose3d = torch.nn.Parameter(torch.zeros([self.window_size, 3, self.NUM_OF_JOINTS]), requires_grad=True)
         self.bone_lengths = Variable(bone_lengths_, requires_grad = False)
@@ -86,7 +78,7 @@ class pose3d_flight(torch.nn.Module):
         #outputs_norm = (self.pose3d[queue_index, :, :].unsqueeze(0) - mean_3d)/std_3d
         #bone_3d_temp = torch.sub(outputs_norm, hip.unsqueeze(1))
 
-        outputs["lift"]= mse_loss(pose3d_lift.cpu(), temp_pose3d_t)
+        #outputs["lift"]= mse_loss(pose3d_lift.cpu(), temp_pose3d_t)
 
         return outputs
     

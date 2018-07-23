@@ -13,11 +13,11 @@ CAMERA_OFFSET_X = 45/100
 CAMERA_OFFSET_Y = 0
 CAMERA_OFFSET_Z = 0
 CAMERA_ROLL_OFFSET = 0
-CAMERA_PITCH_OFFSET = -pi/4
+CAMERA_PITCH_OFFSET = pi/3
 CAMERA_YAW_OFFSET = 0
 
 neat_tensor = Variable(torch.FloatTensor([[0, 0, 0, 1]]), requires_grad=False) #this tensor is neat!
-DEFAULT_TORSO_SIZE = 0.436*0.70710678118
+DEFAULT_TORSO_SIZE = 0.436*0.86710678118
 
 def euler_to_rotation_matrix(roll, pitch, yaw, returnTensor=False):
     if (returnTensor == True):
@@ -28,12 +28,14 @@ def euler_to_rotation_matrix(roll, pitch, yaw, returnTensor=False):
                     [sin(yaw)*cos(pitch), sin(yaw)*sin(pitch)*sin(roll)+cos(yaw)*cos(roll), sin(yaw)*sin(pitch)*cos(roll)-cos(yaw)*sin(roll)],
                     [-sin(pitch), cos(pitch)*sin(roll), cos(pitch)*cos(roll)]])
 
-R_cam = euler_to_rotation_matrix (CAMERA_ROLL_OFFSET, -CAMERA_PITCH_OFFSET, CAMERA_YAW_OFFSET, returnTensor = False)
+R_cam = euler_to_rotation_matrix (CAMERA_ROLL_OFFSET, CAMERA_PITCH_OFFSET, CAMERA_YAW_OFFSET, returnTensor = False)
 C_cam = np.array([[CAMERA_OFFSET_X, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z]]).T
 R_cam_torch = Variable(torch.from_numpy(R_cam).float(), requires_grad = False)
 C_cam_torch = Variable(torch.FloatTensor([[CAMERA_OFFSET_X], [CAMERA_OFFSET_Y], [CAMERA_OFFSET_Z]]), requires_grad = False)
+
 FLIP_X_Y = np.array([[0,1,0],[-1,0,0],[0,0,1]])
 FLIP_X_Y_torch = Variable(torch.FloatTensor([[0,1,0],[-1,0,0],[0,0,1]]), requires_grad = False)
+
 FLIP_X_Y_inv = np.linalg.inv(FLIP_X_Y)
 FLIP_X_Y_inv_torch = torch.inverse(FLIP_X_Y_torch)
 
@@ -48,11 +50,9 @@ def update_torso_size(new_size):
     do_nothing
 
 def take_bone_projection(P_world, R_drone, C_drone):
-    P_drone = np.linalg.inv(np.vstack([np.hstack([R_drone, C_drone]), np.array([[0,0,0,1]])]))@np.vstack([P_world,  np.ones([1, P_world.shape[1]]) ] )
-    P_camera =  np.linalg.inv(np.vstack([np.hstack([R_cam, C_cam]), np.array([[0,0,0,1]])]))@P_drone
-    P_camera = P_camera[0:3,:]
+    P_camera = world_to_camera(R_drone, C_drone, P_world)
 
-    x_ = K@FLIP_X_Y@P_camera
+    x_ = K@P_camera
     x = np.copy(x_)
 
     z = x[2,:]
@@ -66,19 +66,13 @@ def take_bone_projection(P_world, R_drone, C_drone):
     return x, heatmaps
 
 def take_bone_projection_pytorch(P_world, R_drone, C_drone):
-    num_of_joints = P_world.data.shape[1]
-
-    ones_tensor = Variable(torch.ones([1, num_of_joints]), requires_grad=False)*1.0
-
-    P_drone = torch.mm(torch.inverse(torch.cat((torch.cat((R_drone, C_drone), 1), neat_tensor), 0) ), torch.cat((P_world, ones_tensor), 0) )
-    P_camera = torch.mm(torch.inverse(torch.cat((torch.cat((R_cam_torch, C_cam_torch), 1), neat_tensor), 0) ), P_drone)
-    P_camera = P_camera[0:3,:]
-
-    x_ = torch.mm(torch.mm(K_torch, FLIP_X_Y_torch), P_camera)
+    P_camera = world_to_camera(R_drone, C_drone, P_world)
+    x_ = torch.mm(K_torch, P_camera)
     x = x_.clone()
     
     z = x[2,:]
-
+    
+    num_of_joints = P_world.data.shape[1]
     result = Variable(torch.zeros([2, num_of_joints]), requires_grad = False)
     result[0,:] = x[0,:]/z
     result[1,:] = x[1,:]/z
@@ -90,7 +84,7 @@ def take_bone_projection_pytorch(P_world, R_drone, C_drone):
 def take_bone_backprojection(bone_pred, R_drone, C_drone, joint_names):
     TORSO_SIZE_ = DEFAULT_TORSO_SIZE
 
-    img_torso_size = np.linalg.norm(bone_pred[:, joint_names.index("neck")] - bone_pred[:, joint_names.index("hip")])
+    img_torso_size = np.linalg.norm(bone_pred[:, joint_names.index('neck')] - bone_pred[:, joint_names.index('hip')])
     z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
 
     bone_pos_3d = np.zeros([3, bone_pred.shape[1]])
@@ -103,7 +97,6 @@ def take_bone_backprojection(bone_pred, R_drone, C_drone, joint_names):
     P_camera = np.vstack([bone_pos_3d, np.ones([1,bone_pos_3d.shape[1]]) ])
     P_drone = np.hstack([R_cam, C_cam]).dot(P_camera)
     P_world_ = np.hstack([R_drone, C_drone]).dot(np.vstack([P_drone, np.ones([1, bone_pred.shape[1]])]))
-
     P_world = np.copy(P_world_)
     return P_world
 
@@ -112,7 +105,7 @@ def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone, joint_names):
     TORSO_SIZE_ = DEFAULT_TORSO_SIZE
 
     ones_tensor = Variable(torch.ones([1, num_of_joints]), requires_grad=False)*1.0
-    img_torso_size = torch.norm(bone_pred[:, joint_names.index("neck")] - bone_pred[:, joint_names.index("hip")])
+    img_torso_size = torch.norm(bone_pred[:, joint_names.index('neck')] - bone_pred[:, joint_names.index('hip')])
 
     z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
 
@@ -130,6 +123,23 @@ def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone, joint_names):
     P_world = P_world_.clone()
 
     return P_world
+
+def world_to_camera(R_drone, C_drone, P_world, is_torch = True):
+    if is_torch == True:
+        num_of_joints = P_world.data.shape[1]
+        ones_tensor = Variable(torch.ones([1, num_of_joints]), requires_grad=False)*1.0
+
+        P_drone = torch.mm(torch.inverse(torch.cat((torch.cat((R_drone, C_drone), 1), neat_tensor), 0) ), torch.cat((P_world, ones_tensor), 0) )
+        P_camera = torch.mm(torch.inverse(torch.cat((torch.cat((R_cam_torch, C_cam_torch), 1), neat_tensor), 0) ), P_drone)
+        P_camera = P_camera[0:3,:]
+        P_camera = torch.mm(FLIP_X_Y_torch, P_camera)
+    else:
+        P_drone = np.linalg.inv(np.vstack([np.hstack([R_drone, C_drone]), np.array([[0,0,0,1]])]))@np.vstack([P_world,  np.ones([1, P_world.shape[1]]) ] )
+        P_camera =  np.linalg.inv(np.vstack([np.hstack([R_cam, C_cam]), np.array([[0,0,0,1]])]))@P_drone
+        P_camera = P_camera[0:3,:]
+        P_camera = FLIP_X_Y@P_camera
+
+    return P_camera    
 
 def transform_cov_matrix(R_drone, cov_):
     transformed_cov = (R_drone@R_cam)@cov_@(R_drone@R_cam).T

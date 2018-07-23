@@ -13,9 +13,9 @@ DRONE_ORIENTATION_IND = 4
 
 INCREMENT_DEGREE_AMOUNT = radians(-30)
 
-z_pos = 7
-DELTA_T = 0.25
-N = 4
+z_pos = 5
+DELTA_T = 0.2
+N = 5
 TIME_HORIZON = N*DELTA_T
 
 class State(object):

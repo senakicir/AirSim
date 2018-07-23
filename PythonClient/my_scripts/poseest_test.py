@@ -31,14 +31,17 @@ def pose_test(parameters, energy_parameters):
     client.weights = energy_parameters["WEIGHTS"]
     client.model = parameters["MODEL"]
     #THESE ARE WRONG
-    client.boneLengths = torch.FloatTensor([[ 0.0187],[ 0.4912],[ 0.3634],[ 0.0360],[ 0.0175],[ 0.4542],[ 0.3922],[ 0.0338],[ 0.3812],[ 0.0000],[ 0.1317],[ 0.0000],[ 0.1017],[ 0.0620],[ 0.1946],[ 0.0015],[ 0.1054],[ 0.0521],[ 0.1134],[ 0.0014]])
-
+    if client.model =="mpi":
+        client.boneLengths = torch.FloatTensor([[ 0.0187],[ 0.4912],[ 0.3634],[ 0.0360],[ 0.0175],[ 0.4542],[ 0.3922],[ 0.0338],[ 0.3812],[ 0.0000],[ 0.1317],[ 0.0000],[ 0.1017],[ 0.0620],[ 0.1946],[ 0.0015],[ 0.1054],[ 0.0521],[ 0.1134],[ 0.0014]])
+    else:
+        client.boneLengths = torch.FloatTensor()
     #choose WINDOW_SIZE number of frames starting from 20
     unreal_positions_list, bone_pos_3d_GT_list = client.choose10Frames(20)
     
     #save the R_drone, C_drone, projected joints and 3d positions together for each frame
     for ind, unreal_positions in enumerate(unreal_positions_list):
         bone_pos_3d_GT = bone_pos_3d_GT_list[ind]
+        bone_connections, joint_names, num_of_joints, bone_pos_3d_GT = model_settings(client.model, bone_pos_3d_GT)
         bone_2d, _ = determine_2d_positions(0, True, unreal_positions, bone_pos_3d_GT)
 
         R_drone = Variable(euler_to_rotation_matrix(unreal_positions[DRONE_ORIENTATION_IND, 0], unreal_positions[DRONE_ORIENTATION_IND, 1], unreal_positions[DRONE_ORIENTATION_IND, 2], returnTensor=True), requires_grad = False)
@@ -48,8 +51,8 @@ def pose_test(parameters, energy_parameters):
         #hip_2d = bone_2d[:, 0].unsqueeze(1)
         #bone_2d = bone_2d - hip_2d
 
-        #silly_output_temp = net(bone_2d.view(-1, 2*21).cuda())
-        #silly_output_temp = silly_output_temp.view(1, 3,21)
+        #silly_output_temp = net(bone_2d.view(-1, 2*num_of_joints).cuda())
+        #silly_output_temp = silly_output_temp.view(1, 3,num_of_joints)
         #silly_output_temp = (silly_output_temp - torch.mean(silly_output_temp, dim=2).unsqueeze(2))/torch.std(silly_output_temp, dim=2).unsqueeze(2)
         #hip_new = silly_output_temp[:, :, 0].unsqueeze(2)
         #pose3d_silly = silly_output_temp - hip_new
@@ -59,7 +62,7 @@ def pose_test(parameters, energy_parameters):
         #the last frame is initialized with backprojection
         if ind != client.WINDOW_SIZE-1:
             pose3d_ = torch.from_numpy(bone_pos_3d_GT)
-            m = torch.distributions.normal.Normal(torch.zeros(3,21), 0.15*torch.ones(3,21))
+            m = torch.distributions.normal.Normal(torch.zeros(3,num_of_joints), 0.15*torch.ones(3,num_of_joints))
             noise = m.sample().double() 
             pose3d_ =  pose3d_ + noise
             prev_pose = pose3d_
