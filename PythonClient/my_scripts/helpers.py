@@ -10,13 +10,13 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import time, os
 import cv2
-from math import degrees, radians
+from math import degrees, radians, pi
 
 
 energy_mode = {1:True, 0:False}
 LOSSES = ["proj", "smooth", "bone", "smoothpose"]#, "lift"]
 attributes = ['dronePos', 'droneOrient', 'humanPos', 'hip', 'right_up_leg', 'right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1', 'neck', 'head', 'head_top','left_arm', 'left_forearm', 'left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip' ,'right_foot_tip' ,'left_foot_tip']
-TEST_SETS = {0: "test_set_1", 1: "test_set_2", 2: "test_set_3", 3: "test_set_4"}
+TEST_SETS = {0: "test_set_t", 1: "test_set_05_08", 2: "test_set_38_03", 3: "test_set_64_06", 4: "test_set_02_01"}
 
 bones_h36m = [[0, 1], [1, 2], [2, 3], [3, 19],
               [0, 4], [4, 5], [5, 6], [6, 20],
@@ -31,6 +31,18 @@ bones_mpi = [[0, 1],[1, 2], [2, 3], [3, 4], [1, 5], [5, 6], [6, 7], [14, 8], [8,
 joint_names_mpi = ['head','neck','right_arm','right_forearm','right_hand','left_arm', 'left_forearm','left_hand','right_up_leg','right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'hip']
 
 CALIBRATION_LENGHT = 25
+
+SIZE_X = 1024
+SIZE_Y = 576
+FOCAL_LENGTH = SIZE_X/2
+px = SIZE_X/2
+py = SIZE_Y/2
+CAMERA_OFFSET_X = 45/100
+CAMERA_OFFSET_Y = 0
+CAMERA_OFFSET_Z = 0#-4.92
+CAMERA_ROLL_OFFSET = 0
+CAMERA_PITCH_OFFSET = 0
+CAMERA_YAW_OFFSET = 0
 
 def find_bone_map():
     bones_map_to_mpi = []
@@ -100,7 +112,7 @@ def reset_all_folders(animation_list, param = ""):
     file_names = {}
     folder_names = {}
     for animation in animation_list:
-        sub_folder_name = main_folder_name + "/animation_" + str(animation)
+        sub_folder_name = main_folder_name + "/" + str(TEST_SETS[animation])
         folder_names[animation] = {"images": sub_folder_name + '/images', "estimates": sub_folder_name + '/estimates', "superimposed_images":  sub_folder_name + '/superimposed_images'}
         for a_folder_name in folder_names[animation].values():
             if not os.path.exists(a_folder_name):

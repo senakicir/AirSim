@@ -4,18 +4,6 @@ from torch.autograd import Variable
 from math import pi, cos, sin, degrees
 import numpy as np
 
-SIZE_X = 1024
-SIZE_Y = 576
-FOCAL_LENGTH = SIZE_X/2
-px = SIZE_X/2
-py = SIZE_Y/2
-CAMERA_OFFSET_X = 45/100
-CAMERA_OFFSET_Y = 0
-CAMERA_OFFSET_Z = 0
-CAMERA_ROLL_OFFSET = 0
-CAMERA_PITCH_OFFSET = pi/3
-CAMERA_YAW_OFFSET = 0
-
 neat_tensor = Variable(torch.FloatTensor([[0, 0, 0, 1]]), requires_grad=False) #this tensor is neat!
 DEFAULT_TORSO_SIZE = 0.436*0.86710678118
 
@@ -28,7 +16,7 @@ def euler_to_rotation_matrix(roll, pitch, yaw, returnTensor=False):
                     [sin(yaw)*cos(pitch), sin(yaw)*sin(pitch)*sin(roll)+cos(yaw)*cos(roll), sin(yaw)*sin(pitch)*cos(roll)-cos(yaw)*sin(roll)],
                     [-sin(pitch), cos(pitch)*sin(roll), cos(pitch)*cos(roll)]])
 
-R_cam = euler_to_rotation_matrix (CAMERA_ROLL_OFFSET, CAMERA_PITCH_OFFSET, CAMERA_YAW_OFFSET, returnTensor = False)
+R_cam = euler_to_rotation_matrix (CAMERA_ROLL_OFFSET, CAMERA_PITCH_OFFSET+pi/2, CAMERA_YAW_OFFSET, returnTensor = False)
 C_cam = np.array([[CAMERA_OFFSET_X, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z]]).T
 R_cam_torch = Variable(torch.from_numpy(R_cam).float(), requires_grad = False)
 C_cam_torch = Variable(torch.FloatTensor([[CAMERA_OFFSET_X], [CAMERA_OFFSET_Y], [CAMERA_OFFSET_Z]]), requires_grad = False)
@@ -50,7 +38,7 @@ def update_torso_size(new_size):
     do_nothing
 
 def take_bone_projection(P_world, R_drone, C_drone):
-    P_camera = world_to_camera(R_drone, C_drone, P_world)
+    P_camera = world_to_camera(R_drone, C_drone, P_world, is_torch = False)
 
     x_ = K@P_camera
     x = np.copy(x_)

@@ -13,9 +13,9 @@ DRONE_ORIENTATION_IND = 4
 
 INCREMENT_DEGREE_AMOUNT = radians(-30)
 
-z_pos = 5
+z_pos = 0.8
 DELTA_T = 0.2
-N = 5
+N = 5.0
 TIME_HORIZON = N*DELTA_T
 
 class State(object):
@@ -90,7 +90,7 @@ class State(object):
     def getDesiredPosAndAngle(self):
         desired_polar_angle = self.current_degree + INCREMENT_DEGREE_AMOUNT
         desired_polar_pos = np.array([cos(desired_polar_angle) * self.radius, sin(desired_polar_angle) * self.radius, 0])
-        desired_pos = desired_polar_pos + self.human_pos + TIME_HORIZON*self.human_vel - np.array([0,0,z_pos])
+        desired_pos = desired_polar_pos + self.human_pos + TIME_HORIZON*self.human_vel - np.array([0,0,z_pos]) - np.array([0,0,1])
         #desired_pos = desired_polar_pos + self.human_pos - np.array([0,0,z_pos])
         desired_yaw = desired_polar_angle + pi
         #desired_yaw = desired_polar_angle

@@ -244,8 +244,8 @@ def determine_3d_positions_all_GT(mode_2d, client, plot_loc, photo_loc):
 
         plot_drone_and_human(bone_pos_3d_GT, pose3d_lift.cpu().numpy(), plot_loc, client.linecount, bone_connections, custom_name="lift_res_", orientation = "y_up")
 
-    #elif (mode_2d == 0):
-    #    superimpose_on_image([bone_2d], plot_loc, client.linecount, bone_connections, photo_loc, custom_name="gt_", scale = scale_)
+    elif (mode_2d == 0):
+        superimpose_on_image([bone_2d], plot_loc, client.linecount, bone_connections, photo_loc, custom_name="gt_", scale = scale_)
 
 
     positions = form_positions_dict(angle, drone_pos_vec, unreal_positions[HUMAN_POS_IND,:])

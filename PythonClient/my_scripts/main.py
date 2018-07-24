@@ -4,6 +4,7 @@ from NonAirSimClient import *
 from pose3d_optimizer import *
 from project_bones import *
 from determine_positions import *
+import pprint
 
 gt_hv = []
 est_hv = []
@@ -115,6 +116,7 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
         client.takeoffAsync(timeout_sec = 20)
         client.moveToZAsync(-z_pos, 2, timeout_sec = 5, yaw_mode = airsim.YawMode(), lookahead = -1, adaptive_lookahead = 1)
         time.sleep(5)
+        client.simSetCameraOrientation(str(0), airsim.to_quaternion(CAMERA_PITCH_OFFSET, 0, 0))
     else:
         filename_bones = 'test_sets/'+test_set_name+'/groundtruth.txt'
         filename_output = 'test_sets/'+test_set_name+'/a_flight.txt'
@@ -299,7 +301,7 @@ if __name__ == "__main__":
     use_trackbar = False
 
     #animations = [0,1,2,3]
-    animations = [1]
+    animations = [4]
     test_set = {}
     for animation_num in animations:
         test_set[animation_num] = TEST_SETS[animation_num]
