@@ -15,22 +15,27 @@ from math import degrees, radians, pi
 
 energy_mode = {1:True, 0:False}
 LOSSES = ["proj", "smooth", "bone", "smoothpose"]#, "lift"]
+CALIBRATION_LOSSES = ["proj"]#, "sym"]
 attributes = ['dronePos', 'droneOrient', 'humanPos', 'hip', 'right_up_leg', 'right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1', 'neck', 'head', 'head_top','left_arm', 'left_forearm', 'left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip' ,'right_foot_tip' ,'left_foot_tip']
 TEST_SETS = {0: "test_set_t", 1: "test_set_05_08", 2: "test_set_38_03", 3: "test_set_64_06", 4: "test_set_02_01"}
 
-bones_h36m = [[0, 1], [1, 2], [2, 3], [3, 19],
-              [0, 4], [4, 5], [5, 6], [6, 20],
-              [0, 7], [7, 8], [8, 9], [9, 10],
+bones_h36m = [[0, 1], [1, 2], [2, 3], [3, 19], #right leg
+              [0, 4], [4, 5], [5, 6], [6, 20], #left leg
+              [0, 7], [7, 8], [8, 9], [9, 10], #middle
               [8, 14], [14, 15], [15, 16], [16, 17], #left arm
               [8, 11], [11, 12], [12, 13], [13, 18]] #right arm
 
 joint_indices_h36m=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 joint_names_h36m = ['hip','right_up_leg','right_leg','right_foot','left_up_leg','left_leg', 'left_foot','spine1','neck', 'head', 'head_top', 'left_arm','left_forearm','left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip', 'right_foot_tip', 'left_foot_tip']
 
-bones_mpi = [[0, 1],[1, 2], [2, 3], [3, 4], [1, 5], [5, 6], [6, 7], [14, 8], [8, 9], [9, 10], [14, 11], [11, 12], [12, 13], [14, 1]] 
-joint_names_mpi = ['head','neck','right_arm','right_forearm','right_hand','left_arm', 'left_forearm','left_hand','right_up_leg','right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'hip']
+bones_mpi = [[0, 1], [14, 1], #middle
+            [1, 2], [2, 3], [3, 4], #right arm
+            [1, 5], [5, 6], [6, 7],  #left arm
+            [14, 8], [8, 9], [9, 10], #right leg
+            [14, 11], [11, 12], [12, 13]] #left leg
+joint_names_mpi = ['head','neck','right_arm','right_forearm','right_hand','left_arm', 'left_forearm','left_hand','right_up_leg','right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1']
 
-CALIBRATION_LENGHT = 25
+CALIBRATION_LENGTH = 25
 
 SIZE_X = 1024
 SIZE_Y = 576
@@ -60,6 +65,18 @@ def rearrange_bones_to_mpi(bones_unarranged, is_torch = True):
         bones_rearranged = np.zeros([3,15])
         bones_rearranged = bones_unarranged[:, bones_map_to_mpi]
     return bones_rearranged
+
+def split_bone_connections(bone_connections):
+    if (bone_connections == bones_h36m):
+        left_bone_connections = [[8, 14], [14, 15], [15, 16], [16, 17], [0, 4], [4, 5], [5, 6], [6, 20]]
+        right_bone_connections = [[8, 11], [11, 12], [12, 13], [13, 18], [0, 1], [1, 2], [2, 3], [3, 19]]
+        middle_bone_connections = [[0, 7], [7, 8], [8, 9], [9, 10]]
+    elif (bone_connections == bones_mpi):
+        left_bone_connections = [[1, 5], [5, 6], [6, 7],[14, 11], [11, 12], [12, 13]]
+        right_bone_connections = [[1, 2], [2, 3], [3, 4], [14, 8], [8, 9], [9, 10]]
+        middle_bone_connections = [[0, 1], [14, 1]]
+
+    return left_bone_connections, right_bone_connections, middle_bone_connections
 
 def model_settings(model, bone_pos_3d_GT = Variable(torch.zeros(3,21))):
     if (model == "mpi"):
@@ -178,8 +195,7 @@ def plot_loss_3d(client, folder_name):
     plt.savefig(folder_name + '/loss_plot_3d' + '.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 
-colormap='gist_rainbow'
-def superimpose_on_image(list_of_numbers, plot_loc, ind, bone_connections, photo_location, custom_name=None, scale=-1):
+def superimpose_on_image(openpose, plot_loc, ind, bone_connections, photo_location, custom_name=None, scale=-1, projection = np.zeros([1,1])):
     if custom_name == None:
         name = '/superimposed_'
     else: 
@@ -198,15 +214,19 @@ def superimpose_on_image(list_of_numbers, plot_loc, ind, bone_connections, photo
     ax = fig.add_subplot(111)
     ax.imshow(im)
     #plot part
-    cmap = plt.get_cmap(colormap)
-    colorindex = range(1, len(bone_connections)+1)
     colors = ["y", "r"]
-    linewidths = [2,1]
-    for ind, numbers in enumerate(list_of_numbers):
-        for i, bone in enumerate(bone_connections):
-            color_ = cmap(colorindex[i]/len(bone_connections))
-            ax.plot( numbers[0, bone], numbers[1,bone], color = colors[ind], linewidth=linewidths[ind])
 
+    if np.count_nonzero(projection) != 0:
+        for i, bone in enumerate(bone_connections):
+            ax.plot( projection[0, bone], projection[1,bone], color = "y", linewidth=3)
+
+    left_bone_connections, right_bone_connections, middle_bone_connections = split_bone_connections(bone_connections)
+    for i, bone in enumerate(left_bone_connections):    
+        ax.plot( openpose[0, bone], openpose[1,bone], color = "r", linewidth=2)   
+    for i, bone in enumerate(right_bone_connections):    
+        ax.plot( openpose[0, bone], openpose[1,bone], color = "b", linewidth=2)   
+    for i, bone in enumerate(middle_bone_connections):    
+        ax.plot( openpose[0, bone], openpose[1,bone], color = "b", linewidth=2)   
     plt.savefig(superimposed_plot_loc, bbox_inches='tight', pad_inches=0)
     plt.close()
 
@@ -300,26 +320,17 @@ def plot_drone_and_human(bones_GT, predicted_bones, location, ind,  bone_connect
     plt.close()
 
 
-def plot_optimization_losses(pltpts, location, ind, calibration_mode=False):
-    if (calibration_mode):
-        plt.figure()
-        x_axis = np.linspace(1,pltpts.shape[0],pltpts.shape[0])
-        plt.plot(x_axis, pltpts)
+def plot_optimization_losses(pltpts, location, ind, loss_dict):
+    plt.figure()
+    for loss_ind, loss_key in enumerate(loss_dict):
+        x_axis = np.linspace(1,pltpts[loss_key].shape[0],pltpts[loss_key].shape[0])
+        plt.subplot(1,len(loss_dict),loss_ind+1)
+        plt.semilogy(x_axis, pltpts[loss_key])
         plt.xlabel("iter")
-        plot_3d_pos_loc = location + '/loss_calib_' + str(ind) + '.png'
-        plt.savefig(plot_3d_pos_loc)
-        plt.close()
-    else:
-        plt.figure()
-        for loss_ind, loss_key in enumerate(LOSSES):
-            x_axis = np.linspace(1,pltpts[loss_key].shape[0],pltpts[loss_key].shape[0])
-            plt.subplot(1,len(LOSSES),loss_ind+1)
-            plt.semilogy(x_axis, pltpts[loss_key])
-            plt.xlabel("iter")
-            plt.title(loss_key)
-        plot_3d_pos_loc = location + '/loss_flight_' + str(ind) + '.png'
-        plt.savefig(plot_3d_pos_loc, bbox_inches='tight', pad_inches=0)
-        plt.close()
+        plt.title(loss_key)
+    plot_3d_pos_loc = location + '/loss_' + str(ind) + '.png'
+    plt.savefig(plot_3d_pos_loc, bbox_inches='tight', pad_inches=0)
+    plt.close()
 
 def vector3r_arr_to_dict(input):
     output = dict()

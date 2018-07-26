@@ -53,122 +53,127 @@ def find_2d_pose_openpose(photo_loc, scale = -1):
 
 def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 0, photo_loc = 0):
     unreal_positions, bone_pos_3d_GT, drone_pos_vec, angle = client.getSynchronizedData()
-    bone_connections, joint_names, _, bone_pos_3d_GT = model_settings(client.model, bone_pos_3d_GT)
-
-    bone_2d, heatmap_2d = determine_2d_positions(mode_2d, True, unreal_positions, bone_pos_3d_GT, photo_loc, -1)
-
+    bone_connections, joint_names, num_of_joints, bone_pos_3d_GT = model_settings(client.model, bone_pos_3d_GT)
     #DONT FORGET THESE CHANGES
-    #R_drone = Variable(euler_to_rotation_matrix(angle[1], angle[0], angle[2], returnTensor=True), requires_grad = False) #pitch roll yaw
-    #C_drone = torch.FloatTensor([[drone_pos_vec.x_val], [drone_pos_vec.y_val], [drone_pos_vec.z_val]])
     R_drone = Variable(euler_to_rotation_matrix(unreal_positions[DRONE_ORIENTATION_IND, 0], unreal_positions[DRONE_ORIENTATION_IND, 1], unreal_positions[DRONE_ORIENTATION_IND, 2], returnTensor=True), requires_grad = False)
     C_drone = Variable(torch.FloatTensor([[unreal_positions[DRONE_POS_IND, 0]],[unreal_positions[DRONE_POS_IND, 1]],[unreal_positions[DRONE_POS_IND, 2]]]), requires_grad = False)
 
-    #if (client.linecount != 0):
-    #    pose3d_ = client.poseList_3d[-1]
-    #else:
-    pose3d_ = take_bone_backprojection_pytorch(bone_2d, R_drone, C_drone, joint_names)
-    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_)
+    #find 2d pose (using openpose or gt)
+    bone_2d, heatmap_2d = determine_2d_positions(mode_2d, True, unreal_positions, bone_pos_3d_GT, photo_loc, -1)
 
-    pltpts = np.zeros([1,1])
+    #find 3d pose using liftnet
+    pose = torch.cat((torch.t(bone_2d), torch.ones(num_of_joints,1)), 1)
+    input_image = cv.imread(photo_loc)
+    pose3d_lift, cropped_img, cropped_heatmap = liftnet_module.run(input_image, heatmap_2d.cpu().numpy(), pose)
+    pose3d_lift = pose3d_lift.view(num_of_joints+2,  -1).permute(1, 0)
+    pose3d_lift = rearrange_bones_to_mpi(pose3d_lift, True)
+    pose3d_lift = camera_to_world(R_drone, C_drone, pose3d_lift.cpu(), is_torch = True)
+    #normalize liftnet pose and save it
+    hip_pos_lift = pose3d_lift[:, joint_names.index('spine1')].unsqueeze(1)
+    pose3d_lift = pose3d_lift - hip_pos_lift
+    max_z_lift = torch.max(pose3d_lift[2,:])
+    min_z_lift = torch.min(pose3d_lift[2,:])
+    pose3d_lift = (pose3d_lift-min_z_lift)/(max_z_lift - min_z_lift)
+
+    if (client.linecount != 0):
+        pose3d_ = client.poseList_3d[-1]
+    else:
+        pose3d_ = take_bone_backprojection_pytorch(bone_2d, R_drone, C_drone, joint_names)
+
+    if (client.isCalibratingEnergy): 
+        client.addNewCalibrationFrame(bone_2d, R_drone, C_drone, pose3d_)
+    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_, pose3d_lift)
+
+    pltpts = {}
     final_loss = np.zeros([1,1])
     if (client.linecount >1):
-        #calibration mode
+        #calibration mode parameters
         if (client.isCalibratingEnergy): 
             objective = pose3d_calibration(client.model)
             optimizer = torch.optim.SGD(objective.parameters(), lr = 0.0005, momentum=0.9)
+            if (client.linecount < 8):
+                num_iterations = 5000
+            else:
+                num_iterations = 500
+            objective.init_pose3d(pose3d_) 
+            loss_dict = CALIBRATION_LOSSES
+            data_list = client.requiredEstimationData_calibration
+            energy_weights = {"proj":1}#, "sym":1}
+         #flight mode parameters
+        else:
+            objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE, client.model)
+            optimizer = torch.optim.SGD(objective.parameters(), lr =client.lr, momentum=client.mu)
+            num_iterations = client.iter
+            #init all 3d pose 
+            for queue_index, pose3d_ in enumerate(client.poseList_3d):
+                objective.init_pose3d(pose3d_, queue_index)
+            loss_dict = LOSSES
+            data_list = client.requiredEstimationData
+            energy_weights = client.weights
 
-            num_iterations = 1500
-            pltpts = np.zeros([num_iterations])
-            objective.init_pose3d(pose3d_)
+        for loss_key in loss_dict:
+            pltpts[loss_key] = np.zeros([num_iterations])
 
-            for i in range(num_iterations):
-                def closure():
-                    #outputs = Variable(torch.FloatTensor([1,len(client.requiredEstimationData)]))
-                    outputs = []
-                    optimizer.zero_grad()
-                    objective.zero_grad()
+        for i in range(num_iterations):
+            def closure():
+                outputs = {}
+                output = {}
+                for loss_key in loss_dict:
+                    outputs[loss_key] = []
+                    output[loss_key] = 0
+                optimizer.zero_grad()
+                objective.zero_grad()
 
-                    for bone_2d_, R_drone_, C_drone_ in client.requiredEstimationData:
+                queue_index = 0
+                for bone_2d_, R_drone_, C_drone_ in data_list:
+                    if (client.isCalibratingEnergy):
                         loss = objective.forward(bone_2d_, R_drone_, C_drone_)
-                        outputs.append(loss)
+                    else: 
+                        pose3d_lift = client.liftPoseList[queue_index]
+                        loss = objective.forward(bone_2d_, R_drone_, C_drone_, pose3d_lift, queue_index)
+                    for loss_key in loss_dict:
+                        outputs[loss_key].append(loss[loss_key])
+                    queue_index += 1
 
-                    output = sum(outputs)/len(outputs)
-                    pltpts[i]= output.data.numpy()
+                overall_output = Variable(torch.FloatTensor([0]))
+                for loss_key in loss_dict:
+                    output[loss_key] = (sum(outputs[loss_key])/len(outputs[loss_key]))
+                    overall_output += energy_weights[loss_key]*output[loss_key]/len(loss_dict)
+                    pltpts[loss_key][i] = output[loss_key].data.numpy() 
                     if (i == num_iterations - 1):
-                        final_loss[0] = np.copy(output.data.numpy())
-                    output.backward(retain_graph = True)
-                    return output
-                optimizer.step(closure)
+                        final_loss[0] += energy_weights[loss_key]*np.copy(output[loss_key].data.numpy())/len(loss_dict)
 
+                overall_output.backward(retain_graph = True)
+                return overall_output
+            optimizer.step(closure)
+
+        if (client.isCalibratingEnergy):
             P_world = objective.pose3d
             client.update3dPos(P_world, all = True)
             if client.linecount > 3:
                 for i, bone in enumerate(bone_connections):
                     client.boneLengths[i] = torch.sum(torch.pow(P_world[:, bone[0]] - P_world[:, bone[1]],2)).data 
-                update_torso_size(0.86*(torch.sqrt(torch.sum(torch.pow(P_world[:, joint_names.index('neck')].data- P_world[:, joint_names.index('hip')].data, 2)))))
-                
-        #flight mode   
+                update_torso_size(0.86*(torch.sqrt(torch.sum(torch.pow(P_world[:, joint_names.index('neck')].data- P_world[:, joint_names.index('spine1')].data, 2)))))   
         else:
-            objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE, client.model)
-            optimizer = torch.optim.SGD(objective.parameters(), lr =client.lr, momentum=client.mu)
-            num_iterations = client.iter
-            pltpts = {}
-
-            for loss_key in LOSSES:
-                pltpts[loss_key] = np.zeros([num_iterations])
-
-            #init all 3d pose 
-            for queue_index, pose3d_ in enumerate(client.poseList_3d):
-                objective.init_pose3d(pose3d_, queue_index)
-
-            for i in range(num_iterations):
-                def closure():
-                    outputs = {}
-                    output = {}
-                    for loss_key in LOSSES:
-                        outputs[loss_key] = []
-                        output[loss_key] = 0
-                        
-                    optimizer.zero_grad()
-                    objective.zero_grad()
-                    queue_index = 0
-                    for bone_2d_, R_drone_, C_drone_ in client.requiredEstimationData:
-                        #pose3d_lift = liftnet_module.forward(heatmap_2d)
-                        pose3d_lift =0 
-                        loss = objective.forward(bone_2d_, R_drone_, C_drone_, pose3d_lift, queue_index)
-                        for loss_key in LOSSES:
-                            outputs[loss_key].append(loss[loss_key])
-                        queue_index += 1
-
-                    overall_output = Variable(torch.FloatTensor([0]))
-                    for loss_key in LOSSES:
-                        output[loss_key] = (sum(outputs[loss_key])/len(outputs[loss_key]))
-                        overall_output += client.weights[loss_key]*output[loss_key]/len(LOSSES)
-                        pltpts[loss_key][i] = output[loss_key].data.numpy() 
-                        if (i == num_iterations - 1):
-                            final_loss[0] += client.weights[loss_key]*np.copy(output[loss_key].data.numpy())/len(LOSSES)
-
-                    overall_output.backward(retain_graph = True)
-                    return overall_output
-                optimizer.step(closure)
             P_world = objective.pose3d[0, :, :]
             client.update3dPos(P_world)
 
-    #if first frame, 3d pose is found through backproj.     
+    #if the frame is the first frame, the energy is found through backprojection
     else:
         P_world = pose3d_
+        loss_dict = CALIBRATION_LOSSES
     
     client.error_2d.append(final_loss[0])
     check,  _ = take_bone_projection_pytorch(P_world, R_drone, C_drone)
 
     P_world = P_world.data.numpy()
-
     error_3d = np.mean(np.linalg.norm(bone_pos_3d_GT - P_world, axis=0))
     client.error_3d.append(error_3d)
     if (plot_loc != 0):
-        superimpose_on_image([check.data.numpy(), bone_2d.data.numpy()], plot_loc, client.linecount, bone_connections, photo_loc, custom_name="projected_res_", scale = -1)
+        superimpose_on_image(bone_2d.data.numpy(), plot_loc, client.linecount, bone_connections, photo_loc, custom_name="projected_res_", scale = -1, projection=check.data.numpy())
         plot_drone_and_human(bone_pos_3d_GT, P_world, plot_loc, client.linecount, bone_connections, error_3d)
-        plot_optimization_losses(pltpts, plot_loc, client.linecount, client.isCalibratingEnergy)
+        if (client.linecount >1):
+            plot_optimization_losses(pltpts, plot_loc, client.linecount, loss_dict)
 
     positions = form_positions_dict(angle, drone_pos_vec, P_world[:,0])
     cov = transform_cov_matrix(R_drone.data.numpy(), measurement_cov_)
@@ -212,40 +217,38 @@ def determine_3d_positions_all_GT(mode_2d, client, plot_loc, photo_loc):
 
     bone_2d, heatmap_2d = determine_2d_positions(mode_2d, False, unreal_positions, bone_pos_3d_GT, photo_loc, scale_)
     if (mode_2d == 1):
-        superimpose_on_image([bone_2d.cpu().numpy()], plot_loc, client.linecount, bone_connections, photo_loc, custom_name="openpose_", scale = scale_)
-        #pose = bone_2d[0]
+        superimpose_on_image(bone_2d.cpu().numpy(), plot_loc, client.linecount, bone_connections, photo_loc, custom_name="openpose_", scale = scale_)
         pose = torch.cat((torch.t(bone_2d), torch.ones(num_of_joints,1)), 1)
 
         input_image = cv.imread(photo_loc)
 
         pose3d_lift, cropped_img, cropped_heatmap = liftnet_module.run(input_image, heatmap_2d.cpu().numpy(), pose)
-        save_heatmaps(cropped_heatmap, client.linecount, plot_loc, custom_name="cropped_heatmap_")
-        save_image(cropped_img, client.linecount, plot_loc, custom_name="cropped_image_")
+        #save_heatmaps(cropped_heatmap, client.linecount, plot_loc, custom_name="cropped_heatmap_")
+        #save_image(cropped_img, client.linecount, plot_loc, custom_name="cropped_image_")
         
         pose3d_lift = pose3d_lift.view(num_of_joints+2,  -1).permute(1, 0)
-        pose3d_lift = rearrange_bones_to_mpi(pose3d_lift, True)
-        #pose3d_lift[[0,1,2],:] = pose3d_lift[[0,2,1],:]
+        pose3d_lift = rearrange_bones_to_mpi(pose3d_lift, is_torch = True)
 
         R_drone = Variable(euler_to_rotation_matrix(unreal_positions[DRONE_ORIENTATION_IND, 0], unreal_positions[DRONE_ORIENTATION_IND, 1], unreal_positions[DRONE_ORIENTATION_IND, 2], returnTensor=True), requires_grad = False)
         C_drone = Variable(torch.FloatTensor([[unreal_positions[DRONE_POS_IND, 0]],[unreal_positions[DRONE_POS_IND, 1]],[unreal_positions[DRONE_POS_IND, 2]]]), requires_grad = False)
-        bone_pos_3d_GT = world_to_camera(R_drone, C_drone, bone_pos_3d_GT, is_torch = False)
+        pose3d_lift = camera_to_world(R_drone, C_drone, pose3d_lift.cpu(), is_torch = True)
 
-        hip_pos_lift = pose3d_lift[:, joint_names.index('hip')].unsqueeze(1)
+        hip_pos_lift = pose3d_lift[:, joint_names.index('spine1')].unsqueeze(1)
         pose3d_lift = pose3d_lift - hip_pos_lift
-        max_z_lift = torch.max(pose3d_lift[1,:])
-        min_z_lift = torch.min(pose3d_lift[1,:])
+        max_z_lift = torch.max(pose3d_lift[2,:])
+        min_z_lift = torch.min(pose3d_lift[2,:])
         pose3d_lift = (pose3d_lift-min_z_lift)/(max_z_lift - min_z_lift)
         
-        hip_pos_GT = bone_pos_3d_GT[:, joint_names.index('hip')]
+        hip_pos_GT = bone_pos_3d_GT[:, joint_names.index('spine1')]
         bone_pos_3d_GT = bone_pos_3d_GT - hip_pos_GT[:, np.newaxis]
-        max_z_GT = np.max(bone_pos_3d_GT[1,:])
-        min_z_GT = np.min(bone_pos_3d_GT[1,:])
+        max_z_GT = np.max(bone_pos_3d_GT[2,:])
+        min_z_GT = np.min(bone_pos_3d_GT[2,:])
         bone_pos_3d_GT = (bone_pos_3d_GT-min_z_GT)/(max_z_GT - min_z_GT)
 
-        plot_drone_and_human(bone_pos_3d_GT, pose3d_lift.cpu().numpy(), plot_loc, client.linecount, bone_connections, custom_name="lift_res_", orientation = "y_up")
+        plot_drone_and_human(bone_pos_3d_GT, pose3d_lift.cpu().numpy(), plot_loc, client.linecount, bone_connections, custom_name="lift_res_", orientation = "z_up")
 
     elif (mode_2d == 0):
-        superimpose_on_image([bone_2d], plot_loc, client.linecount, bone_connections, photo_loc, custom_name="gt_", scale = scale_)
+        superimpose_on_image(bone_2d, plot_loc, client.linecount, bone_connections, photo_loc, custom_name="gt_", scale = scale_)
 
 
     positions = form_positions_dict(angle, drone_pos_vec, unreal_positions[HUMAN_POS_IND,:])

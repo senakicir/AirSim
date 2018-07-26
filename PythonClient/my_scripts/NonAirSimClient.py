@@ -8,7 +8,7 @@ class NonAirSimClient(object):
     def __init__(self, filename_bones, filename_others):
         groundtruth_matrix = pd.read_csv(filename_bones, sep='\t', header=None).ix[:,1:].as_matrix().astype('float')                
         self.DRONE_INITIAL_POS = groundtruth_matrix[0,0:3]
-        self.WINDOW_SIZE = CALIBRATION_LENGHT
+        self.WINDOW_SIZE = 6
         self.groundtruth = groundtruth_matrix[1:,:-1]
         a_flight_matrix = pd.read_csv(filename_others, sep='\t', header=None).ix
         self.a_flight = a_flight_matrix[:,1:].as_matrix().astype('float')
@@ -22,10 +22,12 @@ class NonAirSimClient(object):
         self.error_3d = []
         self.requiredEstimationData = []
         self.poseList_3d = []
-        self.sillyPoseList = []
+        self.liftPoseList = []
+        self.requiredEstimationData_calibration = []
+        self.poseList_3d_calibration = []
         self.end = False
         self.isCalibratingEnergy = True
-        self.boneLengths = CALIBRATION_LENGHT
+        self.boneLengths = CALIBRATION_LENGTH
         self.lr = 0
         self.mu = 0
         self.iter_3d = 0
@@ -76,7 +78,16 @@ class NonAirSimClient(object):
     def changeCalibrationMode(self, calibMode):
         self.isCalibratingEnergy = calibMode
 
-    def addNewFrame(self, pose_2d, R_drone, C_drone, pose3d_, pose3d_silly = None):
+    def addNewCalibrationFrame(self, pose_2d, R_drone, C_drone, pose3d_):
+        self.requiredEstimationData_calibration.insert(0, [pose_2d, R_drone, C_drone])
+        if (len(self.requiredEstimationData_calibration) > CALIBRATION_LENGTH):
+            self.requiredEstimationData_calibration.pop()
+        
+        self.poseList_3d_calibration.insert(0, pose3d_)
+        if (len(self.poseList_3d_calibration) > CALIBRATION_LENGTH):
+            self.poseList_3d_calibration.pop()
+
+    def addNewFrame(self, pose_2d, R_drone, C_drone, pose3d_, pose3d_lift = None):
         self.requiredEstimationData.insert(0, [pose_2d, R_drone, C_drone])
         if (len(self.requiredEstimationData) > self.WINDOW_SIZE):
             self.requiredEstimationData.pop()
@@ -85,9 +96,9 @@ class NonAirSimClient(object):
         if (len(self.poseList_3d) > self.WINDOW_SIZE):
             self.poseList_3d.pop()
 
-        self.sillyPoseList.insert(0, pose3d_silly)
-        if (len(self.sillyPoseList) > self.WINDOW_SIZE):
-            self.sillyPoseList.pop()
+        self.liftPoseList.insert(0, pose3d_lift)
+        if (len(self.liftPoseList) > self.WINDOW_SIZE):
+            self.liftPoseList.pop()
 
     def update3dPos(self, pose3d_, all = False):
         if (all):

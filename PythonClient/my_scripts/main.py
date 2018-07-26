@@ -196,7 +196,7 @@ def main(kalman_arguments = None, parameters = None, energy_parameters = None):
 
         #set the mode for energy, calibration mode or no?
         #if (USE_AIRSIM == True):
-        if (client.linecount == CALIBRATION_LENGHT):
+        if (client.linecount == CALIBRATION_LENGTH):
             #client.switch_energy(energy_mode[cv2.getTrackbarPos('Calibration mode', 'Calibration for 3d pose')])
             client.changeCalibrationMode(False)
         
@@ -296,7 +296,7 @@ if __name__ == "__main__":
     kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 5.17947467923e-10, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 1.38949549437e-08}
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
     use_airsim = False
-    mode_3d = 0 #0 - gt, 1- naiveback, 2- energy
+    mode_3d = 2 #0 - gt, 1- naiveback, 2- energy
     mode_2d = 1 # 0- gt, 1- openpose
     use_trackbar = False
 
