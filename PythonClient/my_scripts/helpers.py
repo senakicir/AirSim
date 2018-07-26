@@ -15,7 +15,7 @@ from math import degrees, radians, pi
 
 energy_mode = {1:True, 0:False}
 LOSSES = ["proj", "smooth", "bone", "smoothpose"]#, "lift"]
-CALIBRATION_LOSSES = ["proj"]#, "sym"]
+CALIBRATION_LOSSES = ["proj", "sym"]
 attributes = ['dronePos', 'droneOrient', 'humanPos', 'hip', 'right_up_leg', 'right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1', 'neck', 'head', 'head_top','left_arm', 'left_forearm', 'left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip' ,'right_foot_tip' ,'left_foot_tip']
 TEST_SETS = {0: "test_set_t", 1: "test_set_05_08", 2: "test_set_38_03", 3: "test_set_64_06", 4: "test_set_02_01"}
 

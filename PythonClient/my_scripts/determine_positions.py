@@ -98,7 +98,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
             objective.init_pose3d(pose3d_) 
             loss_dict = CALIBRATION_LOSSES
             data_list = client.requiredEstimationData_calibration
-            energy_weights = {"proj":1}#, "sym":1}
+            energy_weights = {"proj":0.5, "sym":0.5}
          #flight mode parameters
         else:
             objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE, client.model)

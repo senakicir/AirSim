@@ -9,3 +9,5 @@ cd ${arr2[${#arr2[*]}-1]}
 cd t*/superimposed_images
 ffmpeg -framerate 5 -i 'lift_res_%01d.png' -c:v libx264 -pix_fmt yuv420p lift_res.mp4
 ffmpeg -framerate 5 -i 'openpose_%01d.png' -c:v libx264 -pix_fmt yuv420p -vf pad="width=iw:height=ih+1:x=0:y=0:color=white" openpose.mp4
+ffmpeg -framerate 5 -i 'plot3d_%01d.png' -c:v libx264 -pix_fmt yuv420p plot3d.mp4
+ffmpeg -framerate 5 -i 'projected_res_%01d.png' -c:v libx264 -pix_fmt yuv420p -vf pad="width=iw:height=ih+1:x=0:y=0:color=white" projected_res.mp4
