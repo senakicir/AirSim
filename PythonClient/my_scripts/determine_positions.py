@@ -98,7 +98,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
             objective.init_pose3d(pose3d_) 
             loss_dict = CALIBRATION_LOSSES
             data_list = client.requiredEstimationData_calibration
-            energy_weights = {"proj":0.5, "sym":0.5}
+            energy_weights = {"proj":0.5}#, "sym":0.5}
          #flight mode parameters
         else:
             objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE, client.model)
@@ -164,19 +164,19 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
         loss_dict = CALIBRATION_LOSSES
     
     client.error_2d.append(final_loss[0])
-    check,  _ = take_bone_projection_pytorch(P_world, R_drone, C_drone)
+    #check,  _ = take_bone_projection_pytorch(P_world, R_drone, C_drone)
 
-    P_world = P_world.data.numpy()
+    P_world = P_world.cpu().data.numpy()
     error_3d = np.mean(np.linalg.norm(bone_pos_3d_GT - P_world, axis=0))
     client.error_3d.append(error_3d)
     if (plot_loc != 0):
-        superimpose_on_image(bone_2d.data.numpy(), plot_loc, client.linecount, bone_connections, photo_loc, custom_name="projected_res_", scale = -1, projection=check.data.numpy())
+        #superimpose_on_image(bone_2d.data.numpy(), plot_loc, client.linecount, bone_connections, photo_loc, custom_name="projected_res_", scale = -1, projection=check.data.numpy())
         plot_drone_and_human(bone_pos_3d_GT, P_world, plot_loc, client.linecount, bone_connections, error_3d)
         if (client.linecount >1):
             plot_optimization_losses(pltpts, plot_loc, client.linecount, loss_dict)
 
     positions = form_positions_dict(angle, drone_pos_vec, P_world[:,0])
-    cov = transform_cov_matrix(R_drone.data.numpy(), measurement_cov_)
+    cov = transform_cov_matrix(R_drone.cpu().data.numpy(), measurement_cov_)
     f_output_str = '\t'+str(unreal_positions[HUMAN_POS_IND, 0]) +'\t'+str(unreal_positions[HUMAN_POS_IND, 1])+'\t'+str(unreal_positions[HUMAN_POS_IND, 2])+'\t'+str(angle[0])+'\t'+str(angle[1])+'\t'+str(angle[2])+'\t'+str(drone_pos_vec.x_val)+'\t'+str(drone_pos_vec.y_val)+'\t'+str(drone_pos_vec.z_val)
 
     return positions, unreal_positions, cov, f_output_str
@@ -246,6 +246,7 @@ def determine_3d_positions_all_GT(mode_2d, client, plot_loc, photo_loc):
         bone_pos_3d_GT = (bone_pos_3d_GT-min_z_GT)/(max_z_GT - min_z_GT)
 
         plot_drone_and_human(bone_pos_3d_GT, pose3d_lift.cpu().numpy(), plot_loc, client.linecount, bone_connections, custom_name="lift_res_", orientation = "z_up")
+
 
     elif (mode_2d == 0):
         superimpose_on_image(bone_2d, plot_loc, client.linecount, bone_connections, photo_loc, custom_name="gt_", scale = scale_)

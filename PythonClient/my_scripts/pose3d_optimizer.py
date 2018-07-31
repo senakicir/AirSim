@@ -53,7 +53,7 @@ class pose3d_flight(torch.nn.Module):
         outputs = {}
         for loss in LOSSES:
             outputs[loss] = 0
-        projected_2d, _ = take_bone_projection_pytorch(self.pose3d[queue_index, :, :], R_drone, C_drone)
+        projected_2d, _ = take_bone_projection_pytorch(self.pose3d[queue_index, :, :].cpu(), R_drone, C_drone)
         outputs["proj"] = mse_loss(projected_2d, pose_2d)
 
         #smoothness
@@ -88,10 +88,10 @@ class pose3d_flight(torch.nn.Module):
             outputs["smoothpose"] = mse_loss(temp_pose3d_t_m_1, temp_pose3d_t)
 
         #normalize pose
-        #max_z = torch.max(temp_pose3d_t[2,:])
-        #min_z = torch.min(temp_pose3d_t[2,:])
-        #normalized_pose_3d = (pose3d_lift-min_z)/(max_z - min_z)
-        #outputs["lift"]= mse_loss(pose3d_lift.cpu(), normalized_pose_3d)
+        max_z = torch.max(temp_pose3d_t[2,:])
+        min_z = torch.min(temp_pose3d_t[2,:])
+        normalized_pose_3d = (pose3d_lift-min_z)/(max_z - min_z)
+        outputs["lift"]= mse_loss(pose3d_lift.cpu(), normalized_pose_3d)
 
         return outputs
     

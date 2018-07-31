@@ -92,7 +92,7 @@ def take_bone_backprojection_pytorch(bone_pred, R_drone, C_drone, joint_names):
     ones_tensor = Variable(torch.ones([1, num_of_joints]), requires_grad=False)*1.0
     img_torso_size = torch.norm(bone_pred[:, joint_names.index('neck')] - bone_pred[:, joint_names.index('spine1')])
 
-    z_val = (FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size
+    z_val = ((FOCAL_LENGTH * TORSO_SIZE_) / img_torso_size)
 
     bone_pos_3d = Variable(torch.zeros([3, num_of_joints]))
     bone_pos_3d[0,:] = bone_pred[0,:]*z_val
