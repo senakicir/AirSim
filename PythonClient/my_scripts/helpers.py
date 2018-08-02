@@ -14,8 +14,8 @@ from math import degrees, radians, pi
 
 
 energy_mode = {1:True, 0:False}
-LOSSES = ["proj", "smooth", "bone", "smoothpose"]#, "lift"]
-CALIBRATION_LOSSES = ["proj"]#, "sym"]
+LOSSES = ["proj", "smooth", "bone", "smoothpose", "lift"]
+CALIBRATION_LOSSES = ["proj", "sym"]
 attributes = ['dronePos', 'droneOrient', 'humanPos', 'hip', 'right_up_leg', 'right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1', 'neck', 'head', 'head_top','left_arm', 'left_forearm', 'left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip' ,'right_foot_tip' ,'left_foot_tip']
 TEST_SETS = {0: "test_set_t", 1: "test_set_05_08", 2: "test_set_38_03", 3: "test_set_64_06", 4: "test_set_02_01"}
 
@@ -323,7 +323,7 @@ def plot_drone_and_human(bones_GT, predicted_bones, location, ind,  bone_connect
 def plot_optimization_losses(pltpts, location, ind, loss_dict):
     plt.figure()
     for loss_ind, loss_key in enumerate(loss_dict):
-        x_axis = np.linspace(1,pltpts[loss_key].shape[0],pltpts[loss_key].shape[0])
+        x_axis = np.linspace(1,len(pltpts[loss_key]),len(pltpts[loss_key]))
         plt.subplot(1,len(loss_dict),loss_ind+1)
         plt.semilogy(x_axis, pltpts[loss_key])
         plt.xlabel("iter")

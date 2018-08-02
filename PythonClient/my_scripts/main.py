@@ -296,7 +296,7 @@ if __name__ == "__main__":
     kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 5.17947467923e-10, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 1.38949549437e-08}
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
     use_airsim = False
-    mode_3d = 2 #0 - gt, 1- naiveback, 2- energy
+    mode_3d = 3 #0 - gt, 1- naiveback, 2- energy, 3-energy scipy
     mode_2d = 1 # 0- gt, 1- openpose
     use_trackbar = False
 
@@ -310,7 +310,7 @@ if __name__ == "__main__":
 
     parameters = {"USE_TRACKBAR": use_trackbar, "MODE_3D": mode_3d, "MODE_2D": mode_2d, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names, "MODEL": "mpi"}
     
-    weights_ = {'proj': 0.08, 'smooth': 0.55, 'bone': 0.3, 'smoothpose': 0.01}#, 'lift': 0.1}
+    weights_ = {'proj': 0.01, 'smooth': 0.8, 'bone': 0.3, 'smoothpose': 0.01, 'lift': 0.5}
     weights = {}
     weights_sum = sum(weights_.values())
     for loss_key in LOSSES:

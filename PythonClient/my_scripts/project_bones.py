@@ -133,10 +133,12 @@ def camera_to_world(R_drone, C_drone, P_camera, is_torch = True):
         P_world = P_world_.clone()
 
     else:
+        num_of_joints = P_camera.shape[1]
+
         P_camera = FLIP_X_Y_inv.dot(P_camera)
-        P_camera = np.vstack([bone_pos_3d, np.ones([1,P_camera.shape[1]]) ])
+        P_camera = np.vstack([P_camera, np.ones([1,P_camera.shape[1]]) ])
         P_drone = np.hstack([R_cam, C_cam]).dot(P_camera)
-        P_world_ = np.hstack([R_drone, C_drone]).dot(np.vstack([P_drone, np.ones([1, bone_pred.shape[1]])]))
+        P_world_ = np.hstack([R_drone, C_drone]).dot(np.vstack([P_drone, np.ones([1, num_of_joints])]))
         P_world = np.copy(P_world_)
 
     return P_world    

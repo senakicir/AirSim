@@ -2,12 +2,16 @@ from helpers import *
 from State import *
 from NonAirSimClient import *
 from pose3d_optimizer import *
+from pose3d_optimizer_scipy import *
 from project_bones import *
 import numpy as np
 import torch
 import cv2 as cv
 from torch.autograd import Variable
 import time
+from scipy.optimize import minimize
+#from levenberg import *
+
 
 import util as demo_util
 
@@ -22,6 +26,8 @@ def determine_all_positions(mode_3d, mode_2d, client, measurement_cov_ = 0,  plo
         positions, unreal_positions, cov, inFrame, f_output_str = determine_3d_positions_backprojection(mode_2d, measurement_cov_, client, plot_loc, photo_loc)
     elif (mode_3d == 2):            
         positions, unreal_positions, cov, f_output_str = determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc, photo_loc)
+    elif (mode_3d == 3):
+        positions, unreal_positions, cov, f_output_str = determine_3d_positions_energy_scipy(mode_2d, measurement_cov_, client, plot_loc, photo_loc)
 
     return positions, unreal_positions, cov, inFrame, f_output_str
 
@@ -50,6 +56,111 @@ def find_2d_pose_openpose(photo_loc, scale = -1):
     input_image = demo_util.prepare_image(image_path=photo_loc, height=scale)
     poses, heatmaps, model_type = openpose_module.run_only_model(input_image)
     return poses, heatmaps
+
+def determine_3d_positions_energy_scipy(mode_2d, measurement_cov_, client, plot_loc = 0, photo_loc = 0):
+    unreal_positions, bone_pos_3d_GT, drone_pos_vec, angle = client.getSynchronizedData()
+    bone_connections, joint_names, num_of_joints, bone_pos_3d_GT = model_settings(client.model, bone_pos_3d_GT)
+    #DONT FORGET THESE CHANGES
+    R_drone = euler_to_rotation_matrix(unreal_positions[DRONE_ORIENTATION_IND, 0], unreal_positions[DRONE_ORIENTATION_IND, 1], unreal_positions[DRONE_ORIENTATION_IND, 2])
+    C_drone = unreal_positions[DRONE_POS_IND, :]
+    C_drone = C_drone[:, np.newaxis]
+
+    #find 2d pose (using openpose or gt)
+    bone_2d, heatmap_2d = determine_2d_positions(mode_2d, True, unreal_positions, bone_pos_3d_GT, photo_loc, -1)
+
+    #find 3d pose using liftnet
+    pose = torch.cat((torch.t(bone_2d), torch.ones(num_of_joints,1)), 1)
+    input_image = cv.imread(photo_loc)
+    bone_2d = bone_2d.data.numpy()
+
+    pose3d_lift, cropped_img, cropped_heatmap = liftnet_module.run(input_image, heatmap_2d.cpu().numpy(), pose)
+    pose3d_lift = pose3d_lift.view(num_of_joints+2,  -1).permute(1, 0)
+    pose3d_lift = rearrange_bones_to_mpi(pose3d_lift, True)
+    pose3d_lift = camera_to_world(R_drone, C_drone, pose3d_lift.cpu().data.numpy(), is_torch = False)
+
+    #normalize liftnet pose and save it
+    hip_pos_lift = pose3d_lift[:, joint_names.index('spine1')]
+    pose3d_lift = pose3d_lift - hip_pos_lift[:, np.newaxis]
+    max_z_lift = np.max(pose3d_lift[2,:])
+    min_z_lift = np.min(pose3d_lift[2,:])
+    pose3d_lift = (pose3d_lift-min_z_lift)/(max_z_lift - min_z_lift)
+
+    if (client.linecount != 0):
+        pose3d_ = client.poseList_3d[-1]
+    else:
+        pose3d_ = take_bone_backprojection(bone_2d, R_drone, C_drone, joint_names)
+
+    if (client.isCalibratingEnergy): 
+        client.addNewCalibrationFrame(bone_2d, R_drone, C_drone, pose3d_)
+    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_, pose3d_lift)
+
+    pltpts = {}
+    final_loss = np.zeros([1,1])
+    if (client.linecount >1):
+        #calibration mode parameters
+        if (client.isCalibratingEnergy): 
+            if (client.linecount < 8):
+                num_iterations = 500000
+            else:
+                num_iterations = 50000
+            loss_dict = CALIBRATION_LOSSES
+            data_list = client.requiredEstimationData_calibration
+            energy_weights = {"proj":0.5, "sym":0.5}
+
+            objective = pose3d_calibration_scipy(client.model, data_list, energy_weights, loss_dict, num_iterations)
+            pose3d_init = pose3d_.copy()
+
+         #flight mode parameters
+        else:
+            num_iterations = 5000#client.iter
+
+            loss_dict = LOSSES
+            data_list = client.requiredEstimationData
+            lift_list = client.liftPoseList
+            energy_weights = client.weights
+
+            objective = pose3d_flight_scipy(client.model, data_list, lift_list, energy_weights, loss_dict, num_iterations, client.WINDOW_SIZE, client.boneLengths)
+            
+            pose3d_init = np.zeros([client.WINDOW_SIZE, 3, num_of_joints])
+            for queue_index, pose3d_ in enumerate(client.poseList_3d):
+                pose3d_init[queue_index, :] = pose3d_.copy()
+
+        optimized_res = minimize(objective.forward, pose3d_init, method='Powell', tol=1e-6, options={'maxiter': num_iterations})
+        P_world = optimized_res.x
+        
+        if (client.isCalibratingEnergy):
+            P_world = np.reshape(a = P_world, newshape = [3, num_of_joints], order = "C")
+            client.update3dPos(P_world, all = True)
+            if client.linecount > 3:
+                for i, bone in enumerate(bone_connections):
+                    client.boneLengths[i] = np.sum(np.square(P_world[:, bone[0]] - P_world[:, bone[1]]))
+                update_torso_size(0.86*(np.sqrt(np.sum(np.square(P_world[:, joint_names.index('neck')]- P_world[:, joint_names.index('spine1')])))))   
+        else:
+            P_world = np.reshape(a = P_world, newshape = [client.WINDOW_SIZE, 3, num_of_joints], order = "C")   
+            client.update3dPos(P_world)
+
+    #if the frame is the first frame, the energy is found through backprojection
+    else:
+        P_world = pose3d_
+        loss_dict = CALIBRATION_LOSSES
+    
+    client.error_2d.append(final_loss[0])
+    #check,  _ = take_bone_projection_pytorch(P_world, R_drone, C_drone)
+
+    error_3d = np.mean(np.linalg.norm(bone_pos_3d_GT - P_world, axis=0))
+    client.error_3d.append(error_3d)
+    if (plot_loc != 0):
+        #superimpose_on_image(bone_2d.data.numpy(), plot_loc, client.linecount, bone_connections, photo_loc, custom_name="projected_res_", scale = -1, projection=check.data.numpy())
+        plot_drone_and_human(bone_pos_3d_GT, P_world, plot_loc, client.linecount, bone_connections, error_3d)
+        if (client.linecount >1):
+            plot_optimization_losses(objective.pltpts, plot_loc, client.linecount, loss_dict)
+
+    positions = form_positions_dict(angle, drone_pos_vec, P_world[:,0])
+    cov = transform_cov_matrix(R_drone, measurement_cov_)
+    f_output_str = '\t'+str(unreal_positions[HUMAN_POS_IND, 0]) +'\t'+str(unreal_positions[HUMAN_POS_IND, 1])+'\t'+str(unreal_positions[HUMAN_POS_IND, 2])+'\t'+str(angle[0])+'\t'+str(angle[1])+'\t'+str(angle[2])+'\t'+str(drone_pos_vec.x_val)+'\t'+str(drone_pos_vec.y_val)+'\t'+str(drone_pos_vec.z_val)
+
+    return positions, unreal_positions, cov, f_output_str
+
 
 def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 0, photo_loc = 0):
     unreal_positions, bone_pos_3d_GT, drone_pos_vec, angle = client.getSynchronizedData()
@@ -90,7 +201,8 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
         #calibration mode parameters
         if (client.isCalibratingEnergy): 
             objective = pose3d_calibration(client.model)
-            optimizer = torch.optim.SGD(objective.parameters(), lr = 0.0005, momentum=0.9)
+            #optimizer = torch.optim.SGD(objective.parameters(), lr = 0.0005, momentum=0.9)
+            optimizer = levenberg(objective.parameters(), lr = 0.0005, momentum=0.9)
             if (client.linecount < 8):
                 num_iterations = 5000
             else:
@@ -98,7 +210,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
             objective.init_pose3d(pose3d_) 
             loss_dict = CALIBRATION_LOSSES
             data_list = client.requiredEstimationData_calibration
-            energy_weights = {"proj":0.5}#, "sym":0.5}
+            energy_weights = {"proj":0.5, "sym":0.5}
          #flight mode parameters
         else:
             objective = pose3d_flight(client.boneLengths, client.WINDOW_SIZE, client.model)
