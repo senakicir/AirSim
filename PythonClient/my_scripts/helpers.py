@@ -14,7 +14,7 @@ from math import degrees, radians, pi
 
 
 energy_mode = {1:True, 0:False}
-LOSSES = ["proj", "smooth", "bone", "smoothpose", "lift"]
+LOSSES = ["proj", "smooth", "bone", "lift"]#, "smoothpose"]
 CALIBRATION_LOSSES = ["proj", "sym"]
 attributes = ['dronePos', 'droneOrient', 'humanPos', 'hip', 'right_up_leg', 'right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1', 'neck', 'head', 'head_top','left_arm', 'left_forearm', 'left_hand','right_arm','right_forearm','right_hand', 'right_hand_tip', 'left_hand_tip' ,'right_foot_tip' ,'left_foot_tip']
 TEST_SETS = {0: "test_set_t", 1: "test_set_05_08", 2: "test_set_38_03", 3: "test_set_64_06", 4: "test_set_02_01"}
@@ -277,7 +277,7 @@ def plot_drone_and_human(bones_GT, predicted_bones, location, ind,  bone_connect
         Y = bones_GT[2,:]
         Z = -bones_GT[1,:]
         
-    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() * 0.8
+    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() *0.8
     mid_x = (X.max()+X.min()) * 0.5
     mid_y = (Y.max()+Y.min()) * 0.5
     mid_z = (Z.max()+Z.min()) * 0.5
@@ -288,12 +288,24 @@ def plot_drone_and_human(bones_GT, predicted_bones, location, ind,  bone_connect
     #plot drone
     #plot1 = ax.scatter(drone[0], drone[1], drone[2], c='r', marker='o')
 
+    left_bone_connections, right_bone_connections, middle_bone_connections = split_bone_connections(bone_connections)
+
     if (orientation == "z_up"):
         #plot joints
-        for i, bone in enumerate(bone_connections):
-            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='b', marker='^', label="GT")
-        for i, bone in enumerate(bone_connections):
-            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='r', marker='^', label="Estimate")
+        for i, bone in enumerate(left_bone_connections):
+            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='#8080ff', marker='^', label="GT")
+        for i, bone in enumerate(right_bone_connections):
+            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='#00004d', marker='^')
+        for i, bone in enumerate(middle_bone_connections):
+            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='#00004d', marker='^')
+
+        for i, bone in enumerate(left_bone_connections):
+            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='#ff8c66', marker='^', label="Estimate")
+        for i, bone in enumerate(right_bone_connections):
+            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='#992600', marker='^')
+        for i, bone in enumerate(middle_bone_connections):
+            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='#992600', marker='^')
+
         ax.legend(handles=[plot1, plot2])
         
         ax.set_xlabel('X')
@@ -337,3 +349,18 @@ def vector3r_arr_to_dict(input):
     for attribute in attributes:
         output[attribute] = getattr(input, attribute)
     return output
+
+def normalize_pose(pose_3d_input, joint_names, is_torch = True):
+    if (is_torch):
+        hip_pos = pose_3d_input[:, joint_names.index('spine1')].unsqueeze(1)
+        relative_pos = torch.sub(pose_3d_input, hip_pos)
+        max_z = torch.max(relative_pos[2,:])
+        min_z = torch.min(relative_pos[2,:])
+        result = (relative_pos)/(max_z - min_z)
+    else:
+        hip_pos = pose_3d_input[:, joint_names.index('spine1')]
+        relative_pos = pose_3d_input - hip_pos[:, np.newaxis]
+        max_z = np.max(relative_pos[2,:])
+        min_z = np.min(relative_pos[2,:])
+        result = (relative_pos)/(max_z - min_z)
+    return result, relative_pos

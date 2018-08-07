@@ -73,24 +73,26 @@ class pose3d_flight(torch.nn.Module):
             bonelosses[i] = torch.pow((self.bone_lengths[i] - length_of_bone),2)
         outputs["bone"] = torch.sum(bonelosses)/bonelosses.data.nelement()
 
-        hip_index = self.joint_names.index('spine1')
-        hip = self.pose3d[queue_index, :, hip_index].unsqueeze(1)
-        temp_pose3d_t = torch.sub(self.pose3d[queue_index, :, :], hip)
-        if (queue_index != self.window_size-1 and queue_index != 0):
-            temp_pose3d_t_p_1 = torch.sub(self.pose3d[queue_index+1, :, :], self.pose3d[queue_index+1, :, hip_index].unsqueeze(1))
-            temp_pose3d_t_m_1 = torch.sub(self.pose3d[queue_index-1, :, :], self.pose3d[queue_index-1, :, hip_index].unsqueeze(1))
-            outputs["smoothpose"] = mse_loss(temp_pose3d_t, temp_pose3d_t_p_1) +  mse_loss(temp_pose3d_t_m_1, temp_pose3d_t)
-        elif (queue_index != self.window_size-1 ):
-            temp_pose3d_t_p_1 = torch.sub(self.pose3d[queue_index+1, :, :], self.pose3d[queue_index+1, :, hip_index].unsqueeze(1))
-            outputs["smoothpose"] = mse_loss(temp_pose3d_t, temp_pose3d_t_p_1)
-        elif (queue_index != 0):
-            temp_pose3d_t_m_1 = torch.sub(self.pose3d[queue_index-1, :, :], self.pose3d[queue_index-1, :, hip_index].unsqueeze(1))
-            outputs["smoothpose"] = mse_loss(temp_pose3d_t_m_1, temp_pose3d_t)
+        #hip_index = self.joint_names.index('spine1')
+        #hip = self.pose3d[queue_index, :, hip_index].unsqueeze(1)
+        #temp_pose3d_t = torch.sub(self.pose3d[queue_index, :, :], hip)
+        normalized_pose_3d, temp_pose3d_t = normalize_pose(self.pose3d[queue_index, :, :], self.joint_names, is_torch = True)
+
+        #if (queue_index != self.window_size-1 and queue_index != 0):
+        #    temp_pose3d_t_p_1 = torch.sub(self.pose3d[queue_index+1, :, :], self.pose3d[queue_index+1, :, hip_index].unsqueeze(1))
+        #    temp_pose3d_t_m_1 = torch.sub(self.pose3d[queue_index-1, :, :], self.pose3d[queue_index-1, :, hip_index].unsqueeze(1))
+        #    outputs["smoothpose"] = mse_loss(temp_pose3d_t, temp_pose3d_t_p_1) +  mse_loss(temp_pose3d_t_m_1, temp_pose3d_t)
+        #elif (queue_index != self.window_size-1 ):
+        #    temp_pose3d_t_p_1 = torch.sub(self.pose3d[queue_index+1, :, :], self.pose3d[queue_index+1, :, hip_index].unsqueeze(1))
+        #    outputs["smoothpose"] = mse_loss(temp_pose3d_t, temp_pose3d_t_p_1)
+        #elif (queue_index != 0):
+        #    temp_pose3d_t_m_1 = torch.sub(self.pose3d[queue_index-1, :, :], self.pose3d[queue_index-1, :, hip_index].unsqueeze(1))
+        #    outputs["smoothpose"] = mse_loss(temp_pose3d_t_m_1, temp_pose3d_t)
 
         #normalize pose
-        max_z = torch.max(temp_pose3d_t[2,:])
-        min_z = torch.min(temp_pose3d_t[2,:])
-        normalized_pose_3d = (pose3d_lift-min_z)/(max_z - min_z)
+        #max_z = torch.max(temp_pose3d_t[2,:])
+        #min_z = torch.min(temp_pose3d_t[2,:])
+        #normalized_pose_3d = (pose3d_lift)/(max_z - min_z)
         outputs["lift"]= mse_loss(pose3d_lift.cpu(), normalized_pose_3d)
 
         return outputs

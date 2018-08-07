@@ -132,3 +132,156 @@ class pose3d_flight_scipy():
         
         self.curr_iter += 1
         return overall_output
+    
+def minimize_levenberg(fun, x0, args=(), jac=None, hess=None, hessp=None,
+                       callback=None, xtol=1e-5, eps=1e-6, maxiter=None,
+                       disp=False, return_all=False,
+                       **unknown_options):
+    """
+    Minimization of scalar function of one or more variables using the
+    Newton-CG algorithm.
+    Note that the `jac` parameter (Jacobian) is required.
+    Options
+    -------
+    disp : bool
+        Set to True to print convergence messages.
+    xtol : float
+        Average relative error in solution `xopt` acceptable for
+        convergence.
+    maxiter : int
+        Maximum number of iterations to perform.
+    eps : float or ndarray
+        If `jac` is approximated, use this value for the step size.
+    """
+    _check_unknown_options(unknown_options)
+    if jac is None:
+        raise ValueError('Jacobian is required for Newton-CG method')
+    f = fun
+    fprime = jac
+    fhess_p = hessp
+    fhess = hess
+    avextol = xtol
+    epsilon = eps
+    retall = return_all
+
+    x0_flat = asarray(x0).flatten()
+    fcalls, f = wrap_function(f, args)
+    gcalls, fprime = wrap_function(fprime, args)
+    hcalls = 0
+    if maxiter is None:
+        maxiter = len(x0_flat)*200
+
+    xtol = len(x0_flat) * avextol
+    update = [2 * xtol]
+    xk = x0
+    if retall:
+        allvecs = [xk]
+    k = 0
+    old_fval = f(x0)
+    old_old_fval = None
+    float64eps = np.finfo(np.float64).eps
+    warnflag = 0
+    while (np.add.reduce(np.abs(update)) > xtol) and (k < maxiter):
+        # Compute a search direction pk by applying the CG method to
+        #  del2 f(xk) p = - grad f(xk) starting from 0.
+        b = -fprime(xk)
+        maggrad = np.add.reduce(np.abs(b))
+        eta = np.min([0.5, np.sqrt(maggrad)])
+        termcond = eta * maggrad
+        xsupi = zeros(len(x0), dtype=x0.dtype)
+        ri = -b
+        psupi = -ri
+        i = 0
+        dri0 = np.dot(ri, ri)
+
+        if fhess is not None:             # you want to compute hessian once.
+            A = fhess(*(xk,) + args)
+            hcalls = hcalls + 1
+
+        while np.add.reduce(np.abs(ri)) > termcond:
+            if fhess is None:
+                if fhess_p is None:
+                    Ap = approx_fhess_p(xk, psupi, fprime, epsilon)
+                else:
+                    Ap = fhess_p(xk, psupi, *args)
+                    hcalls = hcalls + 1
+            else:
+                Ap = np.dot(A, psupi)
+            # check curvature
+            Ap = asarray(Ap).squeeze()  # get rid of matrices...
+            curv = np.dot(psupi, Ap)
+            if 0 <= curv <= 3 * float64eps:
+                break
+            elif curv < 0:
+                if (i > 0):
+                    break
+                else:
+                    # fall back to steepest descent direction
+                    xsupi = dri0 / (-curv) * b
+                    break
+            alphai = dri0 / curv
+            xsupi = xsupi + alphai * psupi
+            ri = ri + alphai * Ap
+            dri1 = np.dot(ri, ri)
+            betai = dri1 / dri0
+            psupi = -ri + betai * psupi
+            i = i + 1
+            dri0 = dri1          # update numpy.dot(ri,ri) for next time.
+
+        pk = xsupi  # search direction is solution to system.
+        gfk = -b    # gradient at xk
+
+        try:
+            alphak, fc, gc, old_fval, old_old_fval, gfkp1 = \
+                     _line_search_wolfe12(f, fprime, xk, pk, gfk,
+                                          old_fval, old_old_fval)
+        except _LineSearchError:
+            # Line search failed to find a better solution.
+            warnflag = 2
+            break
+
+        update = alphak * pk
+        xk = xk + update        # upcast if necessary
+        if callback is not None:
+            callback(xk)
+        if retall:
+            allvecs.append(xk)
+        k += 1
+
+    fval = old_fval
+    if warnflag == 2:
+        msg = _status_message['pr_loss']
+        if disp:
+            print("Warning: " + msg)
+            print("         Current function value: %f" % fval)
+            print("         Iterations: %d" % k)
+            print("         Function evaluations: %d" % fcalls[0])
+            print("         Gradient evaluations: %d" % gcalls[0])
+            print("         Hessian evaluations: %d" % hcalls)
+    elif k >= maxiter:
+        warnflag = 1
+        msg = _status_message['maxiter']
+        if disp:
+            print("Warning: " + msg)
+            print("         Current function value: %f" % fval)
+            print("         Iterations: %d" % k)
+            print("         Function evaluations: %d" % fcalls[0])
+            print("         Gradient evaluations: %d" % gcalls[0])
+            print("         Hessian evaluations: %d" % hcalls)
+    else:
+        msg = _status_message['success']
+        if disp:
+            print(msg)
+            print("         Current function value: %f" % fval)
+            print("         Iterations: %d" % k)
+            print("         Function evaluations: %d" % fcalls[0])
+            print("         Gradient evaluations: %d" % gcalls[0])
+            print("         Hessian evaluations: %d" % hcalls)
+
+    result = OptimizeResult(fun=fval, jac=gfk, nfev=fcalls[0], njev=gcalls[0],
+                            nhev=hcalls, status=warnflag,
+                            success=(warnflag == 0), message=msg, x=xk,
+                            nit=k)
+    if retall:
+        result['allvecs'] = allvecs
+    return result
