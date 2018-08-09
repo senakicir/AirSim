@@ -48,7 +48,7 @@ class pose3d_flight(torch.nn.Module):
         self.pose3d = torch.nn.Parameter(torch.zeros([self.window_size, 3, self.NUM_OF_JOINTS]), requires_grad=True)
         self.bone_lengths = Variable(bone_lengths_, requires_grad = False)
 
-    def forward(self, pose_2d, R_drone, C_drone, pose3d_lift, queue_index):
+    def forward(self, pose_2d, R_drone, C_drone, pose3d_lift_directions, queue_index):
         #projection loss
         outputs = {}
         for loss in LOSSES:
@@ -73,10 +73,16 @@ class pose3d_flight(torch.nn.Module):
             bonelosses[i] = torch.pow((self.bone_lengths[i] - length_of_bone),2)
         outputs["bone"] = torch.sum(bonelosses)/bonelosses.data.nelement()
 
+        pose_est_directions = torch.zeros([3, self.NUM_OF_JOINTS-1])
+        for i, bone in enumerate(self.bone_connections):
+            bone_vector = self.pose3d[queue_index, :, bone[0]] - self.pose3d[queue_index, :, bone[1]]
+            pose_est_directions[:, i] = bone_vector/(torch.norm(bone_vector)+EPSILON)
+
         #hip_index = self.joint_names.index('spine1')
         #hip = self.pose3d[queue_index, :, hip_index].unsqueeze(1)
         #temp_pose3d_t = torch.sub(self.pose3d[queue_index, :, :], hip)
-        normalized_pose_3d, temp_pose3d_t = normalize_pose(self.pose3d[queue_index, :, :], self.joint_names, is_torch = True)
+        #normalized_pose_3d, temp_pose3d_t = normalize_pose(self.pose3d[queue_index, :, :], self.joint_names, is_torch = True)
+
 
         #if (queue_index != self.window_size-1 and queue_index != 0):
         #    temp_pose3d_t_p_1 = torch.sub(self.pose3d[queue_index+1, :, :], self.pose3d[queue_index+1, :, hip_index].unsqueeze(1))
@@ -93,7 +99,7 @@ class pose3d_flight(torch.nn.Module):
         #max_z = torch.max(temp_pose3d_t[2,:])
         #min_z = torch.min(temp_pose3d_t[2,:])
         #normalized_pose_3d = (pose3d_lift)/(max_z - min_z)
-        outputs["lift"]= mse_loss(pose3d_lift.cpu(), normalized_pose_3d)
+        outputs["lift"]= mse_loss(pose_est_directions, pose3d_lift_directions)
 
         return outputs
     

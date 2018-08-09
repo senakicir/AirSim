@@ -9,7 +9,7 @@ import torch
 import cv2 as cv
 from torch.autograd import Variable
 import time
-from scipy.optimize import minimize
+from scipy.optimize import minimize, least_squares
 from levenberg import *
 
 
@@ -79,12 +79,11 @@ def determine_3d_positions_energy_scipy(mode_2d, measurement_cov_, client, plot_
     pose3d_lift = camera_to_world(R_drone, C_drone, pose3d_lift.cpu().data.numpy(), is_torch = False)
 
     #normalize liftnet pose and save it
-    pose3d_lift, _ = normalize_pose(pose3d_lift, joint_names, is_torch = False)
-    #hip_pos_lift = pose3d_lift[:, joint_names.index('spine1')]
-    #pose3d_lift = pose3d_lift - hip_pos_lift[:, np.newaxis]
-    #max_z_lift = np.max(pose3d_lift[2,:])
-    #min_z_lift = np.min(pose3d_lift[2,:])
-    #pose3d_lift = (pose3d_lift-min_z_lift)/(max_z_lift - min_z_lift)
+    #pose3d_lift, _ = normalize_pose(pose3d_lift, joint_names, is_torch = False)
+    pose3d_lift_directions = np.zeros([3, num_of_joints-1])
+    for i, bone in enumerate(bone_connections):
+        bone_vector = pose3d_lift[:, bone[0]] - pose3d_lift[:, bone[1]]
+        pose3d_lift_directions[:, i] = bone_vector/(np.linalg.norm(bone_vector)+EPSILON)
 
     if (client.linecount != 0):
         pose3d_ = client.poseList_3d[-1]
@@ -93,7 +92,7 @@ def determine_3d_positions_energy_scipy(mode_2d, measurement_cov_, client, plot_
 
     if (client.isCalibratingEnergy): 
         client.addNewCalibrationFrame(bone_2d, R_drone, C_drone, pose3d_)
-    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_, pose3d_lift)
+    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_, pose3d_lift_directions)
 
     pltpts = {}
     final_loss = np.zeros([1,1])
@@ -110,6 +109,7 @@ def determine_3d_positions_energy_scipy(mode_2d, measurement_cov_, client, plot_
 
             objective = pose3d_calibration_scipy(client.model, data_list, energy_weights, loss_dict, num_iterations)
             pose3d_init = pose3d_.copy()
+            pose3d_init = np.reshape(a = pose3d_init, newshape = [3*num_of_joints], order = "C")
 
          #flight mode parameters
         else:
@@ -125,8 +125,14 @@ def determine_3d_positions_energy_scipy(mode_2d, measurement_cov_, client, plot_
             pose3d_init = np.zeros([client.WINDOW_SIZE, 3, num_of_joints])
             for queue_index, pose3d_ in enumerate(client.poseList_3d):
                 pose3d_init[queue_index, :] = pose3d_.copy()
+            pose3d_init = np.reshape(a = pose3d_init, newshape = [client.WINDOW_SIZE*3*num_of_joints,], order = "C")
 
-        optimized_res = minimize(objective.forward, pose3d_init, method='Newton-CG', jac={"2-point"}, tol=1e-3, options={'maxiter': num_iterations})
+        #optimized_res = minimize(objective.forward, pose3d_init, method='Newton-CG', jac={"2-point"}, tol=1e-3, options={'maxiter': num_iterations})
+        if (client.linecount < client.WINDOW_SIZE):
+            optimized_res = minimize(objective.forward_powell, pose3d_init, method='Powell', tol=1e-2, options={'maxiter': num_iterations})
+        else:
+            optimized_res = least_squares(objective.forward, pose3d_init, jac="2-point", bounds=(-np.inf, np.inf), method='trf', ftol=1e-3)
+
         P_world_scrambled = optimized_res.x
         
         if (client.isCalibratingEnergy):
@@ -182,13 +188,14 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
     pose3d_lift = rearrange_bones_to_mpi(pose3d_lift, True)
     pose3d_lift = camera_to_world(R_drone, C_drone, pose3d_lift.cpu(), is_torch = True)
 
+    #find lift bone directions
+    pose3d_lift_directions = torch.zeros([3, num_of_joints-1])
+    for i, bone in enumerate(bone_connections):
+        bone_vector = pose3d_lift[:, bone[0]] - pose3d_lift[:, bone[1]]
+        pose3d_lift_directions[:, i] = bone_vector/(torch.norm(bone_vector)+EPSILON)
+
     #normalize liftnet pose and save it
-    #hip_pos_lift = pose3d_lift[:, joint_names.index('spine1')].unsqueeze(1)
-    #pose3d_lift = pose3d_lift - hip_pos_lift
-    #max_z_lift = torch.max(pose3d_lift[2,:])
-    #min_z_lift = torch.min(pose3d_lift[2,:])
-    #pose3d_lift = pose3d_lift/(max_z_lift - min_z_lift) #TEST WITHOUT SUB
-    pose3d_lift, _ = normalize_pose(pose3d_lift, joint_names, is_torch = True)
+    #pose3d_lift, _ = normalize_pose(pose3d_lift, joint_names, is_torch = True)
 
     if (client.linecount != 0):
         pose3d_ = client.poseList_3d[-1]
@@ -197,7 +204,7 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
 
     if (client.isCalibratingEnergy): 
         client.addNewCalibrationFrame(bone_2d, R_drone, C_drone, pose3d_)
-    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_, pose3d_lift)
+    client.addNewFrame(bone_2d, R_drone, C_drone, pose3d_, pose3d_lift_directions)
 
     pltpts = {}
     final_loss = np.zeros([1,1])
@@ -248,18 +255,13 @@ def determine_3d_positions_energy(mode_2d, measurement_cov_, client, plot_loc = 
                     if (client.isCalibratingEnergy):
                         loss = objective.forward(bone_2d_, R_drone_, C_drone_)
                     else: 
-                        pose3d_lift = client.liftPoseList[queue_index]
-                        loss = objective.forward(bone_2d_, R_drone_, C_drone_, pose3d_lift, queue_index)
+                        pose3d_lift_directions = client.liftPoseList[queue_index]
+                        loss = objective.forward(bone_2d_, R_drone_, C_drone_, pose3d_lift_directions, queue_index)
 
                         if (i == num_iterations - 1 and queue_index == 0):
-                            #temp_res_ = objective.pose3d[0, :, :]
-                            #temp_hip_pos = temp_res_[:, joint_names.index('spine1')].unsqueeze(1)
-                            #temp_res = temp_res_ - temp_hip_pos
-                            #max_z = torch.max(temp_res[2,:])
-                            #min_z = torch.min(temp_res[2,:])
-                            #normalized_pose_3d = temp_res/(max_z - min_z)
                             normalized_pose_3d, _ = normalize_pose(objective.pose3d[0, :, :], joint_names, is_torch = True)
-                            plot_drone_and_human(normalized_pose_3d.data.numpy(), pose3d_lift.cpu().numpy(), plot_loc, client.linecount, bone_connections, custom_name="lift_res_", orientation = "z_up")
+                            normalized_lift, _ = normalize_pose(pose3d_lift, joint_names, is_torch = True)
+                            plot_drone_and_human(normalized_pose_3d.data.numpy(), normalized_lift.cpu().numpy(), plot_loc, client.linecount, bone_connections, custom_name="lift_res_", orientation = "z_up")
                     for loss_key in loss_dict:
                         outputs[loss_key].append(loss[loss_key])
                     queue_index += 1
@@ -362,18 +364,8 @@ def determine_3d_positions_all_GT(mode_2d, client, plot_loc, photo_loc):
         C_drone = Variable(torch.FloatTensor([[unreal_positions[DRONE_POS_IND, 0]],[unreal_positions[DRONE_POS_IND, 1]],[unreal_positions[DRONE_POS_IND, 2]]]), requires_grad = False)
         pose3d_lift = camera_to_world(R_drone, C_drone, pose3d_lift.cpu(), is_torch = True)
 
-        #hip_pos_lift = pose3d_lift[:, joint_names.index('spine1')].unsqueeze(1)
-        #pose3d_lift = pose3d_lift - hip_pos_lift
-        #max_z_lift = torch.max(pose3d_lift[2,:])
-        #min_z_lift = torch.min(pose3d_lift[2,:])
-        #pose3d_lift = (pose3d_lift-min_z_lift)/(max_z_lift - min_z_lift)
         pose3d_lift, _ = normalize_pose(pose3d_lift, joint_names, is_torch = True)
         
-        #hip_pos_GT = bone_pos_3d_GT[:, joint_names.index('spine1')]
-        #bone_pos_3d_GT = bone_pos_3d_GT - hip_pos_GT[:, np.newaxis]
-        #max_z_GT = np.max(bone_pos_3d_GT[2,:])
-        #min_z_GT = np.min(bone_pos_3d_GT[2,:])
-        #bone_pos_3d_GT = (bone_pos_3d_GT-min_z_GT)/(max_z_GT - min_z_GT)
         bone_pos_3d_GT, _ = normalize_pose(bone_pos_3d_GT, joint_names, is_torch = False)
 
         plot_drone_and_human(bone_pos_3d_GT, pose3d_lift.cpu().numpy(), plot_loc, client.linecount, bone_connections, custom_name="lift_res_", orientation = "z_up")

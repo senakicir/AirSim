@@ -35,6 +35,8 @@ bones_mpi = [[0, 1], [14, 1], #middle
             [14, 11], [11, 12], [12, 13]] #left leg
 joint_names_mpi = ['head','neck','right_arm','right_forearm','right_hand','left_arm', 'left_forearm','left_hand','right_up_leg','right_leg', 'right_foot', 'left_up_leg', 'left_leg', 'left_foot', 'spine1']
 
+EPSILON = 0.00000001
+
 CALIBRATION_LENGTH = 25
 
 SIZE_X = 1024
@@ -293,20 +295,20 @@ def plot_drone_and_human(bones_GT, predicted_bones, location, ind,  bone_connect
     if (orientation == "z_up"):
         #plot joints
         for i, bone in enumerate(left_bone_connections):
-            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='#8080ff', marker='^', label="GT")
+            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='xkcd:light blue', marker='^', label="GT left")
         for i, bone in enumerate(right_bone_connections):
-            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='#00004d', marker='^')
+            plot1_r, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='xkcd:royal blue', marker='^', label="GT right")
         for i, bone in enumerate(middle_bone_connections):
-            plot1, = ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='#00004d', marker='^')
+            ax.plot(bones_GT[0,bone], bones_GT[1,bone], -bones_GT[2,bone], c='xkcd:royal blue', marker='^')
 
         for i, bone in enumerate(left_bone_connections):
-            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='#ff8c66', marker='^', label="Estimate")
+            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='xkcd:light red', marker='^', label="Estimate left")
         for i, bone in enumerate(right_bone_connections):
-            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='#992600', marker='^')
+            plot2_r, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='xkcd:blood red', marker='^', label="Estimate right")
         for i, bone in enumerate(middle_bone_connections):
-            plot2, = ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='#992600', marker='^')
+            ax.plot(predicted_bones[0,bone], predicted_bones[1,bone], -predicted_bones[2,bone], c='xkcd:blood red', marker='^')
 
-        ax.legend(handles=[plot1, plot2])
+        ax.legend(handles=[plot1, plot1_r, plot2, plot2_r])
         
         ax.set_xlabel('X')
         ax.set_ylabel('Y')

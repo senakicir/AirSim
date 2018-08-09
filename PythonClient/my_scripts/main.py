@@ -296,7 +296,7 @@ if __name__ == "__main__":
     kalman_arguments = {"KALMAN_PROCESS_NOISE_AMOUNT" : 5.17947467923e-10, "KALMAN_MEASUREMENT_NOISE_AMOUNT_XY" : 1.38949549437e-08}
     kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_Z"] = 517.947467923 * kalman_arguments["KALMAN_MEASUREMENT_NOISE_AMOUNT_XY"]
     use_airsim = False
-    mode_3d = 0 #0 - gt, 1- naiveback, 2- energy, 3-energy scipy
+    mode_3d = 3 #0 - gt, 1- naiveback, 2- energy, 3-energy scipy
     mode_2d = 1 # 0- gt, 1- openpose
     use_trackbar = False
 
@@ -310,13 +310,13 @@ if __name__ == "__main__":
 
     parameters = {"USE_TRACKBAR": use_trackbar, "MODE_3D": mode_3d, "MODE_2D": mode_2d, "USE_AIRSIM": use_airsim, "FILE_NAMES": file_names, "FOLDER_NAMES": folder_names, "MODEL": "mpi"}
     
-    weights_ = {'proj': 0.01, 'smooth': 0.8, 'bone': 0.3, 'lift': 0.1}#'smoothpose': 0.01,}
+    weights_ = {'proj': 0.01, 'smooth': 0.8, 'bone': 0.3, 'lift': 0.4}#'smoothpose': 0.01,}
     weights = {}
     weights_sum = sum(weights_.values())
     for loss_key in LOSSES:
         weights[loss_key] = weights_[loss_key]/weights_sum
 
-    energy_parameters = {"LR_MU": [3.5, 0.8], "ITER": 6000, "WEIGHTS": weights}
+    energy_parameters = {"LR_MU": [1, 0.8], "ITER": 4000, "WEIGHTS": weights}
 
     fill_notes(f_notes_name, parameters, energy_parameters)   
 
