@@ -54,6 +54,8 @@ public: //implementation of VehicleSimApiBase
     virtual void changeAnimation(int anim_num) const override;
     virtual void changeCalibrationMode(bool calib_mode) const override;
     virtual void pauseHuman(bool is_paused) const override;
+    virtual void updateBonePositions() override;
+
     
     virtual int getRemoteControlID() const override;
     virtual msr::airlib::RCData getRCData() const override;
@@ -105,12 +107,12 @@ public: //Unreal specific methods
     Vector3r_arr bones; //sena was here
     Vector3r_arr* bonesPosPtr;
     AActor* human_; //sena was here
+    IDroneInterface* TheDroneInterface;
+    ICharacterInterface* TheCharacterInterface;
 
     //sena was here
     FVector getDroneWorldPosition() const;
     FRotator getDroneWorldOrientation() const;
-    void updateBonePositions();
-    void setBonePos(Vector3r_arr bonePos_);
 
 private: //methods
     bool canTeleportWhileMove()  const;

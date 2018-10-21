@@ -132,5 +132,5 @@ echo "=================================================================="
 popd >/dev/null
 
 #sena was here too!
-rm -r ~/Documents/UnrealProjects/LandscapeMountains\ 4.18/Plugins
-rsync -t -r ~/Gitstuff/AirSim/Unreal/Plugins/ ~/Documents/UnrealProjects/LandscapeMountains\ 4.18/Plugins
+rm -r ~/Documents/Unreal\ Projects/LandscapeMountains/Plugins
+rsync -t -r ~/workspace/AirSim/Unreal/Plugins/ ~/Documents/Unreal\ Projects/LandscapeMountains/Plugins

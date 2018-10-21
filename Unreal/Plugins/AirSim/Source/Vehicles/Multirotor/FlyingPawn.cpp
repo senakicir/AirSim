@@ -98,6 +98,7 @@ void AFlyingPawn::setRotorSpeed(const std::vector<MultirotorPawnEvents::RotorInf
 
 //sena was here
 FVector AFlyingPawn::getDronePositionUpdated_Implementation(){
+    droneLocationUpdated = this->GetActorLocation();
     return droneLocationUpdated;
 }
 
