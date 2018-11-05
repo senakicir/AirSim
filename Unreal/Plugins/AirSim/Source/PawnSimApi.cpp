@@ -9,6 +9,7 @@
 #include "PIPCamera.h"
 #include "NedTransform.h"
 #include "common/EarthUtils.hpp"
+#include <unistd.h>
 
 PawnSimApi::PawnSimApi(APawn* pawn, const NedTransform& global_transform, PawnEvents* pawn_events,
                        const common_utils::UniqueValueMap<std::string, APIPCamera*>& cameras, UClass* pip_camera_class,
@@ -187,8 +188,7 @@ APawn* PawnSimApi::getPawn()
     return pawn_;
 }
 
-std::vector<PawnSimApi::ImageCaptureBase::ImageResponse> PawnSimApi::getImages(
-                                                                               const std::vector<ImageCaptureBase::ImageRequest>& requests) const
+std::vector<PawnSimApi::ImageCaptureBase::ImageResponse> PawnSimApi::getImages( const std::vector<ImageCaptureBase::ImageRequest>& requests) const
 {
     std::vector<ImageCaptureBase::ImageResponse> responses;
     
@@ -295,6 +295,8 @@ void PawnSimApi::reset()
     state_ = initial_state_;
     rc_data_ = msr::airlib::RCData();
     pawn_->SetActorLocationAndRotation(state_.start_location, state_.start_rotation, false, nullptr, ETeleportType::TeleportPhysics);
+    
+    TheCharacterInterface->Execute_resetAnimation(human_); //sena was here
     
     environment_->reset();
 }
@@ -424,6 +426,23 @@ void PawnSimApi::pauseHuman(bool is_paused) const
 //sena was here
 void PawnSimApi::updateBonePositions()
 {
+    TArray<FVector> temp = TheCharacterInterface->Execute_getBonePositionsUpdated(human_);
+    int i = 0;
+    int exception = 0;
+    std::cout << human_ << std::endl;
+    while (temp.Num() == 0 and i < 10000){
+        exception = 1;
+        unsigned int microseconds = 10000;
+        usleep(microseconds);
+        temp = TheCharacterInterface->Execute_getBonePositionsUpdated(human_);
+        i++;
+        TheCharacterInterface = Cast<ICharacterInterface>(human_);
+    }
+    if(exception)
+    {
+        std::cout<< "Warning, read Execute_getBonePositionsUpdated again "<< i << std::endl;
+        //sleep(10);
+    }
     
     FRotator droneOrient_f = this -> getDroneWorldOrientation();
     float pi = 3.14159265358979323846;
@@ -431,61 +450,56 @@ void PawnSimApi::updateBonePositions()
     FVector dronePos_f = this -> getDroneWorldPosition();
     Vector3r dronePos(dronePos_f.X, dronePos_f.Y, dronePos_f.Z);
     
-    if (TheCharacterInterface){
-        FVector humanloc = TheCharacterInterface->Execute_getHumanPositionUpdated(human_);
-        Vector3r humanloc_3r(humanloc.X, humanloc.Y, humanloc.Z);
-        bones.humanPos = humanloc_3r; //save human's position
-        
-        TArray<FVector> temp =TheCharacterInterface->Execute_getBonePositionsUpdated(human_);
-        for (int j=0; j<21; j++){
-            Vector3r boneloc_3r(temp[j].X, temp[j].Y, temp[j].Z);
-            if (j==0)
-                bones.hip = boneloc_3r;
-            if (j==1)
-                bones.right_up_leg = boneloc_3r;
-            if (j==2)
-                bones.right_leg = boneloc_3r;
-            if (j==3)
-                bones.right_foot = boneloc_3r;
-            if (j==4)
-                bones.left_up_leg = boneloc_3r;
-            if (j==5)
-                bones.left_leg = boneloc_3r;
-            if (j==6)
-                bones.left_foot = boneloc_3r;
-            if (j==7)
-                bones.spine1 = boneloc_3r;
-            if (j==8)
-                bones.neck = boneloc_3r;
-            if (j==9)
-                bones.head = boneloc_3r;
-            if (j==10)
-                bones.head_top = boneloc_3r;
-            if (j==11)
-                bones.left_arm = boneloc_3r;
-            if (j==12)
-                bones.left_forearm = boneloc_3r;
-            if (j==13)
-                bones.left_hand = boneloc_3r;
-            if (j==14)
-                bones.right_arm = boneloc_3r;
-            if (j==15)
-                bones.right_forearm = boneloc_3r;
-            if (j==16)
-                bones.right_hand = boneloc_3r;
-            if (j==17)
-                bones.right_hand_tip = boneloc_3r;
-            if (j==18)
-                bones.left_hand_tip = boneloc_3r;
-            if (j==19)
-                bones.right_foot_tip = boneloc_3r;
-            if (j==20)
-                bones.left_foot_tip = boneloc_3r;
-        }
-        
-        bones.dronePos = dronePos;
-        bones.droneOrient = droneOrient;
+    //std::cout<< temp[0].X << " " << temp[0].Y << std::endl;
+    for (int j=0; j<21; j++){
+        Vector3r boneloc_3r(temp[j].X, temp[j].Y, temp[j].Z);
+        if (j==0)
+            bones.hip = boneloc_3r;
+        bones.humanPos = boneloc_3r; //save human's position
+        if (j==1)
+            bones.right_up_leg = boneloc_3r;
+        if (j==2)
+            bones.right_leg = boneloc_3r;
+        if (j==3)
+            bones.right_foot = boneloc_3r;
+        if (j==4)
+            bones.left_up_leg = boneloc_3r;
+        if (j==5)
+            bones.left_leg = boneloc_3r;
+        if (j==6)
+            bones.left_foot = boneloc_3r;
+        if (j==7)
+            bones.spine1 = boneloc_3r;
+        if (j==8)
+            bones.neck = boneloc_3r;
+        if (j==9)
+            bones.head = boneloc_3r;
+        if (j==10)
+            bones.head_top = boneloc_3r;
+        if (j==11)
+            bones.left_arm = boneloc_3r;
+        if (j==12)
+            bones.left_forearm = boneloc_3r;
+        if (j==13)
+            bones.left_hand = boneloc_3r;
+        if (j==14)
+            bones.right_arm = boneloc_3r;
+        if (j==15)
+            bones.right_forearm = boneloc_3r;
+        if (j==16)
+            bones.right_hand = boneloc_3r;
+        if (j==17)
+            bones.right_hand_tip = boneloc_3r;
+        if (j==18)
+            bones.left_hand_tip = boneloc_3r;
+        if (j==19)
+            bones.right_foot_tip = boneloc_3r;
+        if (j==20)
+            bones.left_foot_tip = boneloc_3r;
     }
+    bones.dronePos = dronePos;
+    bones.droneOrient = droneOrient;
+    
 }
 
 //sena was here

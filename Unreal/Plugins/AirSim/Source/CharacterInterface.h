@@ -19,10 +19,6 @@ class ICharacterInterface
 public:
     //classes using this interface must implement this
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "MyCategory")
-    FVector getHumanPositionUpdated();
-    
-    //classes using this interface must implement this
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "MyCategory")
     TArray<FVector> getBonePositionsUpdated();
     
     //classes using this interface must implement this
@@ -34,5 +30,8 @@ public:
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
     void pauseAnimation(bool pause);
+    
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "MyCategory")
+    void resetAnimation();
 };
 

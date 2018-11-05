@@ -24,8 +24,8 @@ public:
     AFlyingPawn();
     
     //sena was here
-    FVector droneLocationUpdated;
-    FRotator droneOrientationUpdated;
+    //FVector droneLocationUpdated;
+    //FRotator droneOrientationUpdated;
 
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaSeconds) override;
