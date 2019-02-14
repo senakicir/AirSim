@@ -37,6 +37,8 @@ public:
     Pose toLocalNed(const FTransform& pose) const;
     Pose toGlobalNed(const FTransform& pose) const;
 
+    //sena was here
+    Vector3r getInitialPos();
 
     //local NED -> UU
     FVector fromLocalNed(const Vector3r& position) const;

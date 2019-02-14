@@ -34,6 +34,9 @@ public:
 
     bool simIsPaused() const;
     void simPause(bool is_paused);
+    void simPauseHuman(bool is_paused); //sena was here
+    void simPauseDrone(bool is_paused); //sena was here
+    
     void simContinueForTime(double seconds);
 
     Pose simGetObjectPose(const std::string& object_name) const;
@@ -54,6 +57,7 @@ public:
     msr::airlib::GeoPoint getHomeGeoPoint(const std::string& vehicle_name = "") const;
     Pose simGetVehiclePose(const std::string& vehicle_name = "") const;
     void simSetVehiclePose(const Pose& pose, bool ignore_collision, const std::string& vehicle_name = "");
+    void simSetVehiclePose_senaver(const Pose& pose, const std::string& vehicle_name = ""); //sena was here
 
     vector<ImageCaptureBase::ImageResponse> simGetImages(vector<ImageCaptureBase::ImageRequest> request, const std::string& vehicle_name = "");
     vector<uint8_t> simGetImage(const std::string& camera_name, ImageCaptureBase::ImageType type, const std::string& vehicle_name = "");
@@ -62,6 +66,7 @@ public:
 
     //sena was here
     Vector3r_arr getBonePositions(const std::string& vehicle_name = "") const;
+    Vector3r getInitialDronePos(const std::string& vehicle_name = "") const;
     void changeAnimation(int new_anim, const std::string& vehicle_name = "") const;
     void changeCalibrationMode(bool calib_mode, const std::string& vehicle_name = "") const;
 

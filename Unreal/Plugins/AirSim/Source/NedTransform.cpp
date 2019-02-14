@@ -26,6 +26,11 @@ NedTransform::NedTransform(const AActor* pivot, const FTransform& global_transfo
         local_ned_offset_ = FVector::ZeroVector;
 }
 
+//sena was here
+NedTransform::Vector3r NedTransform::getInitialPos(){
+    return Vector3r(local_ned_offset_.X, local_ned_offset_.Y, local_ned_offset_.Z);
+}
+
 NedTransform::Vector3r NedTransform::toLocalNed(const FVector& position) const
 {
     return NedTransform::toVector3r(position - local_ned_offset_,

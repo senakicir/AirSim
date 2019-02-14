@@ -124,5 +124,14 @@ void AComputerVisionPawn::BeginPlay()
     Super::BeginPlay();
 }
 
+//sena was here
+FVector AComputerVisionPawn::getDronePositionUpdated_Implementation(){
+    return (this->GetActorLocation());
+}
+
+//sena was here
+FRotator AComputerVisionPawn::getDroneOrientationUpdated_Implementation(){
+    return (this->GetActorRotation());
+}
 
 

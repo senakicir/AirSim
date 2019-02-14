@@ -12,23 +12,37 @@
 #include "PIPCamera.h"
 #include "ManualPoseController.h"
 
+//sena was here
+#include "DroneInterface.h"
+
 #include "ComputerVisionPawn.generated.h"
 
 
 UCLASS()
-class AComputerVisionPawn : public APawn
+class AComputerVisionPawn : public APawn, public IDroneInterface
 {
     GENERATED_BODY()
-
+    
 public:
     AComputerVisionPawn();
-
+    
     virtual void BeginPlay() override;
     virtual void Tick(float Delta) override;
+    
+    //sena was here
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
+    FVector getDronePositionUpdated();
+    virtual FVector getDronePositionUpdated_Implementation() override;
+    
+    //sena was here
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
+    FRotator getDroneOrientationUpdated();
+    virtual FRotator getDroneOrientationUpdated_Implementation() override;
+    
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void NotifyHit(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation,
-        FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
-
+                           FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+    
     //interface
     void initializeForBeginPlay();
     common_utils::UniqueValueMap<std::string, APIPCamera*> getCameras() const;
@@ -36,12 +50,12 @@ public:
     {
         return &pawn_events_;
     }
-
+    
 private:
     UPROPERTY() UClass* pip_camera_class_;
     
     PawnEvents pawn_events_;
-
+    
     UPROPERTY() USceneComponent* camera_front_center_base_;
     UPROPERTY() USceneComponent* camera_front_left_base_;
     UPROPERTY() USceneComponent* camera_front_right_base_;
@@ -53,7 +67,8 @@ private:
     UPROPERTY() APIPCamera* camera_front_right_;
     UPROPERTY() APIPCamera* camera_bottom_center_;
     UPROPERTY() APIPCamera* camera_back_center_;
-
-
+    
+    
     UPROPERTY() UManualPoseController* manual_pose_controller_;
 };
+

@@ -60,11 +60,19 @@ namespace msr { namespace airlib {
             return 1;
         });
         
-        
         pimpl_->server.bind("simPause", [&](bool is_paused) -> void {
             getVehicleSimApi("")->pauseHuman(is_paused); //sena was here
             getWorldSimApi()->pause(is_paused);
         });
+        //sena was here
+        pimpl_->server.bind("simPauseHuman", [&](bool is_paused) -> void {
+            getVehicleSimApi("")->pauseHuman(is_paused);
+        });
+        //sena was here
+        pimpl_->server.bind("simPauseDrone", [&](bool is_paused) -> void {
+            getWorldSimApi()->pause(is_paused);
+        });
+        
         pimpl_->server.bind("simIsPaused", [&]() -> bool {
             return getWorldSimApi()->isPaused();
         });
@@ -84,12 +92,12 @@ namespace msr { namespace airlib {
         
         //sena was here
         pimpl_->server.bind("simGetImages", [&](const std::vector<RpcLibAdapatorsBase::ImageRequest>& request_adapter, const std::string& vehicle_name) -> vector<RpcLibAdapatorsBase::ImageResponse> {
-            getVehicleSimApi(vehicle_name)->pauseHuman(true);
-            getWorldSimApi()->pause(true);
+            //getVehicleSimApi(vehicle_name)->pauseHuman(true);
+            //getWorldSimApi()->pause(true);
             getVehicleSimApi(vehicle_name)->updateBonePositions();
             const auto& response = getVehicleSimApi(vehicle_name)->getImages(RpcLibAdapatorsBase::ImageRequest::to(request_adapter));
-            getVehicleSimApi(vehicle_name)->pauseHuman(false);
-            getWorldSimApi()->pause(false);
+            //getVehicleSimApi(vehicle_name)->pauseHuman(false);
+            //getWorldSimApi()->pause(false);
             return RpcLibAdapatorsBase::ImageResponse::from(response);
         });
         
@@ -102,9 +110,12 @@ namespace msr { namespace airlib {
             return result;
         });
         
-        pimpl_->server.
-        bind("simSetVehiclePose", [&](const RpcLibAdapatorsBase::Pose &pose, bool ignore_collision, const std::string& vehicle_name) -> void {
+        pimpl_->server.bind("simSetVehiclePose", [&](const RpcLibAdapatorsBase::Pose &pose, bool ignore_collision, const std::string& vehicle_name) -> void {
             getVehicleSimApi(vehicle_name)->setPose(pose.to(), ignore_collision);
+        });
+        //sena was here
+        pimpl_->server.bind("simSetVehiclePose_senaver", [&](const RpcLibAdapatorsBase::Pose &pose, const std::string& vehicle_name) -> void {
+            getVehicleSimApi(vehicle_name)->setPose_senaver(pose.to());
         });
         pimpl_->server.bind("simGetVehiclePose", [&](const std::string& vehicle_name) -> RpcLibAdapatorsBase::Pose {
             const auto& pose = getVehicleSimApi(vehicle_name)->getPose();
@@ -158,12 +169,16 @@ namespace msr { namespace airlib {
             const auto& bone_pos = *(getVehicleSimApi(vehicle_name)->getBonePositions());
             return RpcLibAdapatorsBase::Vector3r_arr(bone_pos);
         });
-        
+        //sena was here
+        pimpl_->server.bind("getInitialDronePos", [&](const std::string& vehicle_name) -> RpcLibAdapatorsBase::Vector3r {
+            const auto& initial_drone_pos = (getVehicleSimApi(vehicle_name)->getInitialDronePos());
+            return RpcLibAdapatorsBase::Vector3r(initial_drone_pos);
+        });
         //sena was here
         pimpl_->server.bind("changeAnimation", [&](const std::string& vehicle_name, int new_anim) -> void {
             getVehicleSimApi(vehicle_name)->changeAnimation(new_anim);
         });
-        
+
         //sena was here
         pimpl_->server.bind("changeCalibrationMode", [&](const std::string& vehicle_name, bool calib_mode) -> void {
             getVehicleSimApi(vehicle_name)->changeCalibrationMode(calib_mode);

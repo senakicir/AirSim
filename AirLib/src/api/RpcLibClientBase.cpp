@@ -167,6 +167,12 @@ Vector3r_arr RpcLibClientBase::getBonePositions(const std::string& vehicle_name)
 }
     
 //sena was here
+Vector3r RpcLibClientBase::getInitialDronePos(const std::string& vehicle_name) const
+{
+    return pimpl_->client.call("getInitialDronePos", vehicle_name).as<RpcLibAdapatorsBase::Vector3r>().to();
+}
+    
+//sena was here
 void RpcLibClientBase::changeAnimation(int new_anim, const std::string& vehicle_name) const
 {
     pimpl_->client.call("changeAnimation", vehicle_name, new_anim);
@@ -187,9 +193,16 @@ void RpcLibClientBase::simSetVehiclePose(const Pose& pose, bool ignore_collision
 {
     pimpl_->client.call("simSetVehiclePose", RpcLibAdapatorsBase::Pose(pose), ignore_collision, vehicle_name);
 }
+    
+//sena was here
+void RpcLibClientBase::simSetVehiclePose_senaver(const Pose& pose, const std::string& vehicle_name)
+{
+    pimpl_->client.call("simSetVehiclePose_senaver", RpcLibAdapatorsBase::Pose(pose), vehicle_name);
+}
+
 
 vector<ImageCaptureBase::ImageResponse> RpcLibClientBase::simGetImages(vector<ImageCaptureBase::ImageRequest> request, const std::string& vehicle_name)
-{
+{    
     const auto& response_adaptor = pimpl_->client.call("simGetImages", 
         RpcLibAdapatorsBase::ImageRequest::from(request), vehicle_name)
         .as<vector<RpcLibAdapatorsBase::ImageResponse>>();
@@ -220,6 +233,18 @@ void RpcLibClientBase::simPause(bool is_paused)
 {
     pimpl_->client.call("simPause", is_paused);
 }
+    
+//sena was here
+void RpcLibClientBase::simPauseHuman(bool is_paused)
+{
+    pimpl_->client.call("simPauseHuman", is_paused);
+}
+//sena was here
+void RpcLibClientBase::simPauseDrone(bool is_paused)
+{
+    pimpl_->client.call("simPauseDrone", is_paused);
+}
+
 
 void RpcLibClientBase::simContinueForTime(double seconds)
 {

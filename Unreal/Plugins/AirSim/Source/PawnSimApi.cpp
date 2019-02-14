@@ -29,6 +29,8 @@ pip_camera_class_(pip_camera_class), collision_display_template_(collision_displ
     pawn_->GetActorBounds(true, initial_state_.mesh_origin, initial_state_.mesh_bounds);
     initial_state_.ground_offset = FVector(0, 0, initial_state_.mesh_bounds.Z);
     initial_state_.transformation_offset = pawn_->GetActorLocation() - initial_state_.ground_offset;
+    //sena was here
+    initialDronePos = Vector3r(initial_state_.transformation_offset.X, initial_state_.transformation_offset.Y, initial_state_.transformation_offset.Z);
     ground_margin_ = FVector(0, 0, 20); //TODO: can we explain pawn_ experimental setting? 7 seems to be minimum
     ground_trace_end_ = initial_state_.ground_offset + ground_margin_;
     
@@ -39,6 +41,8 @@ pip_camera_class_(pip_camera_class), collision_display_template_(collision_displ
     
     //compute our home point
     Vector3r nedWrtOrigin = ned_transform_.toGlobalNed(getUUPosition());
+    //sena was here
+    //initialDronePos = ned_transform_.getInitialPos();
     home_geo_point_ = msr::airlib::EarthUtils::nedToGeodetic(nedWrtOrigin, AirSimSettings::singleton().origin_geopoint);
     
     initial_state_.tracing_enabled = getVehicleSetting()->enable_trace;
@@ -508,6 +512,11 @@ Vector3r_arr* PawnSimApi::getBonePositions() const{
 }
 
 //sena was here
+Vector3r PawnSimApi::getInitialDronePos() const{
+    return initialDronePos;
+}
+
+//sena was here
 void PawnSimApi::changeAnimation(int anim_num) const{
     UAirBlueprintLib::LogMessageString("Change animation now!", "", LogDebugLevel::Failure);
     TheCharacterInterface->Execute_changeAnimation(human_, anim_num);
@@ -538,7 +547,66 @@ void PawnSimApi::setPose(const Pose& pose, bool ignore_collision)
     UAirBlueprintLib::RunCommandOnGameThread([this, pose, ignore_collision]() {
         setPoseInternal(pose, ignore_collision);
     }, true);
+    
 }
+
+//sena was here
+
+void PawnSimApi::setPose_senaver(const Pose& pose){
+    UAirBlueprintLib::RunCommandOnGameThread([this, pose]()
+                                             {
+                                                 setPoseInternal_senaver(pose);
+                                             }, true);
+}
+
+void PawnSimApi::setPoseInternal_senaver(const Pose& pose)
+{
+    /*//FVector glob_off = ned_transform_.getGlobalOffset();
+     //FVector local_off = ned_transform_.getLocalOffset();
+     //UAirBlueprintLib::LogMessage(FString("Local Offset: "), local_off.ToCompactString(), LogDebugLevel::Informational);
+     //UAirBlueprintLib::LogMessage(FString("Global Offset: "), glob_off.ToCompactString(), LogDebugLevel::Informational);
+     
+     FVector position = ned_transform_.fromLocalNed(pose.position);
+     FQuat orientation = ned_transform_.fromNed(pose.orientation);
+     
+     //FVector lol = FVector (lol2.x(), lol2.y(), lol2.z());
+     // UAirBlueprintLib::LogMessage(FString("Global Offset: "), lol.ToCompactString(), LogDebugLevel::Informational);
+     
+     state_.collision_info.has_collided = false;
+     pawn_->SetActorLocationAndRotation(position, orientation, false, nullptr, ETeleportType::TeleportPhysics);
+     */
+    bool ignore_collision = true;
+    //translate to new PawnSimApi position & orientation from NED to NEU
+    FVector position = ned_transform_.fromLocalNed(pose.position);
+    state_.current_position = position;
+    
+    //quaternion formula comes from http://stackoverflow.com/a/40334755/207661
+    FQuat orientation = ned_transform_.fromNed(pose.orientation);
+    
+    bool enable_teleport = ignore_collision || canTeleportWhileMove();
+    
+    //must reset collision before we set pose. Setting pose will immediately call NotifyHit if there was collision
+    //if there was no collision than has_collided would remain false, else it will be set so its value can be
+    //checked at the start of next tick
+    state_.collision_info.has_collided = false;
+    state_.was_last_move_teleport = enable_teleport;
+    
+    if (enable_teleport)
+        pawn_->SetActorLocationAndRotation(position, orientation, false, nullptr, ETeleportType::TeleportPhysics);
+    else
+        pawn_->SetActorLocationAndRotation(position, orientation, true);
+    
+    if (state_.tracing_enabled && (state_.last_position - position).SizeSquared() > 0.25) {
+        UKismetSystemLibrary::DrawDebugLine(pawn_->GetWorld(), state_.last_position, position, FColor::Purple, -1, 3.0f);
+        state_.last_position = position;
+    }
+    else if (!state_.tracing_enabled) {
+        state_.last_position = position;
+    }
+    
+    
+}
+
 
 void PawnSimApi::setPoseInternal(const Pose& pose, bool ignore_collision)
 {
