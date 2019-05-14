@@ -7,7 +7,6 @@
 AFlyingPawn::AFlyingPawn()
 {
     pawn_events_.getActuatorSignal().connect_member(this, &AFlyingPawn::setRotorSpeed);
-    //PrimaryActorTick.bCanEverTick = true; //sena was here
 }
 
 void AFlyingPawn::BeginPlay()
@@ -36,9 +35,6 @@ void AFlyingPawn::initializeForBeginPlay()
 
 void AFlyingPawn::Tick(float DeltaSeconds)
 {
-    //sena was here
-    // droneLocationUpdated = this->GetActorLocation();
-    // droneOrientationUpdated= this->GetActorRotation();
     Super::Tick(DeltaSeconds);
     pawn_events_.getPawnTickSignal().emit(DeltaSeconds);
 }
