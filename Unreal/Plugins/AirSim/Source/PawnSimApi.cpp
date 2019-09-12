@@ -422,9 +422,21 @@ FRotator PawnSimApi::getDroneWorldOrientation() const
 }
 
 //sena was here
-void PawnSimApi::pauseHuman(bool is_paused) const
+void PawnSimApi::setAnimationTime(float time) const
 {
-    TheCharacterInterface->Execute_pauseAnimation(human_, is_paused);
+    TheCharacterInterface->Execute_setAnimationTime(human_, time);
+}
+
+//sena was here
+void PawnSimApi::updateAnimation(float increment_time) const
+{
+    TheCharacterInterface->Execute_updateAnimation(human_, increment_time);
+}
+
+//sena was here
+float PawnSimApi::getAnimationTime() const
+{
+    return TheCharacterInterface->Execute_getAnimationTime(human_);
 }
 
 //sena was here

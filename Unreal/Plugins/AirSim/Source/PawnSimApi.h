@@ -55,7 +55,9 @@ public: //implementation of VehicleSimApiBase
     virtual Vector3r_arr* getBonePositions() const override;
     virtual void changeAnimation(int anim_num) const override;
     virtual void changeCalibrationMode(bool calib_mode) const override;
-    virtual void pauseHuman(bool is_paused) const override;
+    virtual void setAnimationTime(float time) const override;
+    virtual float getAnimationTime() const override;
+    virtual void updateAnimation(float increment_time) const override;
     virtual void updateBonePositions() override;
     virtual Vector3r getInitialDronePos() const override;
     

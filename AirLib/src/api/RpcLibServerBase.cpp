@@ -61,12 +61,20 @@ namespace msr { namespace airlib {
         });
         
         pimpl_->server.bind("simPause", [&](bool is_paused) -> void {
-            getVehicleSimApi("")->pauseHuman(is_paused); //sena was here
+            //getVehicleSimApi("")->pauseHuman(is_paused); //sena was here
             getWorldSimApi()->pause(is_paused);
         });
         //sena was here
-        pimpl_->server.bind("simPauseHuman", [&](bool is_paused) -> void {
-            getVehicleSimApi("")->pauseHuman(is_paused);
+        pimpl_->server.bind("setAnimationTime", [&](float time) -> void {
+            getVehicleSimApi("")->setAnimationTime(time);
+        });
+        //sena was here
+        pimpl_->server.bind("getAnimationTime", [&]() -> float {
+            return getVehicleSimApi("")->getAnimationTime();
+        });
+        //sena was here
+        pimpl_->server.bind("updateAnimation", [&](float increment_time) -> void {
+            return getVehicleSimApi("")->updateAnimation(increment_time);
         });
         //sena was here
         pimpl_->server.bind("simPauseDrone", [&](bool is_paused) -> void {
@@ -178,7 +186,7 @@ namespace msr { namespace airlib {
         pimpl_->server.bind("changeAnimation", [&](const std::string& vehicle_name, int new_anim) -> void {
             getVehicleSimApi(vehicle_name)->changeAnimation(new_anim);
         });
-
+        
         //sena was here
         pimpl_->server.bind("changeCalibrationMode", [&](const std::string& vehicle_name, bool calib_mode) -> void {
             getVehicleSimApi(vehicle_name)->changeCalibrationMode(calib_mode);

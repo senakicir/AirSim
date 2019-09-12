@@ -29,8 +29,14 @@ public:
     void changeCalibrationMode(bool calibMode);
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
-    void pauseAnimation(bool pause);
+    void setAnimationTime(float time);
     
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
+    void updateAnimation(float increment_time);
+    
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
+    float getAnimationTime();
+
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "MyCategory")
     void resetAnimation();
 };

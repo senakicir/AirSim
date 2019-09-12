@@ -66,7 +66,9 @@ namespace msr { namespace airlib {
         virtual Vector3r_arr* getBonePositions() const = 0;
         virtual void changeAnimation(int new_anim) const = 0;
         virtual void changeCalibrationMode(bool calib_mode) const = 0;
-        virtual void pauseHuman(bool is_paused) const = 0;
+        virtual void setAnimationTime(float time) const = 0;
+        virtual float getAnimationTime() const = 0;
+        virtual void updateAnimation(float increment_time) const = 0;
         virtual void updateBonePositions() = 0;
         virtual Vector3r getInitialDronePos() const=0;
         
