@@ -108,12 +108,12 @@ void UAirBlueprintLib::enableViewportRendering(AActor* context, bool enable)
     auto* viewport = context->GetWorld()->GetGameViewport();
     if (!viewport)
         return;
-
+    
     if (!enable) {
         // This disables rendering of the main viewport in the same way as the
         // console command "show rendering" would do.
         viewport->EngineShowFlags.SetRendering(false);
-
+        
         // When getting an image through the API, the image is produced after the render
         // thread has finished rendering the current and the subsequent frame. This means
         // that the frame rate for obtaining images through the API is only half as high as
@@ -122,16 +122,12 @@ void UAirBlueprintLib::enableViewportRendering(AActor* context, bool enable)
         // drawn frame so that it executes our render request at that point already.
         // Do this only if the main viewport is not being rendered anyway in case there are
         // any adverse performance effects during main rendering.
-        //HACK: FViewPort doesn't expose this field so we are doing dirty work around by maintaining count by ourselves
-        if (flush_on_draw_count_ == 0)
-            viewport->GetGameViewport()->IncrementFlushOnDraw();
+        
+        // TODO: Validate framerate of sensor data when the NoDisplay setting is turned on.
     }
     else {
         viewport->EngineShowFlags.SetRendering(true);
-
-        //HACK: FViewPort doesn't expose this field so we are doing dirty work around by maintaining count by ourselves
-        if (flush_on_draw_count_ > 0)
-            viewport->GetGameViewport()->DecrementFlushOnDraw();
+        
     }
 }
 
