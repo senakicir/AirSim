@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=airsim_binary
+FROM $BASE_IMAGE
+
+
+USER root
+RUN apt-get update
+COPY 

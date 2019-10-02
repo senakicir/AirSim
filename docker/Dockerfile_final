@@ -1,0 +1,64 @@
+ARG BASE_IMAGE=airsim_binary:10.0-devel-ubuntu18.04 
+FROM $BASE_IMAGE
+
+USER root
+RUN apt-get update
+
+# python, hdf5, codecs for imageio
+RUN apt-get install --no-install-recommends -y \
+    python3 python3-pip \
+	ssh \
+	software-properties-common \
+    hdf5-tools h5utils \
+    libgomp1 ninja-build \
+	&& apt-get clean \
+	&& ln -s /usr/bin/python3 /usr/local/bin/python \
+	&& ln -s /usr/bin/pip3 /usr/local/bin/pip 
+
+# core
+RUN pip --no-cache-dir install \
+	setuptools wheel virtualenv
+
+# main
+RUN pip --no-cache-dir install \
+	numpy scipy scikit-image scikit-learn \
+	matplotlib \
+	imageio h5py
+
+RUN python -c "import imageio; imageio.plugins.freeimage.download()"
+
+RUN pip --no-cache-dir install \
+	ipython jupyterlab \
+	click tqdm \
+	einops docopt \
+	pyyaml easydict natsort \
+	xonsh \
+	opencv-contrib-python-headless \
+	pandas \
+	msgpack-rpc-python \
+	tornado==4.5.3
+
+# pytorch
+# use shared cache for pytorch
+ENV TORCH_MODEL_ZOO /cvlabsrc1/cvlab/pytorch_model_zoo/models
+ENV TORCH_HOME /cvlabsrc1/cvlab/pytorch_model_zoo 
+RUN pip --no-cache-dir install \
+	torch \
+	torchvision \
+	future
+# future is for caffe2 / torch.tensorboard
+
+RUN apt-get install --no-install-recommends -y python3-dev \
+	screen \ 
+	&& apt-get clean
+
+RUN mkdir -p /home/kicirogl/Documents/AirSim
+COPY settings.json /home/kicirogl/Documents/AirSim
+
+RUN mkdir /opt/lab
+COPY setup.sh setup_and_run_command.sh setup_and_wait.sh /opt/lab/
+COPY setup_steps /opt/lab/setup_steps
+
+ENV AUTO_SHUTDOWN_TIME 168h
+CMD ["/opt/lab/setup.sh"]
+
