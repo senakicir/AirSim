@@ -1,7 +1,6 @@
 ARG BASE_IMAGE=nvidia/cudagl:10.0-devel-ubuntu18.04
 FROM $BASE_IMAGE
 
-
 USER root
 RUN apt-get update
 RUN apt-get install \
@@ -11,21 +10,3 @@ RUN apt-get install \
     x11-xserver-utils \
     git \ 
     -y --no-install-recommends 
-
-
-RUN adduser --force-badname --disabled-password --gecos '' --shell /bin/bash airsim_user && \ 
-	echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \ 
-	adduser airsim_user sudo && \ 
-	adduser airsim_user audio && \ 
-	adduser airsim_user video
-
-USER airsim_user
-RUN cd /home/airsim_user && \
-	git clone --progress https://github.com/senakicir/AirSim.git && \
-	cd AirSim && \
-	./setup.sh && \
-	./build.sh
-	
-WORKDIR /home/airsim_user
-RUN mkdir -p /home/airsim_user/Documents/AirSim
-RUN sudo chown -R airsim_user /home/airsim_user

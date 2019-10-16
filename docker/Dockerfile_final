@@ -1,8 +1,16 @@
-ARG BASE_IMAGE=airsim_binary:10.0-devel-ubuntu18.04 
+ARG BASE_IMAGE=nvidia/cudagl:10.0-devel-ubuntu18.04
 FROM $BASE_IMAGE
 
 USER root
 RUN apt-get update
+
+RUN apt-get install \
+	rsync \
+    sudo \
+    wget \
+    x11-xserver-utils \
+    git \ 
+    -y --no-install-recommends 
 
 # python, hdf5, codecs for imageio
 RUN apt-get install --no-install-recommends -y \
@@ -36,7 +44,8 @@ RUN pip --no-cache-dir install \
 	opencv-contrib-python-headless \
 	pandas \
 	msgpack-rpc-python \
-	tornado==4.5.3
+	tornado==4.5.3 \
+	configobj==5.0.6
 
 # pytorch
 # use shared cache for pytorch
@@ -50,15 +59,27 @@ RUN pip --no-cache-dir install \
 
 RUN apt-get install --no-install-recommends -y python3-dev \
 	screen \ 
+	unzip \
 	&& apt-get clean
-
-RUN mkdir -p /home/kicirogl/Documents/AirSim
-COPY settings.json /home/kicirogl/Documents/AirSim
 
 RUN mkdir /opt/lab
 COPY setup.sh setup_and_run_command.sh setup_and_wait.sh /opt/lab/
 COPY setup_steps /opt/lab/setup_steps
 
-ENV AUTO_SHUTDOWN_TIME 168h
-CMD ["/opt/lab/setup.sh"]
+RUN mkdir -p /home/kicirogl/Documents/AirSim
+COPY settings.json /home/kicirogl/Documents/AirSim
 
+#RUN mkdir /tmp/apex-build \
+#	&& cd /tmp/apex-build \
+#	&& wget --output-document=apex-master.zip https://github.com/NVIDIA/apex/archive/master.zip \
+#	&& unzip apex-master.zip \
+#	&& cd apex-master \
+#	&& pip install --no-cache-dir --upgrade pip \
+#	&& pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" . \
+#	&& cd / \
+#	&& rm -r /tmp/apex-build
+
+
+ENV AUTO_SHUTDOWN_TIME 168h
+
+WORKDIR /home/kicirogl

@@ -2,6 +2,7 @@
   "SettingsVersion": 1.2,
   "SimMode": "ComputerVision",
   "ViewMode":"NoDisplay",
+  "ApiServerPort": 41452,
   "CameraDefaults": {
     "CaptureSettings": [
       {

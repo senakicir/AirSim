@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: kicirogl-airsim
+  name: kicirogl-airsim-grid-search
   labels:
     user: kicirogl
-    priority: "1"
+    priority: "5"
 spec:
   restartPolicy: Never
   containers:
