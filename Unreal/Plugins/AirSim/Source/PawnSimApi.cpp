@@ -430,7 +430,7 @@ void PawnSimApi::setAnimationTime(float time) const
 //sena was here
 void PawnSimApi::updateAnimation(float increment_time) const
 {
-    TheCharacterInterface->Execute_updateAnimation(human_, increment_time);
+    TheCharacterInterface->Execute_advanceAnimation(human_, increment_time);
 }
 
 //sena was here
@@ -537,8 +537,6 @@ void PawnSimApi::changeAnimation(int anim_num) const{
 
 //sena was here
 void PawnSimApi::changeCalibrationMode(bool calib_mode) const{
-    UAirBlueprintLib::LogMessageString("Change calibration mode now!", "", LogDebugLevel::Failure);
-    TheCharacterInterface->Execute_changeCalibrationMode(human_, calib_mode);
 }
 
 //sena was here

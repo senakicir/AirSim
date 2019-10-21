@@ -26,13 +26,10 @@ public:
     void changeAnimation(int new_anim_num);
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
-    void changeCalibrationMode(bool calibMode);
-    
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
     void setAnimationTime(float time);
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
-    void updateAnimation(float increment_time);
+    void advanceAnimation(float increment_time);
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
     float getAnimationTime();
