@@ -445,7 +445,6 @@ void PawnSimApi::updateBonePositions()
     TArray<FVector> temp = TheCharacterInterface->Execute_getBonePositionsUpdated(human_);
     int i = 0;
     int exception = 0;
-    std::cout << human_ << std::endl;
     while (temp.Num() == 0 and i < 10000){
         exception = 1;
         unsigned int microseconds = 10000;
