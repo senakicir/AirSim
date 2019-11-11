@@ -46,18 +46,14 @@ public: //implementation of VehicleSimApiBase
     virtual std::vector<uint8_t> getImage(const std::string& camera_name, ImageCaptureBase::ImageType image_type) const override;
     virtual Pose getPose() const override;
     virtual void setPose(const Pose& pose, bool ignore_collision) override;
-    virtual void setPose_senaver(const Pose& pose) override; //sena was here
     
     virtual msr::airlib::CameraInfo getCameraInfo(const std::string& camera_name) const override;
     virtual void setCameraOrientation(const std::string& camera_name, const Quaternionr& orientation) override;
     virtual CollisionInfo getCollisionInfo() const override;
     //sena was here
-    virtual Vector3r_arr* getBonePositions() const override;
     virtual void changeAnimation(int anim_num) const override;
-    virtual void changeCalibrationMode(bool calib_mode) const override;
     virtual void setAnimationTime(float time) const override;
     virtual float getAnimationTime() const override;
-    virtual void updateAnimation(float increment_time) const override;
     virtual void updateBonePositions() override;
     virtual Vector3r getInitialDronePos() const override;
     

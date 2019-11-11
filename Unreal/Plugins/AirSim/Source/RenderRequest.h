@@ -33,14 +33,12 @@ public:
         
         int width;
         int height;
-        Vector3r_arr bonePos_data; //sena was here
         msr::airlib::TTimePoint time_stamp;
     };
     
 private:
     static FReadSurfaceDataFlags setupRenderResource(const FTextureRenderTargetResource* rt_resource, const RenderParams* params, RenderResult* result, FIntPoint& size);
     bool use_safe_method_;
-    Vector3r_arr* bonesPosPtr; //sena was here
     std::shared_ptr<RenderParams>* params_;
     std::shared_ptr<RenderResult>* results_;
     unsigned int req_size_;
@@ -49,7 +47,7 @@ private:
     
     
 public:
-    RenderRequest(bool use_safe_method = false, Vector3r_arr* bonesPosPtr_ = nullptr);
+    RenderRequest(bool use_safe_method = false);
     ~RenderRequest();
     
     void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)

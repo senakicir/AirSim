@@ -53,7 +53,6 @@ namespace msr { namespace airlib {
         
         virtual Pose getPose() const = 0;
         virtual void setPose(const Pose& pose, bool ignore_collision) = 0;
-        virtual void setPose_senaver(const Pose& pose) = 0; //sena was here
         virtual const Kinematics::State* getGroundTruthKinematics() const = 0;
         virtual const msr::airlib::Environment* getGroundTruthEnvironment() const = 0;
         
@@ -63,12 +62,9 @@ namespace msr { namespace airlib {
         virtual CollisionInfo getCollisionInfo() const = 0;
         
         //sena was here
-        virtual Vector3r_arr* getBonePositions() const = 0;
         virtual void changeAnimation(int new_anim) const = 0;
-        virtual void changeCalibrationMode(bool calib_mode) const = 0;
         virtual void setAnimationTime(float time) const = 0;
         virtual float getAnimationTime() const = 0;
-        virtual void updateAnimation(float increment_time) const = 0;
         virtual void updateBonePositions() = 0;
         virtual Vector3r getInitialDronePos() const=0;
         

@@ -428,12 +428,6 @@ void PawnSimApi::setAnimationTime(float time) const
 }
 
 //sena was here
-void PawnSimApi::updateAnimation(float increment_time) const
-{
-    TheCharacterInterface->Execute_advanceAnimation(human_, increment_time);
-}
-
-//sena was here
 float PawnSimApi::getAnimationTime() const
 {
     return TheCharacterInterface->Execute_getAnimationTime(human_);
@@ -517,10 +511,6 @@ void PawnSimApi::updateBonePositions()
     
 }
 
-//sena was here
-Vector3r_arr* PawnSimApi::getBonePositions() const{
-    return bonesPosPtr;
-}
 
 //sena was here
 Vector3r PawnSimApi::getInitialDronePos() const{
@@ -532,10 +522,6 @@ void PawnSimApi::changeAnimation(int anim_num) const{
     UAirBlueprintLib::LogMessageString("Change animation now!", "", LogDebugLevel::Failure);
     TheCharacterInterface->Execute_changeAnimation(human_, anim_num);
     
-}
-
-//sena was here
-void PawnSimApi::changeCalibrationMode(bool calib_mode) const{
 }
 
 //sena was here
@@ -559,62 +545,6 @@ void PawnSimApi::setPose(const Pose& pose, bool ignore_collision)
     
 }
 
-//sena was here
-
-void PawnSimApi::setPose_senaver(const Pose& pose){
-    UAirBlueprintLib::RunCommandOnGameThread([this, pose]()
-                                             {
-                                                 setPoseInternal_senaver(pose);
-                                             }, true);
-}
-
-void PawnSimApi::setPoseInternal_senaver(const Pose& pose)
-{
-    /*//FVector glob_off = ned_transform_.getGlobalOffset();
-     //FVector local_off = ned_transform_.getLocalOffset();
-     //UAirBlueprintLib::LogMessage(FString("Local Offset: "), local_off.ToCompactString(), LogDebugLevel::Informational);
-     //UAirBlueprintLib::LogMessage(FString("Global Offset: "), glob_off.ToCompactString(), LogDebugLevel::Informational);
-     
-     FVector position = ned_transform_.fromLocalNed(pose.position);
-     FQuat orientation = ned_transform_.fromNed(pose.orientation);
-     
-     //FVector lol = FVector (lol2.x(), lol2.y(), lol2.z());
-     // UAirBlueprintLib::LogMessage(FString("Global Offset: "), lol.ToCompactString(), LogDebugLevel::Informational);
-     
-     state_.collision_info.has_collided = false;
-     pawn_->SetActorLocationAndRotation(position, orientation, false, nullptr, ETeleportType::TeleportPhysics);
-     */
-    bool ignore_collision = true;
-    //translate to new PawnSimApi position & orientation from NED to NEU
-    FVector position = ned_transform_.fromLocalNed(pose.position);
-    state_.current_position = position;
-    
-    //quaternion formula comes from http://stackoverflow.com/a/40334755/207661
-    FQuat orientation = ned_transform_.fromNed(pose.orientation);
-    
-    bool enable_teleport = ignore_collision || canTeleportWhileMove();
-    
-    //must reset collision before we set pose. Setting pose will immediately call NotifyHit if there was collision
-    //if there was no collision than has_collided would remain false, else it will be set so its value can be
-    //checked at the start of next tick
-    state_.collision_info.has_collided = false;
-    state_.was_last_move_teleport = enable_teleport;
-    
-    if (enable_teleport)
-        pawn_->SetActorLocationAndRotation(position, orientation, false, nullptr, ETeleportType::TeleportPhysics);
-    else
-        pawn_->SetActorLocationAndRotation(position, orientation, true);
-    
-    if (state_.tracing_enabled && (state_.last_position - position).SizeSquared() > 0.25) {
-        UKismetSystemLibrary::DrawDebugLine(pawn_->GetWorld(), state_.last_position, position, FColor::Purple, -1, 3.0f);
-        state_.last_position = position;
-    }
-    else if (!state_.tracing_enabled) {
-        state_.last_position = position;
-    }
-    
-    
-}
 
 
 void PawnSimApi::setPoseInternal(const Pose& pose, bool ignore_collision)
@@ -748,4 +678,5 @@ std::string PawnSimApi::getRecordFileLine(bool is_header_line) const
     //ss << "\n";
     //return ss.str();
 }
+
 

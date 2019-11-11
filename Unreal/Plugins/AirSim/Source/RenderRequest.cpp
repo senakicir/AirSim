@@ -6,8 +6,8 @@
 
 #include "AirBlueprintLib.h"
 
-RenderRequest::RenderRequest(bool use_safe_method, Vector3r_arr* bonesPosPtr_) //sena was here
-: use_safe_method_(use_safe_method), bonesPosPtr(bonesPosPtr_), params_(nullptr), results_(nullptr), req_size_(0),
+RenderRequest::RenderRequest(bool use_safe_method) //sena was here
+: use_safe_method_(use_safe_method), params_(nullptr), results_(nullptr), req_size_(0),
 wait_signal_(new msr::airlib::WorkerThreadSignal)
 {
 }
@@ -27,7 +27,6 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
         else
             results[i]->bmp_float.Reset();
         results[i]->time_stamp = 0;
-        results[i]->bonePos_data = Vector3r_arr();
     }
     
     //make sure we are not on the rendering thread
@@ -115,9 +114,6 @@ void RenderRequest::ExecuteTask()
                 auto flags = setupRenderResource(rt_resource, params_[i].get(), results_[i].get(), size);
                 //should we be using ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER which was in original commit by @saihv
                 //https://github.com/Microsoft/AirSim/pull/162/commits/63e80c43812300a8570b04ed42714a3f6949e63f#diff-56b790f9394f7ca1949ddbb320d8456fR64
-                if (bonesPosPtr != nullptr){
-                    results_[i]->bonePos_data = *bonesPosPtr; //sena was here
-                }
                 if (!params_[i]->pixels_as_float) {
                     //below is undocumented method that avoids flushing, but it seems to segfault every 2000 or so calls
                     RHICmdList.ReadSurfaceData(rhi_texture, FIntRect(0, 0, size.X, size.Y),results_[i]->bmp,flags);

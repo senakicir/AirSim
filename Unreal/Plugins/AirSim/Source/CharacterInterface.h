@@ -27,9 +27,7 @@ public:
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
     void setAnimationTime(float time);
-    
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
-    void advanceAnimation(float increment_time);
+
     
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "MyCategory")
     float getAnimationTime();

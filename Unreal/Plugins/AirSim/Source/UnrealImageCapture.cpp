@@ -59,7 +59,7 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         render_params.push_back(std::make_shared<RenderRequest::RenderParams>(textureTarget, requests[i].pixels_as_float, requests[i].compress));
     }
     
-    RenderRequest render_request(use_safe_method, bonePosPtr); //sena was here
+    RenderRequest render_request(use_safe_method); //sena was here
     render_request.getScreenshot(render_params.data(), render_results, render_params.size());
     
     for (unsigned int i = 0; i < requests.size(); ++i) {
@@ -68,7 +68,9 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         APIPCamera* camera = cameras_->at(request.camera_name);
 
         //sena was here
-        response.bones = render_results[i]->bonePos_data;
+        if (bonePosPtr){
+            response.bones = *bonePosPtr;
+        }
         response.camera_name = request.camera_name;
         response.time_stamp = render_results[i]->time_stamp;
         response.image_data_uint8 = std::vector<uint8_t>(render_results[i]->image_data_uint8.GetData(), render_results[i]->image_data_uint8.GetData() + render_results[i]->image_data_uint8.Num());

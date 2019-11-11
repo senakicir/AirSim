@@ -160,11 +160,6 @@ namespace msr { namespace airlib {
         return pimpl_->client.call("getCollisionInfo", vehicle_name).as<RpcLibAdapatorsBase::CollisionInfo>().to();
     }
     
-    //sena was here
-    Vector3r_arr RpcLibClientBase::getBonePositions(const std::string& vehicle_name) const
-    {
-        return pimpl_->client.call("getBonePositions", vehicle_name).as<RpcLibAdapatorsBase::Vector3r_arr>().to();
-    }
     
     //sena was here
     Vector3r RpcLibClientBase::getInitialDronePos(const std::string& vehicle_name) const
@@ -178,11 +173,6 @@ namespace msr { namespace airlib {
         pimpl_->client.call("changeAnimation", vehicle_name, new_anim);
     }
     
-    //sena was here
-    void RpcLibClientBase::changeCalibrationMode(bool calib_mode, const std::string& vehicle_name) const
-    {
-        pimpl_->client.call("changeCalibrationMode", vehicle_name, calib_mode);
-    }
     
     //sim only
     Pose RpcLibClientBase::simGetVehiclePose(const std::string& vehicle_name) const
@@ -192,12 +182,6 @@ namespace msr { namespace airlib {
     void RpcLibClientBase::simSetVehiclePose(const Pose& pose, bool ignore_collision, const std::string& vehicle_name)
     {
         pimpl_->client.call("simSetVehiclePose", RpcLibAdapatorsBase::Pose(pose), ignore_collision, vehicle_name);
-    }
-    
-    //sena was here
-    void RpcLibClientBase::simSetVehiclePose_senaver(const Pose& pose, const std::string& vehicle_name)
-    {
-        pimpl_->client.call("simSetVehiclePose_senaver", RpcLibAdapatorsBase::Pose(pose), vehicle_name);
     }
     
     
@@ -239,22 +223,12 @@ namespace msr { namespace airlib {
     {
         pimpl_->client.call("setAnimationTime", time);
     }
-    //sena was here
-    void RpcLibClientBase::updateAnimation(float increment_time)
-    {
-        pimpl_->client.call("updateAnimation", increment_time);
-    }
+    
     //sena was here
     float RpcLibClientBase::getAnimationTime()
     {
         return pimpl_->client.call("getAnimationTime").as<float>();
     }
-    //sena was here
-    void RpcLibClientBase::simPauseDrone(bool is_paused)
-    {
-        pimpl_->client.call("simPauseDrone", is_paused);
-    }
-    
     
     void RpcLibClientBase::simContinueForTime(double seconds)
     {
@@ -314,4 +288,5 @@ namespace msr { namespace airlib {
 
 #endif
 #endif
+
 

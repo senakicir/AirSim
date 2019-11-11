@@ -28,11 +28,11 @@ if [ "$(uname)" == "Darwin" ]; then # osx
 
     #below takes way too long
     # brew install llvm@3.9
-    brew tap llvm-hs/homebrew-llvm
-    brew install llvm-5.0
+#   brew tap llvm-hs/homebrew-llvm
+# brew install llvm-5.0
 
-    brew install wget
-    brew install coreutils
+#  brew install wget
+#  brew install coreutils
 
     export C_COMPILER=/usr/local/opt/llvm-5.0/bin/clang-5.0
     export COMPILER=/usr/local/opt/llvm-5.0/bin/clang++-5.0
